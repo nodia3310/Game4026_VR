@@ -26,7 +26,20 @@ namespace Game4026.Enemy
         /// <summary>Windup interrupted (stagger or death) before the hit check.</summary>
         public event Action<EnemyAttack> AttackCancelled;
 
-        public float RecoveryDuration => recoveryDuration;
+        private float recoveryOverride = -1f;
+
+        /// <summary>Seconds after the hit check before moving again. Uses <see cref="RecoveryOverride"/> when it is set.</summary>
+        public float RecoveryDuration => recoveryOverride >= 0f ? recoveryOverride : recoveryDuration;
+
+        /// <summary>
+        /// Runtime recovery time, e.g. set by <see cref="EnemyAnimator"/> so the attack clip can finish.
+        /// Negative = use the Inspector value.
+        /// </summary>
+        public float RecoveryOverride
+        {
+            get => recoveryOverride;
+            set => recoveryOverride = float.IsNaN(value) ? -1f : value;
+        }
         public float HitRangePadding => hitRangePadding;
 
         /// <summary>
