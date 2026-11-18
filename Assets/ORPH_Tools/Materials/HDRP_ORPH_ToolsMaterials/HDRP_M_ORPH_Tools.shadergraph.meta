@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: e150c0435090f804f9226bfc6e40e06f
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 625f186215c104763be7675aa2d941aa, type: 3}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 424990
+  packageName: Orphans of the Great War - Props for characters - Asset Pack
+  packageVersion: 1.0
+  assetPath: Assets/ORPH_Tools/Materials/HDRP_ORPH_ToolsMaterials/HDRP_M_ORPH_Tools.shadergraph
+  uploadId: 1038676

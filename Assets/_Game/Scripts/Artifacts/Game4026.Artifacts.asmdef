@@ -1,0 +1,14 @@
+{
+  "name": "Game4026.Artifacts",
+  "rootNamespace": "Game4026.Artifacts",
+  "references": ["Game4026.Contracts"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

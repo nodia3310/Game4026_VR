@@ -1,0 +1,12 @@
+{
+  "recordType": "summary-recorded-from-successful-synchronous-cli-run",
+  "mode": "EditMode",
+  "filter": "Game4026",
+  "summary": {
+    "total": 56,
+    "passed": 56,
+    "failed": 0,
+    "skipped": 0
+  },
+  "note": "The synchronous CLI run returned success=true with 56 Passed entries. This is a recorded summary, not the raw runner envelope. Subsequent test status returns no_tests for a synchronous run."
+}

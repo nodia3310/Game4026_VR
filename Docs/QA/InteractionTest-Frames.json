@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "command": "command",
+  "data": {
+    "command": "job wait",
+    "parameters": {
+      "condition": "{\"member\":\"UnityEngine.Time.frameCount\",\"op\":\"changed\"}",
+      "timeout": "10",
+      "return-history": "true"
+    },
+    "result": {
+      "state": "met",
+      "met": true,
+      "timedOut": false,
+      "member": "UnityEngine.Time.frameCount",
+      "op": "changed",
+      "value": 43752,
+      "initialValue": 43671,
+      "elapsedMs": 109,
+      "framesObserved": 2,
+      "history": [
+        {
+          "value": 43671,
+          "elapsedMs": 5
+        },
+        {
+          "value": 43752,
+          "elapsedMs": 109
+        }
+      ]
+    },
+    "target": {
+      "host": "127.0.0.1",
+      "port": 7801,
+      "projectPath": "E:\\unity project\\game4026"
+    }
+  },
+  "errors": [],
+  "warnings": []
+}
