@@ -1,0 +1,124 @@
+{
+  "success": true,
+  "command": "command",
+  "data": {
+    "command": "console get",
+    "parameters": {
+      "since": "137",
+      "level": "warn",
+      "tail": "40"
+    },
+    "result": {
+      "entries": [
+        {
+          "seq": 139,
+          "timestampUtc": "2026-11-11T16:50:15.5199718Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "XR: Error setting active audio output driver. Falling back to default.",
+          "stackTrace": "UnityEngine.XR.Management.XRGeneralSettings:AttemptInitializeXRSDKOnLoad ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 140,
+          "timestampUtc": "2026-11-11T16:50:15.5224702Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "XR: Error setting active audio output driver. Falling back to default.",
+          "stackTrace": "UnityEngine.XR.Management.XRGeneralSettings:AttemptInitializeXRSDKOnLoad ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 142,
+          "timestampUtc": "2026-11-11T16:50:44.1516211Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "Account API did not become accessible within 30 seconds. This may be due to network issues or editor focus.",
+          "stackTrace": "UnityEngine.Debug:LogWarning (object)\nUnity.AI.Toolkit.Accounts.Services.States.ApiAccessibleState/<WaitForCloudProjectSettings>d__4:MoveNext () (at ./Library/PackageCache/com.unity.ai.assistant@890548b66362/Modules/Unity.AI.Toolkit.Accounts/Services/States/ApiAccessibleState.cs:46)\nSystem.Threading.Tasks.TaskCompletionSource`1<bool>:TrySetResult (bool)\nUnity.AI.Toolkit.EditorTask/<>c__DisplayClass22_0:<WaitForCondition>b__0 () (at ./Library/PackageCache/com.unity.ai.assistant@890548b66362/Modules/Unity.AI.Toolkit.Async/EditorTask.cs:420)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 148,
+          "timestampUtc": "2026-11-11T16:52:20.2941955Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "Account API did not become accessible within 30 seconds. This may be due to network issues or editor focus.",
+          "stackTrace": "UnityEngine.Debug:LogWarning (object)\nUnity.AI.Toolkit.Accounts.Services.States.ApiAccessibleState/<WaitForCloudProjectSettings>d__4:MoveNext () (at ./Library/PackageCache/com.unity.ai.assistant@890548b66362/Modules/Unity.AI.Toolkit.Accounts/Services/States/ApiAccessibleState.cs:46)\nSystem.Threading.Tasks.TaskCompletionSource`1<bool>:TrySetResult (bool)\nUnity.AI.Toolkit.EditorTask/<>c__DisplayClass22_0:<WaitForCondition>b__0 () (at ./Library/PackageCache/com.unity.ai.assistant@890548b66362/Modules/Unity.AI.Toolkit.Async/EditorTask.cs:420)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 151,
+          "timestampUtc": "2026-11-11T16:52:26.2092298Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "XR: Error setting active audio output driver. Falling back to default.",
+          "stackTrace": "UnityEngine.XR.Management.XRGeneralSettings:AttemptInitializeXRSDKOnLoad ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 152,
+          "timestampUtc": "2026-11-11T16:52:26.2112407Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "XR: Error setting active audio output driver. Falling back to default.",
+          "stackTrace": "UnityEngine.XR.Management.XRGeneralSettings:AttemptInitializeXRSDKOnLoad ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 164,
+          "timestampUtc": "2026-11-11T16:52:54.8813422Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "Account API did not become accessible within 30 seconds. This may be due to network issues or editor focus.",
+          "stackTrace": "UnityEngine.Debug:LogWarning (object)\nUnity.AI.Toolkit.Accounts.Services.States.ApiAccessibleState/<WaitForCloudProjectSettings>d__4:MoveNext () (at ./Library/PackageCache/com.unity.ai.assistant@890548b66362/Modules/Unity.AI.Toolkit.Accounts/Services/States/ApiAccessibleState.cs:46)\nSystem.Threading.Tasks.TaskCompletionSource`1<bool>:TrySetResult (bool)\nUnity.AI.Toolkit.EditorTask/<>c__DisplayClass22_0:<WaitForCondition>b__0 () (at ./Library/PackageCache/com.unity.ai.assistant@890548b66362/Modules/Unity.AI.Toolkit.Async/EditorTask.cs:420)\nUnityEditor.EditorApplication:Internal_CallUpdateFunctions ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 166,
+          "timestampUtc": "2026-11-11T16:53:45.7555691Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "XR: Error setting active audio output driver. Falling back to default.",
+          "stackTrace": "UnityEngine.XR.Management.XRGeneralSettings:AttemptInitializeXRSDKOnLoad ()\n",
+          "seeded": false
+        },
+        {
+          "seq": 167,
+          "timestampUtc": "2026-11-11T16:53:45.7575622Z",
+          "level": "warn",
+          "logType": "Warning",
+          "message": "XR: Error setting active audio output driver. Falling back to default.",
+          "stackTrace": "UnityEngine.XR.Management.XRGeneralSettings:AttemptInitializeXRSDKOnLoad ()\n",
+          "seeded": false
+        }
+      ],
+      "cursor": 168,
+      "session": "3fb517e461244357911e01066f66c46d",
+      "returned": 9,
+      "dropped": false,
+      "reset": false,
+      "counts": {
+        "error": 14,
+        "warn": 84,
+        "log": 70
+      },
+      "groundTruth": {
+        "sampledUtc": "2026-11-11T16:54:14.0219277Z",
+        "ageMs": 228,
+        "compilationFailed": false,
+        "compiling": false,
+        "consoleErrors": 0,
+        "consoleWarnings": 6,
+        "consoleLogs": 20,
+        "seeded": true
+      }
+    },
+    "target": {
+      "host": "127.0.0.1",
+      "port": 7801,
+      "projectPath": "E:\\unity project\\game4026"
+    }
+  },
+  "errors": [],
+  "warnings": []
+}
