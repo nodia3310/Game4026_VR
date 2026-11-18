@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8df22629d3a60e74396a75183fc46fc1, type: 3}
+  m_Name: Wave_Boss_Minions
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.WaveDefinition
+  entries:
+  - Prefab: {fileID: 30866176954583873, guid: d541954f964f68640b1fd4928320e29c, type: 3}
+    Count: 2
+  spawnInterval: 1
+  startDelay: 0

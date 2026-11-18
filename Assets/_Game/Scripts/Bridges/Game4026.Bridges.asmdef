@@ -1,0 +1,14 @@
+{
+  "name": "Game4026.Bridges",
+  "rootNamespace": "Game4026.Bridges",
+  "references": ["Game4026.Contracts", "Game4026.Interaction", "Game4026.Enemy"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

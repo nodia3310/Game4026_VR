@@ -136,8 +136,12 @@ crashlytics-build.properties
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
-/Docs
+/Docs/*
 CLAUDE.md
 CODE_MAP.md
+# Enemy system docs are tracked
+!/Docs/PROGRESS.md
+!/Docs/CODE_MAP.md
+!/Docs/ENEMY_SYSTEM_SPEC.md
 .cursorignore
 .claude/settings.json

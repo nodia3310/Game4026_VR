@@ -1,0 +1,14 @@
+{
+  "name": "Game4026.Enemy.DebugTools",
+  "rootNamespace": "Game4026.Enemy.DebugTools",
+  "references": ["Game4026.Enemy", "Game4026.Contracts", "Unity.InputSystem"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
