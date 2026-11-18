@@ -4,7 +4,12 @@
 
 ## 目前狀態
 - 里程碑：**M1–M4 全部完成**（EditMode 165/165；PlayMode 16/16；EnemyAI 場景實測與 Profiler 驗證通過）
-- 傷害橋接完成，含場景安裝器（Bridges，EditMode 測試 19/19；全專案 EditMode 98/98）
+- 傷害橋接完成，含場景安裝器（Bridges）
+- Git（2026-11-18）：所有工作都已 commit 並 push 到 `origin/feature/enemy-ai`（最新 `30f77c6`）。**還沒開 PR、沒合進 main**，使用者決定先不開。
+  - 組員可以在 GitHub 切到 `feature/enemy-ai` 看到程式和 `Notes For Groupmates/NOTES_FOR_A.md`，但他們自己的分支（例如 A 的 `feature/vr-interaction`）還沒有這些改動。
+  - A 要實際用到 `PlayerTarget`、橋接等東西之前，需要先合併（開 PR 合進 main，或 A 直接合併這個分支）。
+  - `ProfilerCaptures/` 是 M4 的 Profiler 錄檔，沒進 git，可以刪。
+  - PR 準備：之前的 commit `a4c5456 Stop tracking Docs folder` 會讓 PR 刪掉 main 上 30 個組員的 Docs 檔案（DevelopmentPlan、InteractionSetup、QA、Tools、進度.md）。使用者決定保留，已從 main 恢復到這個分支（commit「Restore teammates' docs…」）。現在 PR 對 main 不刪除任何檔案、沒有衝突。PR 說明草稿已給使用者，還沒建立。
 - 下一步（規格之外，建議）：
   1. 換真正的模型與動畫：換 prefab 外觀，把弱點 Collider 移到骨頭上，掛 Animator（自動設定 `Speed`/`State` 參數），讓 attackWindup / staggerDuration 對齊動畫長度
   2. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測
