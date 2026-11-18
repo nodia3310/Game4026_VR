@@ -27,4 +27,4 @@ MonoBehaviour:
   attackCooldown: 2
   attackAngle: 70
   spawnDuration: 1.5
-  despawnDuration: 1.5
+  despawnDuration: 2.5

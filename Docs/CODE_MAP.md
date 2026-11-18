@@ -18,6 +18,7 @@
 - EnemyHealth — Scripts/Enemy/Core/EnemyHealth.cs — MonoBehaviour + IDamageable，包裝 Model，提供 Damaged/Died 事件、ResetState、IsInvulnerable
 - WeakPoint — Scripts/Enemy/Core/WeakPoint.cs — 掛在弱點 Collider 子物件上，以 isWeakPoint=true 轉發給父物件的 EnemyHealth，附 Gizmo
 - EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator
+- EnemyAnimator — Scripts/Enemy/Core/EnemyAnimator.cs — 依 AI 狀態切換 Animator（Locomotion 混合樹／Attack／Hit／Death），攻擊動畫擊中點對齊前搖，收招時間跟著攻擊動畫長度（EnemyAttack.RecoveryOverride）
 - EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 前搖事件、距離 + 角度命中判定、冷卻；命中時呼叫 ApplyPlayerDamage
 - EnemyGeometry — Scripts/Enemy/Core/EnemyGeometry.cs — 忽略高度的水平距離與扇形判定
 - AssemblyInfo — Scripts/Enemy/AssemblyInfo.cs — InternalsVisibleTo PlayMode 測試（讓測試直接呼叫 EnemyController.Tick）

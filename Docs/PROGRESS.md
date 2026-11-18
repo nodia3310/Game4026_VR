@@ -3,17 +3,19 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
-- 里程碑：**M1–M4 全部完成**（EditMode 165/165；PlayMode 16/16；EnemyAI 場景實測與 Profiler 驗證通過）
+- 里程碑：**M1–M4 全部完成**；之後加上模型與動畫（EditMode 177/177；PlayMode 16/16）
 - 傷害橋接完成，含場景安裝器（Bridges）
-- Git（2026-11-18）：所有工作都已 commit 並 push 到 `origin/feature/enemy-ai`（最新 `30f77c6`）。**還沒開 PR、沒合進 main**，使用者決定先不開。
-  - 組員可以在 GitHub 切到 `feature/enemy-ai` 看到程式和 `Notes For Groupmates/NOTES_FOR_A.md`，但他們自己的分支（例如 A 的 `feature/vr-interaction`）還沒有這些改動。
-  - A 要實際用到 `PlayerTarget`、橋接等東西之前，需要先合併（開 PR 合進 main，或 A 直接合併這個分支）。
+- 模型與動畫：所有敵人（基底 Enemy_Placeholder 與四個 Variant、場景的巡邏示範）都用 Anubis 模型 + AC_Anubis + EnemyAnimator；各自弱點掛在骨頭上（衛兵/基底：頭，木乃伊/法老：胸口，塞克邁特：背後）。各種敵人目前外觀相同，只有大小不同。
+- Git（2026-11-18）：M1–M4 已 push 到 `origin/feature/enemy-ai`（`837f7bb`）。PR 頁面已在瀏覽器開好給使用者按建立，是否已建立未確認。**模型與動畫的改動還沒 commit。**
+  - PR 不會刪除 main 上組員的 Docs 檔案（已從 main 恢復）。
+  - A 要用到 `PlayerTarget`、橋接之前，需要先把這個分支合進 main。
   - `ProfilerCaptures/` 是 M4 的 Profiler 錄檔，沒進 git，可以刪。
-  - PR 準備：之前的 commit `a4c5456 Stop tracking Docs folder` 會讓 PR 刪掉 main 上 30 個組員的 Docs 檔案（DevelopmentPlan、InteractionSetup、QA、Tools、進度.md）。使用者決定保留，已從 main 恢復到這個分支（commit「Restore teammates' docs…」）。現在 PR 對 main 不刪除任何檔案、沒有衝突。PR 說明草稿已給使用者，還沒建立。
 - 下一步（規格之外，建議）：
-  1. 換真正的模型與動畫：換 prefab 外觀，把弱點 Collider 移到骨頭上，掛 Animator（自動設定 `Speed`/`State` 參數），讓 attackWindup / staggerDuration 對齊動畫長度
-  2. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測
-  3. 法老招式細節（PharaohBoss.OnPhaseEntered 的 TODO）、數值平衡、開 PR 合進 main
+  1. commit 模型與動畫（新增 `Character Models/`、`Animations/` 約 10 MB）
+  2. 各種敵人換成自己的模型（木乃伊、塞克邁特、法老）；人形 Mixamo 模型可沿用 AC_Anubis 與 EnemyAnimator，只要在 Variant 裡換掉 Model
+  3. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測；確認 A 的武器 targetMask 包含敵人 Collider 的 Layer
+  4. 法老招式細節（PharaohBoss.OnPhaseEntered 的 TODO）、數值平衡（冷卻、前搖、血量）
+  5. 可選：身體 Collider 改成掛在骨頭上（現在是固定膠囊，不會跟著彎腰或倒地）；生成/死亡特效、音效
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
@@ -28,6 +30,7 @@
 - 2026-11-18：武器不改 Prefab，改用場景裡的 `DamageBridgeInstaller` 在執行時自動掛上橋接（A 的 Prefab 和場景都不動）。
 - 2026-11-18（M4）：敵人數值暫定（木乃伊 60HP、衛兵 100HP 攻擊距離 2.4、女神像 250HP 硬直門檻 60 弱點 ×3、法老 600HP），都在 EnemyData 資產裡，Inspector 可調。
 - 2026-11-18（M4）：四種敵人都做成 Enemy_Placeholder 的 Prefab Variant，基底改了會全部套用。
+- 2026-11-18（模型）：Anubis 模型、AC_Anubis、EnemyAnimator 放在基底 prefab，各種敵人先共用；之後換專屬模型時在 Variant 裡替換 Model。動畫用 Humanoid，收招時間跟著攻擊動畫長度。
 - 2026-11-18（M4）：Boss 階段做成 Inspector 列表（BossPhase），加階段不用改程式；一擊跨過多個門檻時，經過的每個階段效果都會執行（例如沒經過召喚階段也會召喚）。
 - 2026-11-18（M4）：Boss 小兵用 Boss prefab 子物件上的 EncounterController（規格：「透過 Boss 自己的 EncounterController」），Boss 死亡時強制清除，重新生成時重置。
 - 2026-11-18（M4）：EnemyAttack.SpeedMultiplier 同時縮短前搖與冷卻；ResetState 會回到 1。
@@ -55,6 +58,45 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-18（所有敵人換成 Anubis 模型）
+- 完成：模型、Animator、EnemyAnimator、頭部骨頭弱點 `HeadBone_WeakPoint` 從衛兵 Variant 移到基底 `Enemy_Placeholder`，所有 Variant 和場景的 `Enemy_PatrolDemo` 都繼承；衛兵 Variant 的舊覆寫還原
+  - 木乃伊、塞克邁特、法老：停用頭部弱點；原本的胸口/背後弱點改掛到 `mixamorig:Spine2` / `Spine1`，跟著動畫移動（法老的胸口弱點仍是第三階段才啟用）
+  - 所有 EnemyData 的 `despawnDuration` 改 2.5 秒（死亡動畫 2.4 秒）
+- 問題：骨頭在綁定姿勢和動畫中的朝向不同（綁定姿勢轉了 180°），第一次用綁定姿勢算的頭部弱點跑到後腦。改成在 Play Mode 量動畫中的骨頭座標再寫回 prefab。
+- 實測：四種敵人一起生成，都正常追擊；弱點位置在臉前/胸前/背後正確
+- 測試：EditMode 177/177、PlayMode 16/16
+- 備註：木乃伊、法老胸口與塞克邁特背後的弱點方塊仍然看得見（當作弱點標記）；不想看到的話，關掉該物件的 MeshRenderer 即可
+
+### 2026-11-18（攻擊動畫換成 QuickerAttack、修正攻擊動畫被切斷）
+- 原因：攻擊判定後的收招固定 0.5 秒（`EnemyAttack.recoveryDuration`），之後就切回追擊，Animator 跟著切回移動動畫，所以攻擊動畫一定會被切掉；玩家走遠時敵人馬上開始跑，所以特別明顯。跟距離判定無關（攻擊中途不檢查距離，只有硬直或死亡會中斷）。
+- 修正：
+  - `EnemyAttack.RecoveryOverride`：執行時可覆寫收招時間（負數 = 用 Inspector 的值）
+  - `EnemyAnimator`：新增 `attackClip`、`recoveryFollowsClip`。每次出手時把收招時間設成「擊中點到動畫結束的剩餘時間 ÷ 播放速度 − 交叉淡出時間」，攻擊動畫會播完才去追擊
+  - `anubis_2@QuickerAttack.fbx`（1.6 秒，單次右手揮擊）改 Humanoid、原地播放，取代 AC_Anubis 的 Attack；擊中點 0.77 秒
+- 實測：前搖 0.7 秒時播放速度 1.10，攻擊狀態共約 1.3 秒；判定後玩家退開 3 公尺，動畫照樣播到結尾才淡回跑步
+- 測試：EditMode 177/177、PlayMode 16/16
+- 舊的 `anubis_2@Attack.fbx`（三連擊）留著沒用到
+
+### 2026-11-18（阿努比斯衛兵換上模型與動畫）
+- 完成：
+  - `anubis_2@T-Pose WithSKin.fbx`（有網格）設為 Humanoid、沿用 T-Pose 的 Avatar、材質改用 M_Anubis
+  - `Enemy_AnubisGuard`：隱藏膠囊外觀，身體 Collider 縮到脖子以下（0–1.38 m），舊的頭部弱點停用；新增 `Model` 子物件（Animator：AC_Anubis、不套用 Root Motion、看不到時不更新骨頭），新的 `Head_WeakPoint` 掛在 `mixamorig:Head` 底下，跟著動畫移動；根物件加 `EnemyAnimator`；Eye 改到 1.6 m
+  - `EnemyData_AnubisGuard.despawnDuration` 1.5 → 2.5（死亡動畫 2.4 秒，避免倒到一半就消失）
+- 實測（EnemyAI 場景 Play Mode）：生成 → 追擊（跑步動畫）→ 攻擊（AttackSpeed 0.86，擊中點對齊前搖 0.7 秒），玩家扣血 → 打頭部弱點 20 傷害扣 50 HP（×2.5）且播 Hit 動畫 → 擊殺播 Death 動畫、身體往後倒、2.5 秒後回物件池
+- 測試：EditMode 全過；PlayMode 16/16
+- 已知限制：身體 Collider 是固定膠囊，不會跟著動畫彎腰或倒地；之後若需要更準的命中，可以改成掛在骨頭上的多個 Collider
+- 需要在 Editor 手動做：無
+
+### 2026-11-18（阿努比斯模型與動畫，前置）
+- 完成：
+  - `anubis.fbx` 材質：新增 `materials/M_Anubis.mat`（URP Lit，Tiling Y = -1 修正 glTF 轉檔造成的 UV 顛倒），金屬度/粗糙度合成 `textures/anubis_MetallicSmoothness.png`，法線貼圖改成 Normal Map，不匯入 FBX 內的相機/燈光
+  - 動畫：`anubis_2@T-Pose.fbx` 建立 Humanoid Avatar，6 個動畫改 Humanoid 並共用這個 Avatar；Idle/Walk/Run 循環；Walk/Run/Attack 原地播放（往前的位移不套用，移動交給 NavMesh），Death/Hit 保留身體位移
+  - `Animations/Enemy/Anubis/AC_Anubis.controller`：Locomotion 混合樹（0 待機、1 走、2 跑）、Attack（播放速度由 `AttackSpeed` 參數控制）、Hit、Death
+  - `EnemyAnimator`：依 AI 狀態切換動畫；攻擊動畫的擊中點（約 0.6 秒，第一下揮擊）對齊前搖結束；受擊重複時從頭播
+  - EditMode 測試 `EnemyAnimatorTests`（全部通過）
+- 當時卡住：`anubis.fbx` 是沒綁骨的靜態模型，`anubis_2@T-Pose.fbx` 和動畫檔只有骨架；使用者之後補上 With Skin 的模型
+- 決定：用 Humanoid（之後木乃伊、法老可以共用動畫）；動畫由獨立元件 `EnemyAnimator` 驅動，`EnemyController` 的 Animator 欄位留空
+
 ### 2026-11-18（M4：敵人種類與 Boss 架構）
 - 完成：BossPhase、BossPhaseTracker、PharaohBoss；EnemyAttack.SpeedMultiplier、IEnemyContext.AttackWindup、EncounterController.ResetEncounter、EnemyData.OnValidate、EnemyDebugLabel 顯示 Boss 階段；4 份 EnemyData、4 個 Prefab Variant、2 個新波次；EnemyAI 場景改用新敵人；14 個 EditMode + 4 個 PlayMode 測試
 - 實測（EnemyAI 場景）：按 1/2/3 → 法老出場 → 50% 進入召喚階段（無敵 2 秒、2 隻木乃伊）→ 8% 進入狂暴階段（胸口弱點出現、攻速 ×1.5）→ 擊殺 → 小兵被清除、BossDefeated、敵人全部回到物件池（Instantiate 只有預熱的 8 次）
