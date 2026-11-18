@@ -54,6 +54,7 @@ namespace Game4026.Enemy
         private float nextRepathTime;
         private Vector3 lastDestination;
         private int patrolIndex = -1;
+        private float currentTime;
         private bool animatorHasSpeed;
         private bool animatorHasState;
 
@@ -114,9 +115,15 @@ namespace Game4026.Enemy
             health.Died -= HandleDied;
         }
 
-        private void Update()
+        private void Update() => Tick(Time.time, Time.deltaTime);
+
+        /// <summary>
+        /// One AI frame. Every time-based rule reads <paramref name="now"/> (never Time.time directly),
+        /// so tests can drive frames manually, e.g. to measure per-frame GC allocation.
+        /// </summary>
+        internal void Tick(float now, float deltaTime)
         {
-            float now = Time.time;
+            currentTime = now;
             UpdateTarget();
 
             if (now >= nextPerceptionTime)
@@ -127,7 +134,7 @@ namespace Game4026.Enemy
                     lastSeenTime = now;
             }
 
-            machine.Tick(Time.deltaTime);
+            machine.Tick(deltaTime);
             UpdateAnimator();
         }
 
@@ -142,6 +149,7 @@ namespace Game4026.Enemy
             lastSeenTime = float.NegativeInfinity;
             nextPerceptionTime = 0f;
             nextRepathTime = 0f;
+            currentTime = Time.time;
             if (agent != null)
                 agent.enabled = true;
             machine.ChangeState(EnemyStateId.Spawn);
@@ -240,7 +248,7 @@ namespace Game4026.Enemy
         public bool HasTarget => target != null;
         public bool CanSeeTarget => canSee && target != null;
         public float DistanceToTarget => distanceToTarget;
-        public float TimeSinceTargetSeen => Time.time - lastSeenTime;
+        public float TimeSinceTargetSeen => currentTime - lastSeenTime;
         public float LoseSightSeconds => loseSightSeconds;
 
         public bool HasPatrolPoints => patrolPoints != null && patrolPoints.Length > 0;
@@ -284,7 +292,7 @@ namespace Game4026.Enemy
             if (target == null)
                 return;
             Vector3 destination = target.Body.position;
-            float now = Time.time;
+            float now = currentTime;
             bool moved = (destination - lastDestination).sqrMagnitude > repathDistance * repathDistance;
             bool idle = AgentUsable && !agent.hasPath && !agent.pathPending;
             if (now >= nextRepathTime || moved || idle)
@@ -315,10 +323,11 @@ namespace Game4026.Enemy
                 transform.rotation, Quaternion.LookRotation(direction), turnSpeed * deltaTime);
         }
 
-        public bool IsAttackReady => attack.IsReady(Time.time);
+        public bool IsAttackReady => attack.IsReady(currentTime);
+        public float AttackWindup => attack.WindupFor(data);
         public float AttackRecovery => attack.RecoveryDuration;
         public void BeginAttack() => attack.BeginWindup();
-        public bool ResolveAttack() => attack.Resolve(target, data, Time.time);
+        public bool ResolveAttack() => attack.Resolve(target, data, currentTime);
         public void CancelAttack() => attack.Cancel();
 
         public void SetInvulnerable(bool value) => health.IsInvulnerable = value;

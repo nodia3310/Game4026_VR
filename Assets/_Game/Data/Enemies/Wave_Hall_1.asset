@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Wave_Hall_1
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.WaveDefinition
   entries:
-  - Prefab: {fileID: 4074402262020610101, guid: 9634a939c43e1b141b5087624d446811, type: 3}
-    Count: 2
+  - Prefab: {fileID: 30866176954583873, guid: d541954f964f68640b1fd4928320e29c, type: 3}
+    Count: 3
   spawnInterval: 1.5
   startDelay: 0

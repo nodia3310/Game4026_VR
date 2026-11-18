@@ -34,6 +34,18 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float spawnDuration = 1.5f;
         [SerializeField, Min(0f)] private float despawnDuration = 1.5f;
 
+        private void OnValidate()
+        {
+            // Inspector safety: an enemy must not lose the player inside its own detection range.
+            if (loseTargetRange < detectionRange)
+            {
+                Debug.LogWarning($"[{name}] loseTargetRange ({loseTargetRange}) < detectionRange ({detectionRange}); raised to match.", this);
+                loseTargetRange = detectionRange;
+            }
+            if (attackRange > detectionRange)
+                Debug.LogWarning($"[{name}] attackRange ({attackRange}) is larger than detectionRange ({detectionRange}).", this);
+        }
+
         public float MaxHealth => maxHealth;
         public float WeakPointMultiplier => weakPointMultiplier;
         public float HitCooldown => hitCooldown;

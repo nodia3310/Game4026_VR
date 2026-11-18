@@ -244,25 +244,25 @@ Assets/_Game/
 ## 7. 里程碑與驗收標準
 
 ### M1：共用介面與受擊
-- [ ] `Game4026.Enemy` asmdef 建立，正確引用 `Game4026.Contracts` 並可編譯
-- [ ] `EnemyHealth`、`WeakPoint`、`EnemyData` 完成
-- [ ] EditMode 測試：弱點倍率、受擊冷卻、死亡只觸發一次、`ResetState` 後血量恢復
+- [x] `Game4026.Enemy` asmdef 建立，正確引用 `Game4026.Contracts` 並可編譯
+- [x] `EnemyHealth`、`WeakPoint`、`EnemyData` 完成
+- [x] EditMode 測試：弱點倍率、受擊冷卻、死亡只觸發一次、`ResetState` 後血量恢復
 
 ### M2：AI 與攻擊
-- [ ] 狀態機完成，所有狀態轉換符合第 4.4 節的表格
-- [ ] 在 `EnemyAI` 場景用 `MockPlayer` 測試：會發現、追擊、前搖後攻擊、被打會硬直、死亡
-- [ ] 沒有 Animator 的佔位模型也能完整運作
+- [x] 狀態機完成，所有狀態轉換符合第 4.4 節的表格
+- [x] 在 `EnemyAI` 場景用 `MockPlayer` 測試：會發現、追擊、前搖後攻擊、被打會硬直、死亡
+- [x] 沒有 Animator 的佔位模型也能完整運作
 
 ### M3：生成與遭遇戰
-- [ ] 物件池運作正常，反覆生成和回收時不產生新的 Instantiate
-- [ ] 波次、同時在場上限、生成點安全距離正常
-- [ ] 按 1/2/3 模擬文物歸位：對應展廳的敵人被清除；三件都歸位後 Boss 戰開始
-- [ ] PlayMode 測試：一場遭遇戰從開始到 `Cleared` 的完整流程
+- [x] 物件池運作正常，反覆生成和回收時不產生新的 Instantiate
+- [x] 波次、同時在場上限、生成點安全距離正常
+- [x] 按 1/2/3 模擬文物歸位：對應展廳的敵人被清除；三件都歸位後 Boss 戰開始
+- [x] PlayMode 測試：一場遭遇戰從開始到 `Cleared` 的完整流程
 
 ### M4：敵人種類與 Boss 架構
-- [ ] 三種敵人的 `EnemyData` 與 Prefab（佔位模型）
-- [ ] Boss 三階段切換與 `PhaseChanged` 事件
-- [ ] Profiler 確認：4 隻敵人同時追擊時，敵人腳本每幀沒有 GC 配置
+- [x] 三種敵人的 `EnemyData` 與 Prefab（佔位模型）
+- [x] Boss 三階段切換與 `PhaseChanged` 事件
+- [x] Profiler 確認：4 隻敵人同時追擊時，敵人腳本每幀沒有 GC 配置
 
 ---
 

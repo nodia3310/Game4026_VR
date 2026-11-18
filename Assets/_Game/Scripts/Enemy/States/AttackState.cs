@@ -29,7 +29,7 @@ namespace Game4026.Enemy
             if (!resolved)
             {
                 context.FaceTarget(deltaTime);
-                if (elapsed < context.Data.AttackWindup)
+                if (elapsed < context.AttackWindup)
                     return;
 
                 context.ResolveAttack();

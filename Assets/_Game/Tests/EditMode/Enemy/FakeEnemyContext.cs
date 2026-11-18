@@ -16,6 +16,9 @@ namespace Game4026.Tests.Enemy
         public bool HasPatrolPoints { get; set; }
         public bool ReachedDestination { get; set; }
         public bool IsAttackReady { get; set; } = true;
+        /// <summary>Negative = use Data.AttackWindup.</summary>
+        public float AttackWindupOverride = -1f;
+        public float AttackWindup => AttackWindupOverride >= 0f ? AttackWindupOverride : Data.AttackWindup;
         public float AttackRecovery { get; set; } = 0.5f;
         public bool AttackHits { get; set; } = true;
 

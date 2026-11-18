@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8df22629d3a60e74396a75183fc46fc1, type: 3}
-  m_Name: Wave_Boss_Placeholder
+  m_Name: Wave_Boss_Minions
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.WaveDefinition
   entries:
-  - Prefab: {fileID: 4074402262020610101, guid: 9634a939c43e1b141b5087624d446811, type: 3}
-    Count: 1
-  spawnInterval: 0
-  startDelay: 1
+  - Prefab: {fileID: 30866176954583873, guid: d541954f964f68640b1fd4928320e29c, type: 3}
+    Count: 2
+  spawnInterval: 1
+  startDelay: 0

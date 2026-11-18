@@ -218,6 +218,17 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void Attack_UsesContextWindup_ForFasterAttacks()
+        {
+            SeePlayerAt(1.5f);
+            ctx.AttackWindupOverride = 0.3f; // e.g. boss phase 3
+            StartIn(EnemyStateId.Attack);
+
+            ctx.Run(0.34f);
+            Assert.AreEqual(1, ctx.AttackResolves);
+        }
+
+        [Test]
         public void Attack_StaggeredDuringWindup_CancelsWithoutHit()
         {
             SeePlayerAt(1.5f);

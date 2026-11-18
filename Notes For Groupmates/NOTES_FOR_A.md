@@ -45,7 +45,7 @@ A: ArrowProjectile.Impact(Collision) ──┤→ B: Bridges（MeleeDamageBridge
 ## 4. 之後會需要 A 的事（M2/M3）
 
 - **玩家受傷**：敵人攻擊命中時會呼叫 `IPlayerDamageReceiver.ApplyPlayerDamage(float)`，但專案裡還沒有任何實作（玩家血量尚未指派）。在那之前，B 用測試用的 MockPlayer。
-- **`PlayerTarget`（已新增）**：B 在 `Scripts/Contracts/` 新增了 `PlayerTarget.cs`（既有檔案沒動）。**請 A 把它掛在 XR Rig 根物件上**，並在 Inspector 指定 `head` = HMD 相機、`body` = 身體中心（可留空，會用 head）。沒有掛的話，敵人找不到玩家，只會待機或巡邏，不會報錯。
+- **`PlayerTarget`（已新增）**：B 在 `Scripts/Contracts/` 新增了 `PlayerTarget.cs`（既有檔案沒動）。**請 A 把它掛在 XR Rig 根物件上**，並在 Inspector 指定 `head` = HMD 相機、`body` = 身體中心（可留空，會用 head）。**`head` 一定要指定**：留空的話會用 Rig 根物件的位置（地面高度），敵人的視線會被地板擋住，看不到玩家。沒有掛的話，敵人找不到玩家，只會待機或巡邏，不會報錯。
   - 玩家受傷：`PlayerTarget` 會在自己或父物件上找 `IPlayerDamageReceiver`，敵人命中時呼叫 `ApplyPlayerDamage(10)`（預設值）。
 - **Layer**：敵人的 Collider 要放在武器 `targetMask` 包含的 Layer 上。如果之後新增 Enemy Layer，A 的武器 `targetMask` 和 `blockerMask` 可能要跟著調。
 

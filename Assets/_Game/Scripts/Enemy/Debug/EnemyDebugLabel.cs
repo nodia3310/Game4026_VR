@@ -15,11 +15,14 @@ namespace Game4026.Enemy.DebugTools
         private string text = string.Empty;
         private EnemyStateId shownState = EnemyStateId.None;
         private float shownHealth = -1f;
+        private int shownPhase = -1;
+        private PharaohBoss boss;
 
         private void Awake()
         {
             if (controller == null)
                 controller = GetComponent<EnemyController>();
+            boss = GetComponent<PharaohBoss>();
         }
 
         private void OnGUI()
@@ -38,17 +41,21 @@ namespace Game4026.Enemy.DebugTools
 
             EnemyStateId state = controller.CurrentState;
             float health = controller.Health.CurrentHealth;
-            if (state != shownState || !Mathf.Approximately(health, shownHealth))
+            int phase = boss != null ? boss.CurrentPhase : -1;
+            if (state != shownState || phase != shownPhase || !Mathf.Approximately(health, shownHealth))
             {
                 shownState = state;
                 shownHealth = health;
-                text = $"{state}  {health:0}/{controller.Health.MaxHealth:0}";
+                shownPhase = phase;
+                text = boss != null
+                    ? $"{state}  {health:0}/{controller.Health.MaxHealth:0}  P{phase + 1} {boss.CurrentPhaseName}"
+                    : $"{state}  {health:0}/{controller.Health.MaxHealth:0}";
             }
 
             if (style == null)
                 style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
 
-            GUI.Label(new Rect(screen.x - 80f, Screen.height - screen.y - 12f, 160f, 24f), text, style);
+            GUI.Label(new Rect(screen.x - 120f, Screen.height - screen.y - 12f, 240f, 24f), text, style);
         }
 #endif
     }

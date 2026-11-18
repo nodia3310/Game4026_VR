@@ -94,6 +94,24 @@ namespace Game4026.Enemy
             Complete();
         }
 
+        /// <summary>
+        /// Back to "not started" so the encounter can run again (e.g. a pooled boss's minion encounter).
+        /// Enemies still alive are force-cleared first.
+        /// </summary>
+        public void ResetEncounter()
+        {
+            for (int i = alive.Count - 1; i >= 0; i--)
+                alive[i].ForceClear();
+            alive.Clear();
+            schedule = null;
+            spawnCursor = 0;
+            IsActive = false;
+            IsCleared = false;
+            WasForceCleared = false;
+            KillCount = 0;
+            SpawnedCount = 0;
+        }
+
         private void Update()
         {
             if (!IsActive)

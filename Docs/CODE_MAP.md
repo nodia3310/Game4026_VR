@@ -20,6 +20,12 @@
 - EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator
 - EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 前搖事件、距離 + 角度命中判定、冷卻；命中時呼叫 ApplyPlayerDamage
 - EnemyGeometry — Scripts/Enemy/Core/EnemyGeometry.cs — 忽略高度的水平距離與扇形判定
+- AssemblyInfo — Scripts/Enemy/AssemblyInfo.cs — InternalsVisibleTo PlayMode 測試（讓測試直接呼叫 EnemyController.Tick）
+
+## Enemy Boss（`Assets/_Game/Scripts/Enemy/Boss/`，`Game4026.Enemy`）
+- BossPhase — Scripts/Enemy/Boss/BossPhase.cs — 一個階段的 Inspector 設定：血量門檻、攻速倍率、無敵秒數、是否召喚小兵、要啟用的物件
+- BossPhaseTracker — Scripts/Enemy/Boss/BossPhaseTracker.cs — 純 C#：依血量比例選階段，只往前，可一次跨多個階段
+- PharaohBoss — Scripts/Enemy/Boss/PharaohBoss.cs — 法老階段層：PhaseChanged、換階段無敵、子物件 EncounterController 召喚小兵、啟用弱點、攻速；招式先寫成 TODO
 
 ## Enemy Spawning（`Assets/_Game/Scripts/Enemy/Spawning/`，`Game4026.Enemy`）
 - WaveDefinition — Scripts/Enemy/Spawning/WaveDefinition.cs — ScriptableObject：一波 = 多組「敵人 prefab + 數量」、spawnInterval、startDelay
@@ -45,8 +51,10 @@
 
 ## 資產與場景
 - EnemyData_Default — Assets/_Game/Data/Enemies/EnemyData_Default.asset — 規格 4.1 預設數值
-- Enemy_Placeholder — Assets/_Game/Prefabs/Enemies/Enemy_Placeholder.prefab — 佔位敵人（膠囊身體 + 方塊頭弱點，無 Animator）
-- Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Placeholder — Assets/_Game/Data/Enemies/*.asset — 測試用波次（2 隻 / 3 隻且延遲 2 秒 / Boss 佔位 1 隻）
+- Enemy_Placeholder — Assets/_Game/Prefabs/Enemies/Enemy_Placeholder.prefab — 佔位敵人基底（膠囊身體 + 方塊頭弱點，無 Animator）
+- Enemy_Mummy / Enemy_AnubisGuard / Enemy_Sekhmet / Enemy_Pharaoh — Assets/_Game/Prefabs/Enemies/*.prefab — 以 Placeholder 為基底的 Prefab Variant（弱點：胸口 / 頭 / 背後 / 第三階段胸口）；Pharaoh 含 PharaohBoss 與子物件 Minions 遭遇戰
+- EnemyData_Mummy / _AnubisGuard / _Sekhmet / _Pharaoh — Assets/_Game/Data/Enemies/*.asset — 四種敵人的暫定數值（規格第 5 節）
+- Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
 - EnemyAI 測試場景 — Assets/_Game/Scenes/Test/EnemyAI.unity — 地板 + 兩面牆（已烘焙 NavMesh）、巡邏點、Enemy_PatrolDemo、MockPlayer、EnemyPool（預熱 4 隻）、3 個生成點、Encounter_Hall_Rosetta（觸發區）、Encounter_Boss、EncounterDirector（+ DebugArtifactButton、ArtifactEventBridge）
 
 ## Bridges（`Assets/_Game/Scripts/Bridges/`，`Game4026.Bridges`，引用 Contracts + Interaction + Enemy）
@@ -70,6 +78,10 @@
 - DamageBridgeInstallerTests — Tests/EditMode/Bridges/DamageBridgeInstallerTests.cs — 安裝器的 AttachMelee/AttachArrows（只用明確清單，不掃描開啟中的場景）
 - DamageBridgeTests — Tests/EditMode/Bridges/DamageBridgeTests.cs — 自己組的 MeleeHit／箭命中 → 橋接 → 真的 EnemyHealth/WeakPoint
 - EncounterScheduleTests / ArtifactProgressTests / EncounterDirectorTests — Tests/EditMode/Enemy/*.cs — 波次排程、文物去重、Director 路由
+- BossPhaseTrackerTests — Tests/EditMode/Enemy/BossPhaseTrackerTests.cs — 階段門檻、只往前、跨階段、4 個階段
 
 ## Tests（`Assets/_Game/Tests/PlayMode/Enemy/`，`Game4026.Enemy.PlayModeTests`，引用 Unity.AI.Navigation）
+- PlayModeWorld — Tests/PlayMode/Enemy/PlayModeWorld.cs — 共用 fixture：執行中烘焙 NavMesh、物件池、用程式建的敵人模板
+- BossPlayModeTests — Tests/PlayMode/Enemy/BossPlayModeTests.cs — 法老三階段、無敵、小兵、弱點、跨階段、物件池重用
+- EnemyGcTests — Tests/PlayMode/Enemy/EnemyGcTests.cs — 4 隻敵人追擊與攻擊 720 幀，敵人腳本 0 bytes GC
 - EncounterPlayModeTests — Tests/PlayMode/Enemy/EncounterPlayModeTests.cs — 執行中烘焙 NavMesh：遭遇戰開始到 Cleared、物件池重用、ForceClear、Boss 觸發與擊敗、生成點檢查

@@ -975,8 +975,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyPoolManager
   prewarm:
-  - Prefab: {fileID: 4074402262020610101, guid: 9634a939c43e1b141b5087624d446811, type: 3}
-    Count: 4
+  - Prefab: {fileID: 30866176954583873, guid: d541954f964f68640b1fd4928320e29c, type: 3}
+    Count: 5
+  - Prefab: {fileID: 6196600340382990914, guid: 48b79cb3f39ddd54193668d8c1439eb5, type: 3}
+    Count: 1
+  - Prefab: {fileID: 6817175781419722942, guid: 0a1a365c53e77e64fb14f245dc7d712b, type: 3}
+    Count: 1
+  - Prefab: {fileID: 7139474162967380601, guid: 5ffb41ab4db49364f87b0cee658c864c, type: 3}
+    Count: 1
   maxPooledPerPrefab: 16
 --- !u!4 &1225747149
 Transform:

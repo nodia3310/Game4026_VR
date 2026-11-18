@@ -85,6 +85,27 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void SpeedMultiplier_ShortensCooldownAndWindup()
+        {
+            attack.SpeedMultiplier = 2f;
+            Assert.AreEqual(data.AttackWindup / 2f, attack.WindupFor(data), 1e-4f);
+
+            attack.Resolve(target, data, 10f); // cooldown 2 s / 2 = 1 s
+            Assert.IsFalse(attack.IsReady(10.9f));
+            Assert.IsTrue(attack.IsReady(11f));
+        }
+
+        [Test]
+        public void SpeedMultiplier_HasSafeMinimum_AndResets()
+        {
+            attack.SpeedMultiplier = 0f;
+            Assert.AreEqual(0.1f, attack.SpeedMultiplier, 1e-5f);
+
+            attack.ResetState();
+            Assert.AreEqual(1f, attack.SpeedMultiplier);
+        }
+
+        [Test]
         public void ResetState_ClearsCooldown()
         {
             attack.Resolve(target, data, 10f);

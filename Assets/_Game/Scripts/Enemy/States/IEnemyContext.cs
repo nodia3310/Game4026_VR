@@ -27,6 +27,8 @@ namespace Game4026.Enemy
 
         // Attack
         bool IsAttackReady { get; }
+        /// <summary>Windup seconds, already scaled by attack speed.</summary>
+        float AttackWindup { get; }
         float AttackRecovery { get; }
         void BeginAttack();
         /// <summary>Runs the hit check once and starts the cooldown. Returns true on a hit.</summary>

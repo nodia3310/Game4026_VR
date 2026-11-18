@@ -17,6 +17,7 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float hitRangePadding = 0.3f;
 
         private float nextReadyTime;
+        private float speedMultiplier = 1f;
 
         /// <summary>Windup started: play telegraph SFX/VFX here so the player can dodge.</summary>
         public event Action<EnemyAttack> AttackWindup;
@@ -28,6 +29,19 @@ namespace Game4026.Enemy
         public float RecoveryDuration => recoveryDuration;
         public float HitRangePadding => hitRangePadding;
 
+        /// <summary>
+        /// Runtime attack speed (e.g. the boss's last phase). 2 = windup and cooldown take half as long.
+        /// Reset to 1 by <see cref="ResetState"/>.
+        /// </summary>
+        public float SpeedMultiplier
+        {
+            get => speedMultiplier;
+            set => speedMultiplier = Mathf.Max(0.1f, value);
+        }
+
+        public float WindupFor(EnemyData data) => data.AttackWindup / speedMultiplier;
+        public float CooldownFor(EnemyData data) => data.AttackCooldown / speedMultiplier;
+
         public bool IsReady(float time) => time >= nextReadyTime;
 
         public void BeginWindup() => AttackWindup?.Invoke(this);
@@ -35,7 +49,7 @@ namespace Game4026.Enemy
         /// <summary>Runs the hit check, applies damage on a hit and starts the cooldown.</summary>
         public bool Resolve(PlayerTarget target, EnemyData data, float time)
         {
-            nextReadyTime = time + data.AttackCooldown;
+            nextReadyTime = time + CooldownFor(data);
 
             bool hit = target != null && EnemyGeometry.IsInAttackCone(
                 transform.position, transform.forward, target.Body.position,
@@ -50,6 +64,10 @@ namespace Game4026.Enemy
 
         public void Cancel() => AttackCancelled?.Invoke(this);
 
-        public void ResetState() => nextReadyTime = 0f;
+        public void ResetState()
+        {
+            nextReadyTime = 0f;
+            speedMultiplier = 1f;
+        }
     }
 }
