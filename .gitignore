@@ -136,3 +136,8 @@ crashlytics-build.properties
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+/Docs
+CLAUDE.md
+CODE_MAP.md
+.cursorignore
+.claude/settings.json
