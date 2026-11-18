@@ -1,0 +1,15 @@
+{
+  "name": "Game4026.Bridges.EditModeTests",
+  "rootNamespace": "Game4026.Tests.Bridges",
+  "references": ["Game4026.Bridges", "Game4026.Contracts", "Game4026.Interaction", "Game4026.Enemy"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": ["TestAssemblies"]
+}

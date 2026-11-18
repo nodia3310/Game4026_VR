@@ -1,0 +1,14 @@
+{
+  "name": "Game4026.Enemy",
+  "rootNamespace": "Game4026.Enemy",
+  "references": ["Game4026.Contracts"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
