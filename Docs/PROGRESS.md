@@ -6,12 +6,13 @@
 - 里程碑：**M1–M4 全部完成**；之後加上模型與動畫（EditMode 177/177；PlayMode 16/16）
 - 傷害橋接完成，含場景安裝器（Bridges）
 - 模型與動畫：所有敵人（基底 Enemy_Placeholder 與四個 Variant、場景的巡邏示範）都用 Anubis 模型 + AC_Anubis + EnemyAnimator；各自弱點掛在骨頭上（衛兵/基底：頭，木乃伊/法老：胸口，塞克邁特：背後）。各種敵人目前外觀相同，只有大小不同。
-- Git（2026-11-18）：M1–M4 已 push 到 `origin/feature/enemy-ai`（`837f7bb`）。PR 頁面已在瀏覽器開好給使用者按建立，是否已建立未確認。**模型與動畫的改動還沒 commit。**
-  - PR 不會刪除 main 上組員的 Docs 檔案（已從 main 恢復）。
-  - A 要用到 `PlayerTarget`、橋接之前，需要先把這個分支合進 main。
-  - `ProfilerCaptures/` 是 M4 的 Profiler 錄檔，沒進 git，可以刪。
+- Git（2026-11-18 收工時）：
+  - PR #2（M1–M4）**已合進 main**（`29246a2`）
+  - 模型與動畫已 commit 並 push（`6111b70`，模型/貼圖走 Git LFS）。PR #3 頁面已在瀏覽器開好（main ← feature/enemy-ai，不刪任何檔案），**使用者還要按 Create pull request**；下次先確認 PR #3 是否建立/合併
+  - 沒有 gh CLI：開 PR 用預先填好的 GitHub compare 網址；查 PR 狀態可用 `https://api.github.com/repos/nodia3310/Game4026_VR/pulls?head=nodia3310:feature/enemy-ai&state=all`
+  - `ProfilerCaptures/` 是 M4 的 Profiler 錄檔，沒進 git，可以刪
 - 下一步（規格之外，建議）：
-  1. commit 模型與動畫（新增 `Character Models/`、`Animations/` 約 10 MB）
+  1. 確認 PR #3 建立並合併
   2. 各種敵人換成自己的模型（木乃伊、塞克邁特、法老）；人形 Mixamo 模型可沿用 AC_Anubis 與 EnemyAnimator，只要在 Variant 裡換掉 Model
   3. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測；確認 A 的武器 targetMask 包含敵人 Collider 的 Layer
   4. 法老招式細節（PharaohBoss.OnPhaseEntered 的 TODO）、數值平衡（冷卻、前搖、血量）
