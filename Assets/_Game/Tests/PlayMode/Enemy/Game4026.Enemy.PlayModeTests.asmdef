@@ -1,0 +1,15 @@
+{
+  "name": "Game4026.Enemy.PlayModeTests",
+  "rootNamespace": "Game4026.Tests.Enemy.PlayMode",
+  "references": ["Game4026.Enemy", "Game4026.Contracts", "Unity.AI.Navigation"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": ["TestAssemblies"]
+}

@@ -59,10 +59,14 @@ namespace Game4026.Enemy
 
         /// <summary>(controller, previous, next)</summary>
         public event Action<EnemyController, EnemyStateId, EnemyStateId> StateChanged;
-        /// <summary>Raised once after death + despawnDuration.</summary>
+        /// <summary>Raised once after death + despawnDuration (also after <see cref="ForceClear"/>).</summary>
         public event Action<EnemyController> Despawned;
+        /// <summary>Raised when the player kills this enemy (not for <see cref="ForceClear"/>).</summary>
+        public event Action<EnemyController> Killed;
 
         public EnemyStateId CurrentState => machine != null ? machine.CurrentId : EnemyStateId.None;
+        /// <summary>True when this life ended through <see cref="ForceClear"/> instead of a kill.</summary>
+        public bool WasForceCleared { get; private set; }
         public EnemyHealth Health => health;
         public EnemyAttack Attack => attack;
 
@@ -132,6 +136,7 @@ namespace Game4026.Enemy
         {
             health.ResetState();
             attack.ResetState();
+            WasForceCleared = false;
             patrolIndex = -1;
             canSee = false;
             lastSeenTime = float.NegativeInfinity;
@@ -140,6 +145,27 @@ namespace Game4026.Enemy
             if (agent != null)
                 agent.enabled = true;
             machine.ChangeState(EnemyStateId.Spawn);
+        }
+
+        /// <summary>
+        /// Encounter clear (e.g. artifact restored): plays the death/despawn delay, then despawns.
+        /// Does not count as a kill and does not raise <see cref="EnemyHealth.Died"/> or <see cref="Killed"/>.
+        /// </summary>
+        public void ForceClear()
+        {
+            if (CurrentState == EnemyStateId.Dead || CurrentState == EnemyStateId.None)
+                return;
+            WasForceCleared = true;
+            machine.ChangeState(EnemyStateId.Dead);
+            // After the switch: leaving Spawn turns invulnerability off, and a cleared enemy must not be "killed" again.
+            health.IsInvulnerable = true;
+        }
+
+        /// <summary>Sets patrol points for this life (used by encounters for pooled enemies).</summary>
+        public void SetPatrolPoints(Transform[] points)
+        {
+            patrolPoints = points ?? new Transform[0];
+            patrolIndex = -1;
         }
 
         // ---- Perception ----
@@ -189,7 +215,11 @@ namespace Game4026.Enemy
                 machine.ChangeState(EnemyStateId.Hit);
         }
 
-        private void HandleDied(EnemyHealth _) => machine.ChangeState(EnemyStateId.Dead);
+        private void HandleDied(EnemyHealth _)
+        {
+            machine.ChangeState(EnemyStateId.Dead);
+            Killed?.Invoke(this);
+        }
 
         private void HandleStateChanged(EnemyStateId previous, EnemyStateId next) =>
             StateChanged?.Invoke(this, previous, next);

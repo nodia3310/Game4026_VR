@@ -49,7 +49,15 @@ A: ArrowProjectile.Impact(Collision) ──┤→ B: Bridges（MeleeDamageBridge
   - 玩家受傷：`PlayerTarget` 會在自己或父物件上找 `IPlayerDamageReceiver`，敵人命中時呼叫 `ApplyPlayerDamage(10)`（預設值）。
 - **Layer**：敵人的 Collider 要放在武器 `targetMask` 包含的 Layer 上。如果之後新增 Enemy Layer，A 的武器 `targetMask` 和 `blockerMask` 可能要跟著調。
 
+## 4b. 文物歸位（M3 已完成橋接）
+
+- 場景裡放一個 `Game4026.Enemy.EncounterDirector`，同一個物件掛 `Game4026.Bridges.ArtifactEventBridge`。開場時，橋接會訂閱場景裡**所有** `ArtifactDisplayTrigger.OnArtifactRestored`，轉給 Director。**A 的程式不用改。**
+- Director 以 `ArtifactId` 去重。收到某種文物 → 清除 `linkedArtifact` 相同的展廳遭遇戰；RosettaStone、CanopicJar、TutankhamunMask 三種都收到 → 開始 Boss 遭遇戰。
+- 開場之後才生成的 `ArtifactDisplayTrigger`，要呼叫 `ArtifactEventBridge.Refresh()`。
+- 如果 A 比較想直接呼叫：`EncounterDirector.NotifyArtifactRestored(ArtifactRestoredEvent)` 是公開方法（但這樣 Interaction 就要引用 Enemy，建議還是走橋接）。
+- B 依賴的 A 公開 API 多了一個：`Game4026.Interaction.Artifacts.ArtifactDisplayTrigger.OnArtifactRestored`（`event Action<ArtifactRestoredEvent>`）。改動前請通知 B。
+
 ## 5. 要問 A 的問題
 
-1. 文物歸位事件（M3）：場景中「正式」的來源是哪一個，`ArtifactRestorationTracker.OnArtifactRestored` 還是 `ArtifactDisplayTrigger.OnArtifactRestored`？B 會寫橋接去訂閱它，A 那邊不用改。
+1. 文物歸位事件：B 目前接的是 `ArtifactDisplayTrigger.OnArtifactRestored`。這是正式的來源嗎？還是應該用 `ArtifactRestorationTracker.OnArtifactRestored`？（Tracker 不是場景元件，由誰建立、要怎麼拿到它？）
 2. 不同武器（棍、彎刀、矛）要不要有不同的傷害係數？目前一律用同一組預設值，可以在每把武器的元件上分別調。
