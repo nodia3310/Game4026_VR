@@ -59,6 +59,11 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-19（GLB 的 PARSING JSON Failed）
+- 原因：`Assets/Models` 底下 44 個 `.glb` 在工作目錄裡是 Git LFS 指標文字，glTFast 把指標當 JSON 解析。本體已在本地 LFS 物件庫，沒有重新下載。
+- 完成：`git lfs pull --include="*.glb"` 把本體 checkout 出來，並在開啟中的 Editor 重新匯入。44 個都匯成 GameObject。Git 狀態沒有新增修改。
+- 還在：`egyptian_styled_trim_set.glb` 的 JSON 正常、mesh 有匯入，但法線貼圖用第三組 UV（`TEXCOORD_2`）。glTFast 在 URP 只支援前兩組，Console 仍有一筆 `Failed to import`（`UVMulti`）。外觀上法線可能不對。要修得改模型 UV，這次沒改檔案。
+
 ### 2026-11-18（所有敵人換成 Anubis 模型）
 - 完成：模型、Animator、EnemyAnimator、頭部骨頭弱點 `HeadBone_WeakPoint` 從衛兵 Variant 移到基底 `Enemy_Placeholder`，所有 Variant 和場景的 `Enemy_PatrolDemo` 都繼承；衛兵 Variant 的舊覆寫還原
   - 木乃伊、塞克邁特、法老：停用頭部弱點；原本的胸口/背後弱點改掛到 `mixamorig:Spine2` / `Spine1`，跟著動畫移動（法老的胸口弱點仍是第三階段才啟用）
