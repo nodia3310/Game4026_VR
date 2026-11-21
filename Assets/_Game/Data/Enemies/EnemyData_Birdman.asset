@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae230d32804a3f04da0e28905ae4e91a, type: 3}
+  m_Name: EnemyData_Birdman
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyData
+  maxHealth: 220
+  weakPointMultiplier: 2
+  hitCooldown: 0.3
+  staggerThreshold: 35
+  staggerDuration: 0.5
+  moveSpeed: 1.4
+  chaseSpeed: 2.8
+  detectionRange: 14
+  loseTargetRange: 20
+  attacks:
+  - {fileID: 11400000, guid: 2af14e13cc5b42d468abda7b9afd6b5e, type: 2}
+  - {fileID: 11400000, guid: a27eb857f6b13684c840925d2bf81275, type: 2}
+  - {fileID: 11400000, guid: 09432074f17851d4a9a6ab932e9e727f, type: 2}
+  - {fileID: 11400000, guid: c8009363b51c1db40b800e8da878c024, type: 2}
+  globalAttackCooldown: 0.9
+  parryStaggerDuration: 2
+  parriedDamageMultiplier: 1.5
+  spawnDuration: 1.8
+  despawnDuration: 2.5

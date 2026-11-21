@@ -60,9 +60,9 @@ namespace Game4026.Enemy
         private bool animatorHasSpeed;
         private bool animatorHasState;
 
-        // Hit stop: real seconds left frozen, and total frozen time removed from the AI clock.
-        private float hitStopRemaining, clockOffset, localDeltaTime;
-        private bool agentFrozen, agentUpdatedRotation;
+        // Hit stop (slow motion): real seconds elapsed/total, the slow speed, and the time it removed from the AI clock.
+        private float hitStopElapsed, hitStopLength, hitStopScale, clockOffset, localDeltaTime, timeScale = 1f;
+        private float baseMoveSpeed = -1f, baseAngularSpeed = -1f;
 
         /// <summary>(controller, previous, next)</summary>
         public event Action<EnemyController, EnemyStateId, EnemyStateId> StateChanged;
@@ -72,7 +72,7 @@ namespace Game4026.Enemy
         public event Action<EnemyController> Killed;
         /// <summary>The player's weapon deflected an attack (SFX, sparks, haptics). (controller, step)</summary>
         public event Action<EnemyController, AttackDefinition> Parried;
-        /// <summary>Hit stop started (true) or ended (false). Animation drivers pause on it.</summary>
+        /// <summary>Hit stop started (true) or ended (false). Animation drivers follow <see cref="TimeScale"/> meanwhile.</summary>
         public event Action<EnemyController, bool> HitStopChanged;
 
         public EnemyStateId CurrentState => machine != null ? machine.CurrentId : EnemyStateId.None;
@@ -82,11 +82,13 @@ namespace Game4026.Enemy
         /// <summary>Line-of-sight origin (also the default projectile muzzle).</summary>
         public Transform Eye => eye != null ? eye : transform;
         public EnemyAttack Attack => attack;
-        /// <summary>True while frozen by <see cref="HitStop"/>.</summary>
-        public bool IsHitStopped => hitStopRemaining > 0f;
-        /// <summary>This frame's AI delta time: 0 while frozen. Animation drivers use it instead of Time.deltaTime.</summary>
+        /// <summary>True while slowed by <see cref="HitStop"/>.</summary>
+        public bool IsHitStopped => hitStopElapsed < hitStopLength;
+        /// <summary>This frame's AI delta time: slowed during a hit stop. Animation drivers use it instead of Time.deltaTime.</summary>
         public float DeltaTime => localDeltaTime;
-        /// <summary>The AI clock (Time.time minus all frozen time).</summary>
+        /// <summary>Current speed of this enemy's clock: 1 normally, the hit stop's slow speed while it lasts (eases back to 1).</summary>
+        public float TimeScale => timeScale;
+        /// <summary>The AI clock (Time.time minus all time removed by hit stops).</summary>
         public float LocalTime => currentTime;
 
         // ---- Unity ----
@@ -133,27 +135,31 @@ namespace Game4026.Enemy
             health.Damaged -= HandleDamaged;
             health.Died -= HandleDied;
             attack.Parried -= HandleParried;
-            if (hitStopRemaining > 0f)
+            if (IsHitStopped)
                 EndHitStop();
         }
 
         private void Update() => Step(Time.time, Time.deltaTime);
 
         /// <summary>
-        /// One real frame: spends hit-stop time first (the AI clock does not advance while frozen), then ticks with
-        /// what is left. Every AI timer (attack timeline, stagger, cooldowns) therefore shifts by the frozen time.
+        /// One real frame. During a hit stop the AI clock runs slowed (<see cref="HitStopCurve"/>), so every AI timer
+        /// (attack timeline, stagger, cooldowns) shifts by the time the slow motion removed.
         /// </summary>
         internal void Step(float realTime, float realDeltaTime)
         {
             float dt = realDeltaTime;
-            if (hitStopRemaining > 0f)
+            if (IsHitStopped)
             {
-                float frozen = Mathf.Min(hitStopRemaining, dt);
-                hitStopRemaining -= frozen;
-                clockOffset += frozen;
-                dt -= frozen;
+                float from = hitStopElapsed;
+                hitStopElapsed = Mathf.Min(hitStopLength, hitStopElapsed + dt);
+                float local = HitStopCurve.LocalTime(from, hitStopElapsed, hitStopLength, hitStopScale);
+                float real = hitStopElapsed - from;
+                clockOffset += real - local;
+                dt = local + (dt - real);
                 attack.ClockOffset = clockOffset;
-                if (hitStopRemaining <= 0f)
+                if (IsHitStopped)
+                    SetTimeScale(HitStopCurve.ScaleAt(hitStopElapsed, hitStopLength, hitStopScale));
+                else
                     EndHitStop();
             }
             localDeltaTime = dt;
@@ -161,44 +167,61 @@ namespace Game4026.Enemy
         }
 
         /// <summary>
-        /// Freezes this enemy for <paramref name="seconds"/> of real time ("卡肉"): AI, attack timeline, NavMesh movement
-        /// and animation pause, then resume exactly where they were. A new hit stop during one keeps the longer remainder.
+        /// Slow motion for <paramref name="seconds"/> of real time ("卡肉"): AI, attack timeline, NavMesh movement and
+        /// animation drop to <paramref name="timeScale"/> (0 = full freeze), hold, then ease back to normal speed.
+        /// A new hit stop during one restarts it if it is longer, and keeps the slower speed.
         /// </summary>
-        public void HitStop(float seconds)
+        public void HitStop(float seconds, float timeScale = 0f)
         {
             if (!(seconds > 0f))
                 return;
-            bool wasFrozen = hitStopRemaining > 0f;
-            hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
-            if (wasFrozen)
-                return;
-            if (agent != null && agent.enabled)
+            timeScale = Mathf.Clamp01(timeScale);
+            bool wasSlowed = IsHitStopped;
+            if (wasSlowed)
             {
-                // Stop the agent writing the transform; its own simulation is put back on resume.
-                agentFrozen = true;
-                agentUpdatedRotation = agent.updateRotation;
-                agent.updatePosition = false;
-                agent.updateRotation = false;
+                hitStopScale = Mathf.Min(hitStopScale, timeScale);
+                if (seconds > hitStopLength - hitStopElapsed)
+                {
+                    hitStopLength = seconds;
+                    hitStopElapsed = 0f;
+                }
             }
-            if (animator != null)
-                animator.speed = 0f;
-            HitStopChanged?.Invoke(this, true);
+            else
+            {
+                hitStopScale = timeScale;
+                hitStopLength = seconds;
+                hitStopElapsed = 0f;
+            }
+            SetTimeScale(HitStopCurve.ScaleAt(hitStopElapsed, hitStopLength, hitStopScale));
+            if (!wasSlowed)
+                HitStopChanged?.Invoke(this, true);
         }
 
         private void EndHitStop()
         {
-            hitStopRemaining = 0f;
-            if (agentFrozen && agent != null)
+            hitStopElapsed = hitStopLength = 0f;
+            SetTimeScale(1f);
+            HitStopChanged?.Invoke(this, false);
+        }
+
+        /// <summary>Applies this enemy's clock speed to the NavMeshAgent and the optional Animator.</summary>
+        private void SetTimeScale(float scale)
+        {
+            if (Mathf.Approximately(scale, timeScale))
+                return;
+            float previous = timeScale;
+            timeScale = scale;
+            if (agent != null)
             {
-                agentFrozen = false;
-                if (agent.enabled)
-                    agent.nextPosition = transform.position;
-                agent.updatePosition = true;
-                agent.updateRotation = agentUpdatedRotation;
+                if (baseMoveSpeed < 0f) baseMoveSpeed = agent.speed;
+                if (baseAngularSpeed < 0f) baseAngularSpeed = agent.angularSpeed;
+                agent.speed = baseMoveSpeed * scale;
+                agent.angularSpeed = baseAngularSpeed * scale;
+                if (agent.enabled && agent.isOnNavMesh)
+                    agent.velocity *= previous > 1e-4f ? scale / previous : 0f;
             }
             if (animator != null)
-                animator.speed = 1f;
-            HitStopChanged?.Invoke(this, false);
+                animator.speed = scale;
         }
 
         /// <summary>
@@ -236,7 +259,7 @@ namespace Game4026.Enemy
             nextAttackSelectTime = 0f;
             staggerDuration = 0f;
             staggerEndTime = 0f;
-            if (hitStopRemaining > 0f)
+            if (IsHitStopped)
                 EndHitStop();
             currentTime = Time.time - clockOffset;
             if (agent != null)
@@ -378,8 +401,9 @@ namespace Game4026.Enemy
 
         public void SetMoveSpeed(float speed)
         {
+            baseMoveSpeed = speed;
             if (agent != null)
-                agent.speed = speed;
+                agent.speed = speed * timeScale;
         }
 
         public void StopMoving()
@@ -448,6 +472,22 @@ namespace Game4026.Enemy
                 return false;
             nextAttackSelectTime = currentTime + perceptionInterval;
             return attack.TrySelect(data, distanceToTarget, currentTime);
+        }
+
+        /// <summary>
+        /// Starts <paramref name="move"/> now (a reaction, e.g. raising a guard after being hit). Only from Idle, Patrol
+        /// or Chase: never interrupts an attack, a stagger, spawn or death. Its cooldown still applies if it is in the data.
+        /// </summary>
+        public bool ForceAttack(AttackDefinition move)
+        {
+            if (move == null || !move.IsSupported)
+                return false;
+            EnemyStateId s = CurrentState;
+            if (s != EnemyStateId.Idle && s != EnemyStateId.Patrol && s != EnemyStateId.Chase)
+                return false;
+            attack.Queue(move);
+            machine.ChangeState(EnemyStateId.Attack);
+            return true;
         }
 
         public float AttackHoldRange => attack.HoldRange(data);

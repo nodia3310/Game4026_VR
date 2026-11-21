@@ -18,6 +18,8 @@ namespace Game4026.Enemy
         void OnStepStarted(in AttackStepTiming timing);
         /// <summary>The step's parry window opened: the strike is coming, the player can deflect it now.</summary>
         void OnParryWindowOpened(in AttackStepTiming timing);
+        /// <summary>The clip reached the step's slow-motion point (<see cref="AttackDefinition.SlowMotionAt"/>).</summary>
+        void OnSlowMotion(AttackDefinition step);
     }
 
     /// <summary>When one step's animation should play, in real seconds from the step start.</summary>
@@ -61,8 +63,8 @@ namespace Game4026.Enemy
         private float speed = 1f;
         private float elapsed;
 
-        private float faceUntil, lungeStart, lungeEnd, hitDelay, recoveryEnd, parryOpen;
-        private bool isLunge, lungeBegun, hitDone, parryNotified;
+        private float faceUntil, lungeStart, lungeEnd, hitDelay, recoveryEnd, parryOpen, slowAt;
+        private bool isLunge, lungeBegun, hitDone, parryNotified, slowDone;
         private AttackStepTiming timing;
         private float lungeDone;
 
@@ -76,6 +78,15 @@ namespace Game4026.Enemy
         public bool IsParryWindowOpen => IsRunning && !hitDone && parryOpen >= 0f && elapsed >= parryOpen;
         /// <summary>Timing of the step being played.</summary>
         public AttackStepTiming Timing => timing;
+        /// <summary>Seconds since the current step started.</summary>
+        public float StepElapsed => elapsed;
+
+        /// <summary>Jumps the current step to its hit time (e.g. a guard cut short to counter). Resolves on the next Tick.</summary>
+        public void SkipToHit()
+        {
+            if (IsRunning && !hitDone && elapsed < hitDelay)
+                elapsed = hitDelay;
+        }
 
         public int StepCount => CountSteps(attack);
 
@@ -114,6 +125,12 @@ namespace Game4026.Enemy
                 }
                 if (lungeBegun)
                     AdvanceLunge(host, lungeEnd > lungeStart ? Mathf.Clamp01((elapsed - lungeStart) / (lungeEnd - lungeStart)) : 1f);
+            }
+
+            if (!slowDone && slowAt >= 0f && elapsed >= slowAt)
+            {
+                slowDone = true;
+                host.OnSlowMotion(step);
             }
 
             if (!hitDone && !parryNotified && parryOpen >= 0f && elapsed >= parryOpen)
@@ -186,6 +203,14 @@ namespace Game4026.Enemy
             lungeEnd = step.LungeDuration > 0f ? Mathf.Min(hitDelay, lungeStart + step.LungeDuration / speed) : hitDelay;
             parryOpen = step.IsParryable ? Mathf.Max(0f, hitDelay - step.ParryWindow / speed) : -1f;
             parryNotified = false;
+            slowDone = false;
+            // Real time the clip reaches the slow-motion point: after the telegraph if it comes after the held pose.
+            slowAt = -1f;
+            if (step.HasSlowMotion)
+            {
+                float at = Mathf.Max(step.SlowMotionAt, clipStart);
+                slowAt = (at - clipStart) / playback + (at > pose ? telegraph : 0f);
+            }
 
             timing = new AttackStepTiming(attack, step, stepIndex, stepIndex >= StepCount - 1,
                 playback, clipStart, holdStart, telegraph, hitDelay, parryOpen);

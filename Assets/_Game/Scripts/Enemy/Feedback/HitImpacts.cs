@@ -16,6 +16,8 @@ namespace Game4026.Enemy
         Blocked,
         /// <summary>The player's weapon reflected an enemy bolt.</summary>
         Reflect,
+        /// <summary>A heavy hit broke an enemy's guard (wing shield).</summary>
+        GuardBreak,
     }
 
     /// <summary>One played hit reaction: what the player's side (haptics, camera, UI) should feel.</summary>

@@ -7,9 +7,9 @@ namespace Game4026.Enemy
     [Serializable]
     public struct HitReaction
     {
-        [Tooltip("Seconds the enemy freezes on contact (hit stop). Damage adds more, see Damage scaling.")]
+        [Tooltip("Real seconds of slow motion on contact (hit stop). Damage adds more, see Damage scaling.")]
         [Min(0f)] public float hitStop;
-        [Tooltip("Metres the model vibrates along the hit direction while frozen.")]
+        [Tooltip("Metres the model vibrates along the hit direction during the slow motion.")]
         [Min(0f)] public float shake;
         [Tooltip("Brightness of the white flash (0 = none).")]
         [Range(0f, 1f)] public float flash;
@@ -38,19 +38,25 @@ namespace Game4026.Enemy
     public sealed class HitFeedbackProfile : ScriptableObject
     {
         [Header("Per kind")]
-        [SerializeField] private HitReaction normal = new HitReaction(0.06f, 0.02f, 0.55f, 0.35f, 0.05f, 1f);
-        [SerializeField] private HitReaction weakPoint = new HitReaction(0.09f, 0.03f, 1f, 0.6f, 0.08f, 1.6f);
-        [SerializeField] private HitReaction stagger = new HitReaction(0.1f, 0.035f, 0.85f, 0.6f, 0.08f, 1.3f);
-        [SerializeField] private HitReaction kill = new HitReaction(0.16f, 0.045f, 1f, 0.9f, 0.14f, 2.2f);
-        [SerializeField] private HitReaction parry = new HitReaction(0.14f, 0.03f, 0.9f, 1f, 0.12f, 2f);
-        [SerializeField] private HitReaction blocked = new HitReaction(0.035f, 0.012f, 0f, 0.25f, 0.04f, 0.6f);
-        [Tooltip("Hit stop here freezes the bolt itself before it flies back.")]
-        [SerializeField] private HitReaction reflect = new HitReaction(0.07f, 0f, 0f, 0.7f, 0.08f, 1.2f);
+        [SerializeField] private HitReaction normal = new HitReaction(0.12f, 0.02f, 0.55f, 0.35f, 0.05f, 1f);
+        [SerializeField] private HitReaction weakPoint = new HitReaction(0.18f, 0.03f, 1f, 0.6f, 0.08f, 1.6f);
+        [SerializeField] private HitReaction stagger = new HitReaction(0.2f, 0.035f, 0.85f, 0.6f, 0.08f, 1.3f);
+        [SerializeField] private HitReaction kill = new HitReaction(0.32f, 0.045f, 1f, 0.9f, 0.14f, 2.2f);
+        [SerializeField] private HitReaction parry = new HitReaction(0.28f, 0.03f, 0.9f, 1f, 0.12f, 2f);
+        [SerializeField] private HitReaction blocked = new HitReaction(0.07f, 0.012f, 0f, 0.25f, 0.04f, 0.6f);
+        [Tooltip("Hit stop here slows the bolt itself before it flies back.")]
+        [SerializeField] private HitReaction reflect = new HitReaction(0.14f, 0f, 0f, 0.7f, 0.08f, 1.2f);
+        [Tooltip("A heavy hit smashed through a guard (wing shield).")]
+        [SerializeField] private HitReaction guardBreak = new HitReaction(0.3f, 0.04f, 1f, 1f, 0.14f, 2.2f);
+
+        [Header("Slow motion")]
+        [Tooltip("Enemy clock speed during a hit stop: 0 = full freeze, 0.1 = very slow motion. It holds for 60% of the stop, then eases back to 1.")]
+        [SerializeField, Range(0f, 1f)] private float hitStopTimeScale = 0.08f;
 
         [Header("Damage scaling (Normal / WeakPoint / Stagger / Kill)")]
         [Tooltip("Extra hit stop per point of damage: harder swings stick longer.")]
-        [SerializeField, Min(0f)] private float hitStopPerDamage = 0.0015f;
-        [SerializeField, Min(0f)] private float maxHitStop = 0.2f;
+        [SerializeField, Min(0f)] private float hitStopPerDamage = 0.003f;
+        [SerializeField, Min(0f)] private float maxHitStop = 0.4f;
         [Tooltip("Damage at which shake is 1x; it scales 0.6x..1.6x around this.")]
         [SerializeField, Min(0.01f)] private float referenceDamage = 20f;
 
@@ -96,6 +102,8 @@ namespace Game4026.Enemy
             }
         }
 
+        public float HitStopTimeScale => hitStopTimeScale;
+        public float MaxHitStop => maxHitStop;
         public float ShakeFrequency => shakeFrequency;
         public Material FlashMaterial => flashMaterial;
         public Color FlashColor => flashColor;
@@ -114,6 +122,7 @@ namespace Game4026.Enemy
                 case HitKind.Parry: return parry;
                 case HitKind.Blocked: return blocked;
                 case HitKind.Reflect: return reflect;
+                case HitKind.GuardBreak: return guardBreak;
                 default: return normal;
             }
         }
@@ -140,7 +149,8 @@ namespace Game4026.Enemy
         }
 
         public Color SparkColor(HitKind kind) =>
-            kind == HitKind.Parry || kind == HitKind.Blocked || kind == HitKind.Reflect ? parrySparkColor : hitSparkColor;
+            kind == HitKind.Parry || kind == HitKind.Blocked || kind == HitKind.Reflect || kind == HitKind.GuardBreak
+                ? parrySparkColor : hitSparkColor;
 
         public AudioClip PickClip(HitKind kind, float random01)
         {
@@ -149,6 +159,7 @@ namespace Game4026.Enemy
             {
                 case HitKind.WeakPoint: clips = weakPointClips.Length > 0 ? weakPointClips : hitClips; break;
                 case HitKind.Kill: clips = killClips.Length > 0 ? killClips : hitClips; break;
+                case HitKind.GuardBreak: clips = weakPointClips.Length > 0 ? weakPointClips : hitClips; break;
                 // Parry sounds only on a successful deflect (parry or reflect), never on a miss.
                 case HitKind.Parry:
                 case HitKind.Reflect: clips = parryClips; break;

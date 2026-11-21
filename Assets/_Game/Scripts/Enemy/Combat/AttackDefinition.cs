@@ -36,6 +36,14 @@ namespace Game4026.Enemy
         [Tooltip("Seconds before the hit in which the player's weapon can deflect the blade (parry). 0 = cannot be parried.")]
         [SerializeField, Min(0f)] private float parryWindow = 0.35f;
 
+        [Header("Slow motion (e.g. at the top of a jump)")]
+        [Tooltip("Seconds into the clip (at speed 1) where the whole enemy drops into slow motion (animation, lunge, timeline), then eases back. Negative = off.")]
+        [SerializeField] private float slowMotionAt = -1f;
+        [Tooltip("Real seconds of slow motion (the last 40% eases back to normal).")]
+        [SerializeField, Min(0f)] private float slowMotionDuration = 0.6f;
+        [Tooltip("Speed during the slow motion (0.1 = ten times slower).")]
+        [SerializeField, Range(0.01f, 1f)] private float slowMotionScale = 0.12f;
+
         [Header("Selection")]
         [SerializeField, Min(0f)] private float minRange;
         [SerializeField, Min(0f)] private float maxRange = 1.6f;
@@ -87,6 +95,10 @@ namespace Game4026.Enemy
         public float TelegraphPoseTime => telegraphPoseTime >= 0f ? telegraphPoseTime : hitTime * 0.7f;
         public float HitTime => hitTime;
         public float RecoveryTime => recoveryTime;
+        public bool HasSlowMotion => slowMotionAt >= 0f && slowMotionDuration > 0f && slowMotionScale < 1f;
+        public float SlowMotionAt => slowMotionAt;
+        public float SlowMotionDuration => slowMotionDuration;
+        public float SlowMotionScale => slowMotionScale;
         public float ParryWindow => parryWindow;
         public bool IsParryable => parryWindow > 0f;
         public float MinRange => minRange;
@@ -127,7 +139,7 @@ namespace Game4026.Enemy
         /// <summary>Types the runner can execute today. Others are never selected.</summary>
         public bool IsSupported =>
             attackType == AttackType.Melee || attackType == AttackType.Lunge ||
-            attackType == AttackType.AreaSlam || (attackType == AttackType.Combo && HasComboSteps) ||
+            attackType == AttackType.AreaSlam || attackType == AttackType.Guard || (attackType == AttackType.Combo && HasComboSteps) ||
             (attackType == AttackType.Projectile && projectilePrefab != null);
 
         public bool HasComboSteps
@@ -183,7 +195,8 @@ namespace Game4026.Enemy
             float lungeDistance = 2f, float lungeDuration = 0f, float clipStart = 0f, float poseTime = -1f,
             AttackDefinition[] combo = null, float slamRadius = 2f, string state = "Attack", bool mirror = false,
             string name = null, float parryWindow = 0.35f, bool leap = false, float stopDistance = -1f,
-            EnemyProjectile projectile = null, float projectileSpeed = 7f, StatueMotion motion = StatueMotion.Auto)
+            EnemyProjectile projectile = null, float projectileSpeed = 7f, StatueMotion motion = StatueMotion.Auto,
+            float slowAt = -1f)
         {
             var a = CreateInstance<AttackDefinition>();
             a.name = name ?? type.ToString();
@@ -213,6 +226,7 @@ namespace Game4026.Enemy
             a.projectilePrefab = projectile;
             a.projectileSpeed = projectileSpeed;
             a.statueMotion = motion;
+            a.slowMotionAt = slowAt;
             return a;
         }
     }

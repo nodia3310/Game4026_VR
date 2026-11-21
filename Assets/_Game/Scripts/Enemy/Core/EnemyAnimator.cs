@@ -38,6 +38,8 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float hitCrossFade = 0.05f;
         [Tooltip("How fast the locomotion blend follows the agent speed.")]
         [SerializeField, Min(0f)] private float locomotionDamping = 0.1f;
+        [Tooltip("Telegraph: the wind-up keeps creeping at this fraction of normal speed instead of freezing on the pose, then the swing plays at normal speed. The impact frame still lands on time. 0 = freeze on the pose.")]
+        [SerializeField, Range(0f, 0.5f)] private float telegraphCreep = 0.15f;
 
         private EnemyController controller;
         private EnemyAttack attack;
@@ -90,8 +92,8 @@ namespace Game4026.Enemy
 
             if (!stepActive)
                 return;
-            stepElapsed += controller.DeltaTime; // stays on the AI clock through hit stops
-            SetAttackSpeed(StepPlaybackAt(stepElapsed, holdStart, holdEnd, playback));
+            stepElapsed += controller.DeltaTime; // stays on the AI clock through hit stops (slowed)
+            SetAttackSpeed(StepPlaybackAt(stepElapsed, holdStart, holdEnd, playback, telegraphCreep));
         }
 
         private void HandleStepStarted(EnemyAttack _, AttackStepTiming timing)
@@ -110,7 +112,7 @@ namespace Game4026.Enemy
             holdEnd = timing.HoldStart + timing.HoldDuration;
             playback = timing.Playback;
             appliedSpeed = -1f;
-            SetAttackSpeed(StepPlaybackAt(0f, holdStart, holdEnd, playback));
+            SetAttackSpeed(StepPlaybackAt(0f, holdStart, holdEnd, playback, telegraphCreep));
             animator.CrossFadeInFixedTime(state, timing.Index == 0 ? crossFade : comboCrossFade, 0, timing.ClipStartTime);
 
             if (!timing.IsLast || !recoveryFollowsClip)
@@ -120,10 +122,15 @@ namespace Game4026.Enemy
                 attack.RecoveryOverride = RecoveryForClip(clip.length, step.HitTime, playback, crossFade);
         }
 
-        private void HandleHitStop(EnemyController _, bool frozen)
+        private void HandleHitStop(EnemyController _, bool slowed) => FollowTimeScale();
+
+        // Slow motion: the clip plays at the enemy clock's speed (eases back to 1 at the end of a hit stop).
+        private void Update() => FollowTimeScale();
+
+        private void FollowTimeScale()
         {
-            if (animator != null)
-                animator.speed = frozen ? 0f : 1f;
+            if (animator != null && !Mathf.Approximately(animator.speed, controller.TimeScale))
+                animator.speed = controller.TimeScale;
         }
 
         private void SetAttackSpeed(float speed)
@@ -159,6 +166,25 @@ namespace Game4026.Enemy
                         animator.CrossFadeInFixedTime(locomotionHash, crossFade, 0);
                     break;
             }
+        }
+
+        /// <summary>
+        /// Clip speed with a slow-motion telegraph: the wind-up slows down early enough that, creeping at about
+        /// <paramref name="creep"/> × playback through the telegraph, it reaches the pose exactly when the hold would end,
+        /// so the swing and impact keep their timing. Normal speed before and after.
+        /// </summary>
+        public static float StepPlaybackAt(float elapsed, float holdStart, float holdEnd, float playback, float creep)
+        {
+            float hold = holdEnd - holdStart;
+            if (hold <= 0f || creep <= 0f)
+                return StepPlaybackAt(elapsed, holdStart, holdEnd, playback);
+            creep = Mathf.Min(creep, 0.95f);
+            // Real seconds of normal-speed wind-up that get stretched over (lead + hold).
+            float lead = Mathf.Min(hold * creep / (1f - creep), Mathf.Max(0f, holdStart));
+            if (lead <= 0f)
+                return StepPlaybackAt(elapsed, holdStart, holdEnd, playback); // no wind-up to stretch: freeze
+            float slowStart = holdStart - lead;
+            return elapsed >= slowStart && elapsed < holdEnd ? playback * lead / (lead + hold) : playback;
         }
 
         /// <summary>Clip speed at this moment of a step: 0 while holding the wind-up pose (telegraph), otherwise playback.</summary>

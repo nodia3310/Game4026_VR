@@ -14,6 +14,8 @@ namespace Game4026.Enemy
         [SerializeField] private EnemyData data;
 
         private EnemyHealthModel model;
+        private EnemyGuard guard;
+        private bool guardLooked;
 
         /// <summary>Raised for every accepted hit.</summary>
         public event Action<EnemyHealth, EnemyDamageResult> Damaged;
@@ -37,6 +39,20 @@ namespace Game4026.Enemy
         {
             get => Model.DamageMultiplier;
             set => Model.DamageMultiplier = value;
+        }
+
+        /// <summary>Optional shield on the same object, asked first for every hit.</summary>
+        private EnemyGuard Guard
+        {
+            get
+            {
+                if (!guardLooked)
+                {
+                    guardLooked = true;
+                    guard = GetComponent<EnemyGuard>();
+                }
+                return guard;
+            }
         }
 
         private EnemyHealthModel Model
@@ -71,6 +87,8 @@ namespace Game4026.Enemy
         /// <summary>Same as <see cref="TakeDamage"/> with an explicit timestamp (used by tests).</summary>
         public bool ApplyDamage(float damage, Vector3 hitPoint, bool isWeakPoint, float time)
         {
+            if (!Model.IsDead && !Model.IsInvulnerable && Guard != null && Guard.TryBlock(damage, hitPoint))
+                return false; // the shield took it
             if (!Model.TryApplyDamage(damage, hitPoint, isWeakPoint, time, out EnemyDamageResult result))
                 return false;
 

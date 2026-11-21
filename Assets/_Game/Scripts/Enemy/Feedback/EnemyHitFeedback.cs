@@ -6,10 +6,10 @@ namespace Game4026.Enemy
 {
     /// <summary>
     /// Universal hit feel ("卡肉") for any enemy, rigged or not. On every accepted hit, parry, blade block and death:
-    /// freezes the enemy for a few frames (<see cref="EnemyController.HitStop"/>: AI, NavMesh, Animator and statue motion
-    /// all pause), vibrates the model along the hit direction while frozen, flashes it white, emits sparks, plays a sound
+    /// drops the enemy into a short slow motion (<see cref="EnemyController.HitStop"/>: AI, NavMesh, Animator and statue
+    /// motion all slow down, then ease back), vibrates the model along the hit direction meanwhile, flashes it white, emits sparks, plays a sound
     /// and raises <see cref="HitImpacts"/> so the weapon bridge can rumble the controller that hit.
-    /// Only the enemy freezes, never Time.timeScale: in VR the player's hands and head must keep moving.
+    /// Only the enemy slows, never Time.timeScale: in VR the player's hands and head must keep moving.
     /// Settings live in a shared <see cref="HitFeedbackProfile"/>. No per-frame allocation.
     /// </summary>
     [DisallowMultipleComponent]
@@ -28,6 +28,7 @@ namespace Game4026.Enemy
 
         private EnemyController controller;
         private EnemyHealth health;
+        private EnemyGuard guard;
         private EnemyWeapon[] weapons = new EnemyWeapon[0];
 
         // Shake
@@ -52,6 +53,7 @@ namespace Game4026.Enemy
         {
             controller = GetComponent<EnemyController>();
             health = GetComponent<EnemyHealth>();
+            guard = GetComponent<EnemyGuard>();
             weapons = GetComponentsInChildren<EnemyWeapon>(true); // once
             if (visual == null)
                 visual = FindVisual();
@@ -72,6 +74,11 @@ namespace Game4026.Enemy
         private void OnEnable()
         {
             health.Damaged += HandleDamaged;
+            if (guard != null)
+            {
+                guard.Blocked += HandleGuardBlocked;
+                guard.Broken += HandleGuardBroken;
+            }
             for (int i = 0; i < weapons.Length; i++)
             {
                 weapons[i].Deflected += HandleDeflected;
@@ -82,6 +89,11 @@ namespace Game4026.Enemy
         private void OnDisable()
         {
             health.Damaged -= HandleDamaged;
+            if (guard != null)
+            {
+                guard.Blocked -= HandleGuardBlocked;
+                guard.Broken -= HandleGuardBroken;
+            }
             for (int i = 0; i < weapons.Length; i++)
             {
                 weapons[i].Deflected -= HandleDeflected;
@@ -107,6 +119,10 @@ namespace Game4026.Enemy
 
         private void HandleBlocked(EnemyWeapon _, Vector3 point) => Play(HitKind.Blocked, point, 0f);
 
+        private void HandleGuardBlocked(EnemyGuard _, Vector3 point) => Play(HitKind.Blocked, point, 0f);
+
+        private void HandleGuardBroken(EnemyGuard _, Vector3 point) => Play(HitKind.GuardBreak, point, 0f);
+
         /// <summary>Plays one reaction. Public so other systems (and tests) can trigger it.</summary>
         public HitImpact Play(HitKind kind, Vector3 point, float damage)
         {
@@ -115,8 +131,8 @@ namespace Game4026.Enemy
             float stop = p.HitStopFor(kind, damage);
 
             if (stop > 0f)
-                controller.HitStop(stop);
-            StartShake(point, p.ShakeFor(kind, damage), Mathf.Max(stop, 0.05f));
+                controller.HitStop(stop, p.HitStopTimeScale);
+            StartShake(point, p.ShakeFor(kind, damage), Mathf.Max(stop * HitStopCurve.HoldFraction, 0.05f)); // during the slowest part
             if (r.flash > 0f)
                 StartFlash(r.flash, Mathf.Max(stop, p.FlashDuration));
 
@@ -145,7 +161,7 @@ namespace Game4026.Enemy
             return d.normalized;
         }
 
-        // ---- Shake (only while frozen) ----
+        // ---- Shake (during the slow motion) ----
 
         private void StartShake(Vector3 point, float amount, float length)
         {

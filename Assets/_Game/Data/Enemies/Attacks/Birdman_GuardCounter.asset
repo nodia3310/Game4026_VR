@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9dd94b1bb62c3b9498677e3880e95807, type: 3}
+  m_Name: Birdman_GuardCounter
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.AttackDefinition
+  attackType: 0
+  animatorState: Attack
+  clip: {fileID: -2367435744613694821, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
+  animSpeed: 1
+  mirror: 0
+  clipStartTime: 0
+  telegraphTime: 0.25
+  telegraphPoseTime: 0.15
+  hitTime: 0.25
+  recoveryTime: 0.6
+  parryWindow: 0.3
+  minRange: 0
+  maxRange: 1.6
+  cooldown: 2
+  weight: 1
+  damage: 18
+  hitRange: 2.6
+  hitAngle: 130
+  lungeDistance: 2
+  lungeDuration: 0
+  lungeStopDistance: -1
+  lungeArcHeight: 0
+  comboSteps: []
+  slamRadius: 2
+  leap: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 7
+  statueMotion: 0

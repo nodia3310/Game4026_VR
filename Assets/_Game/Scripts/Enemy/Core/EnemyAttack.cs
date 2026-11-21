@@ -28,6 +28,8 @@ namespace Game4026.Enemy
         private float speedMultiplier = 1f;
         private float recoveryOverride = -1f;
         private int pendingIndex = -1;
+        private AttackDefinition queued;
+        private bool guardEnded;
         private Vector3 lungeDirection;
         private float lungeTotal;
 
@@ -56,6 +58,11 @@ namespace Game4026.Enemy
         internal float ClockOffset { get; set; }
         /// <summary>The owner's AI clock: use this, not Time.time, when calling <see cref="TryParry"/> from a hit.</summary>
         public float Now => Time.time - ClockOffset;
+
+        /// <summary>True while a Guard step holds its shield (from the step start until its end).</summary>
+        public bool IsGuarding => !guardEnded && runner.IsBeforeHit && runner.Step != null && runner.Step.Type == AttackType.Guard;
+        /// <summary>Seconds since the current step started.</summary>
+        public float StepElapsed => runner.StepElapsed;
 
         /// <summary>The move being played (null when idle).</summary>
         public AttackDefinition Current => runner.Attack;
@@ -109,7 +116,8 @@ namespace Game4026.Enemy
         {
             data = enemyData;
             AttackDefinition[] attacks = enemyData != null ? enemyData.Attacks : null;
-            AttackDefinition move = forced;
+            AttackDefinition move = forced != null ? forced : queued;
+            queued = null;
             int index = -1;
             if (move == null && attacks != null && pendingIndex >= 0 && pendingIndex < attacks.Length)
             {
@@ -142,9 +150,23 @@ namespace Game4026.Enemy
             return false;
         }
 
+        /// <summary>The next <see cref="Begin"/> without a forced move plays this one (reactions, e.g. a guard after a hit).</summary>
+        public void Queue(AttackDefinition move) => queued = move;
+
+        /// <summary>Ends a Guard step now so the move goes on to its next step (the counter). False when not guarding.</summary>
+        public bool EndGuard()
+        {
+            if (!IsGuarding)
+                return false;
+            guardEnded = true; // the shield drops now; the step resolves on the next tick
+            runner.SkipToHit();
+            return true;
+        }
+
         public void Cancel(float now)
         {
             pendingIndex = -1;
+            queued = null;
             if (!runner.IsRunning)
                 return;
             AttackDefinition move = runner.Attack;
@@ -177,6 +199,7 @@ namespace Game4026.Enemy
             runner.Stop();
             selector.Reset();
             pendingIndex = -1;
+            queued = null;
             speedMultiplier = 1f;
             recoveryOverride = -1f;
         }
@@ -218,6 +241,11 @@ namespace Game4026.Enemy
 
         bool IAttackHost.ResolveHit(AttackDefinition step)
         {
+            if (step.Type == AttackType.Guard)
+            {
+                AttackResolved?.Invoke(this, step, false); // the guard simply ends
+                return false;
+            }
             if (step.Type == AttackType.Projectile)
             {
                 bool fired = Fire(step) != null;
@@ -249,12 +277,19 @@ namespace Game4026.Enemy
         void IAttackHost.OnStepStarted(in AttackStepTiming timing)
         {
             recoveryOverride = -1f;
+            guardEnded = false;
             StepStarted?.Invoke(this, timing);
-            if (timing.HoldDuration > 0f)
+            if (timing.HoldDuration > 0f && timing.Step.Type != AttackType.Guard) // a guard is not a warning
                 AttackTelegraph?.Invoke(this, timing);
         }
 
         void IAttackHost.OnParryWindowOpened(in AttackStepTiming timing) => ParryWindowOpened?.Invoke(this, timing);
+
+        void IAttackHost.OnSlowMotion(AttackDefinition step)
+        {
+            if (controller != null)
+                controller.HitStop(step.SlowMotionDuration, step.SlowMotionScale); // the whole enemy, eased back
+        }
 
         /// <summary>AreaSlam: anywhere within slamRadius (any height). Others: the hit cone in front.</summary>
         public static bool IsInHitArea(AttackDefinition step, Transform enemy, Vector3 playerBody)
