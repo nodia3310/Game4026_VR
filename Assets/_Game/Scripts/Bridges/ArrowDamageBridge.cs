@@ -43,6 +43,6 @@ namespace Game4026.Bridges
 
         /// <summary>Applies one arrow impact. Public so tests can call it without a physics collision.</summary>
         public bool ApplyImpact(Collider hitCollider, Vector3 hitPoint, float impactSpeed) =>
-            DamageDispatch.TryApply(hitCollider, damage.Evaluate(impactSpeed), hitPoint);
+            DamageDispatch.TryApply(hitCollider, damage.Evaluate(impactSpeed), hitPoint, allowParry: false);
     }
 }

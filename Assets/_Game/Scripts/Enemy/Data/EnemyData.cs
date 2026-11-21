@@ -24,11 +24,16 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float loseTargetRange = 18f;
 
         [Header("Attack")]
-        [SerializeField, Min(0f)] private float attackRange = 1.6f;
-        [SerializeField, Min(0f)] private float attackWindup = 0.7f;
-        [SerializeField, Min(0f)] private float attackDamage = 10f;
-        [SerializeField, Min(0f)] private float attackCooldown = 2.0f;
-        [SerializeField, Range(0f, 360f)] private float attackAngle = 70f;
+        [Tooltip("Moves this enemy picks from (spec 4.5). Empty = one basic melee swing.")]
+        [SerializeField] private AttackDefinition[] attacks = new AttackDefinition[0];
+        [Tooltip("Minimum seconds after any move ends before the next one starts.")]
+        [SerializeField, Min(0f)] private float globalAttackCooldown = 1.2f;
+
+        [Header("Parry")]
+        [Tooltip("Stagger seconds after the player deflects an attack with their weapon.")]
+        [SerializeField, Min(0f)] private float parryStaggerDuration = 1.5f;
+        [Tooltip("Damage taken is multiplied by this during the parry stagger (counter-attack window).")]
+        [SerializeField, Min(0f)] private float parriedDamageMultiplier = 1.5f;
 
         [Header("Lifecycle")]
         [SerializeField, Min(0f)] private float spawnDuration = 1.5f;
@@ -42,8 +47,10 @@ namespace Game4026.Enemy
                 Debug.LogWarning($"[{name}] loseTargetRange ({loseTargetRange}) < detectionRange ({detectionRange}); raised to match.", this);
                 loseTargetRange = detectionRange;
             }
-            if (attackRange > detectionRange)
-                Debug.LogWarning($"[{name}] attackRange ({attackRange}) is larger than detectionRange ({detectionRange}).", this);
+            if (attacks != null)
+                foreach (AttackDefinition a in attacks)
+                    if (a != null && a.MaxRange > detectionRange)
+                        Debug.LogWarning($"[{name}] attack '{a.name}' maxRange ({a.MaxRange}) is larger than detectionRange ({detectionRange}).", this);
         }
 
         public float MaxHealth => maxHealth;
@@ -55,11 +62,48 @@ namespace Game4026.Enemy
         public float ChaseSpeed => chaseSpeed;
         public float DetectionRange => detectionRange;
         public float LoseTargetRange => loseTargetRange;
-        public float AttackRange => attackRange;
-        public float AttackWindup => attackWindup;
-        public float AttackDamage => attackDamage;
-        public float AttackCooldown => attackCooldown;
-        public float AttackAngle => attackAngle;
+        /// <summary>The moves to pick from; never empty (falls back to <see cref="DefaultAttacks"/>).</summary>
+        public AttackDefinition[] Attacks => HasOwnAttacks ? attacks : DefaultAttacks;
+        public float GlobalAttackCooldown => globalAttackCooldown;
+        public float ParryStaggerDuration => parryStaggerDuration;
+        public float ParriedDamageMultiplier => parriedDamageMultiplier;
+
+        private bool HasOwnAttacks
+        {
+            get
+            {
+                if (attacks == null)
+                    return false;
+                foreach (AttackDefinition a in attacks)
+                    if (a != null)
+                        return true;
+                return false;
+            }
+        }
+
+        private static AttackDefinition[] defaultAttacks;
+
+        /// <summary>One basic melee swing (range 1.6, hit at 0.7 s, 10 damage, cooldown 2) for data without moves.</summary>
+        public static AttackDefinition[] DefaultAttacks
+        {
+            get
+            {
+                if (defaultAttacks == null || defaultAttacks[0] == null)
+                {
+                    AttackDefinition melee = AttackDefinition.Create(name: "DefaultMelee");
+                    melee.hideFlags = HideFlags.HideAndDontSave;
+                    defaultAttacks = new[] { melee };
+                }
+                return defaultAttacks;
+            }
+        }
+
+        /// <summary>Code setup (tests).</summary>
+        internal void SetAttacks(AttackDefinition[] moves, float globalCooldown)
+        {
+            attacks = moves ?? new AttackDefinition[0];
+            globalAttackCooldown = globalCooldown;
+        }
         public float SpawnDuration => spawnDuration;
         public float DespawnDuration => despawnDuration;
     }

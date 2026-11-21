@@ -52,11 +52,17 @@ namespace Game4026.Enemy
         private float lastSeenTime = float.NegativeInfinity;
         private float nextPerceptionTime;
         private float nextRepathTime;
+        private float nextAttackSelectTime;
+        private float staggerDuration, staggerEndTime;
         private Vector3 lastDestination;
         private int patrolIndex = -1;
         private float currentTime;
         private bool animatorHasSpeed;
         private bool animatorHasState;
+
+        // Hit stop: real seconds left frozen, and total frozen time removed from the AI clock.
+        private float hitStopRemaining, clockOffset, localDeltaTime;
+        private bool agentFrozen, agentUpdatedRotation;
 
         /// <summary>(controller, previous, next)</summary>
         public event Action<EnemyController, EnemyStateId, EnemyStateId> StateChanged;
@@ -64,12 +70,24 @@ namespace Game4026.Enemy
         public event Action<EnemyController> Despawned;
         /// <summary>Raised when the player kills this enemy (not for <see cref="ForceClear"/>).</summary>
         public event Action<EnemyController> Killed;
+        /// <summary>The player's weapon deflected an attack (SFX, sparks, haptics). (controller, step)</summary>
+        public event Action<EnemyController, AttackDefinition> Parried;
+        /// <summary>Hit stop started (true) or ended (false). Animation drivers pause on it.</summary>
+        public event Action<EnemyController, bool> HitStopChanged;
 
         public EnemyStateId CurrentState => machine != null ? machine.CurrentId : EnemyStateId.None;
         /// <summary>True when this life ended through <see cref="ForceClear"/> instead of a kill.</summary>
         public bool WasForceCleared { get; private set; }
         public EnemyHealth Health => health;
+        /// <summary>Line-of-sight origin (also the default projectile muzzle).</summary>
+        public Transform Eye => eye != null ? eye : transform;
         public EnemyAttack Attack => attack;
+        /// <summary>True while frozen by <see cref="HitStop"/>.</summary>
+        public bool IsHitStopped => hitStopRemaining > 0f;
+        /// <summary>This frame's AI delta time: 0 while frozen. Animation drivers use it instead of Time.deltaTime.</summary>
+        public float DeltaTime => localDeltaTime;
+        /// <summary>The AI clock (Time.time minus all frozen time).</summary>
+        public float LocalTime => currentTime;
 
         // ---- Unity ----
 
@@ -106,6 +124,7 @@ namespace Game4026.Enemy
         {
             health.Damaged += HandleDamaged;
             health.Died += HandleDied;
+            attack.Parried += HandleParried;
             Respawn();
         }
 
@@ -113,9 +132,74 @@ namespace Game4026.Enemy
         {
             health.Damaged -= HandleDamaged;
             health.Died -= HandleDied;
+            attack.Parried -= HandleParried;
+            if (hitStopRemaining > 0f)
+                EndHitStop();
         }
 
-        private void Update() => Tick(Time.time, Time.deltaTime);
+        private void Update() => Step(Time.time, Time.deltaTime);
+
+        /// <summary>
+        /// One real frame: spends hit-stop time first (the AI clock does not advance while frozen), then ticks with
+        /// what is left. Every AI timer (attack timeline, stagger, cooldowns) therefore shifts by the frozen time.
+        /// </summary>
+        internal void Step(float realTime, float realDeltaTime)
+        {
+            float dt = realDeltaTime;
+            if (hitStopRemaining > 0f)
+            {
+                float frozen = Mathf.Min(hitStopRemaining, dt);
+                hitStopRemaining -= frozen;
+                clockOffset += frozen;
+                dt -= frozen;
+                attack.ClockOffset = clockOffset;
+                if (hitStopRemaining <= 0f)
+                    EndHitStop();
+            }
+            localDeltaTime = dt;
+            Tick(realTime - clockOffset, dt);
+        }
+
+        /// <summary>
+        /// Freezes this enemy for <paramref name="seconds"/> of real time ("卡肉"): AI, attack timeline, NavMesh movement
+        /// and animation pause, then resume exactly where they were. A new hit stop during one keeps the longer remainder.
+        /// </summary>
+        public void HitStop(float seconds)
+        {
+            if (!(seconds > 0f))
+                return;
+            bool wasFrozen = hitStopRemaining > 0f;
+            hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
+            if (wasFrozen)
+                return;
+            if (agent != null && agent.enabled)
+            {
+                // Stop the agent writing the transform; its own simulation is put back on resume.
+                agentFrozen = true;
+                agentUpdatedRotation = agent.updateRotation;
+                agent.updatePosition = false;
+                agent.updateRotation = false;
+            }
+            if (animator != null)
+                animator.speed = 0f;
+            HitStopChanged?.Invoke(this, true);
+        }
+
+        private void EndHitStop()
+        {
+            hitStopRemaining = 0f;
+            if (agentFrozen && agent != null)
+            {
+                agentFrozen = false;
+                if (agent.enabled)
+                    agent.nextPosition = transform.position;
+                agent.updatePosition = true;
+                agent.updateRotation = agentUpdatedRotation;
+            }
+            if (animator != null)
+                animator.speed = 1f;
+            HitStopChanged?.Invoke(this, false);
+        }
 
         /// <summary>
         /// One AI frame. Every time-based rule reads <paramref name="now"/> (never Time.time directly),
@@ -149,7 +233,12 @@ namespace Game4026.Enemy
             lastSeenTime = float.NegativeInfinity;
             nextPerceptionTime = 0f;
             nextRepathTime = 0f;
-            currentTime = Time.time;
+            nextAttackSelectTime = 0f;
+            staggerDuration = 0f;
+            staggerEndTime = 0f;
+            if (hitStopRemaining > 0f)
+                EndHitStop();
+            currentTime = Time.time - clockOffset;
             if (agent != null)
                 agent.enabled = true;
             machine.ChangeState(EnemyStateId.Spawn);
@@ -220,7 +309,32 @@ namespace Game4026.Enemy
         private void HandleDamaged(EnemyHealth _, EnemyDamageResult result)
         {
             if (!result.Killed && result.CausedStagger)
-                machine.ChangeState(EnemyStateId.Hit);
+                Stagger(data.StaggerDuration);
+        }
+
+        private void HandleParried(EnemyAttack _, AttackDefinition move, AttackDefinition step)
+        {
+            if (CurrentState == EnemyStateId.Dead)
+                return;
+            // Before entering Hit, so the counter window is active from the first frame of the stagger.
+            health.DamageMultiplier = data.ParriedDamageMultiplier; // cleared when the stagger ends
+            Stagger(data.ParryStaggerDuration);
+            Parried?.Invoke(this, step);
+        }
+
+        /// <summary>
+        /// Enters Hit for <paramref name="seconds"/>. A shorter stagger during a longer one (e.g. a normal hit during the
+        /// parry stagger) restarts the Hit reaction but keeps the remaining time.
+        /// </summary>
+        public void Stagger(float seconds)
+        {
+            if (CurrentState == EnemyStateId.Dead || CurrentState == EnemyStateId.None)
+                return;
+            if (CurrentState == EnemyStateId.Hit)
+                seconds = Mathf.Max(seconds, staggerEndTime - currentTime);
+            staggerDuration = seconds;
+            staggerEndTime = currentTime + seconds;
+            machine.ChangeState(EnemyStateId.Hit);
         }
 
         private void HandleDied(EnemyHealth _)
@@ -229,8 +343,12 @@ namespace Game4026.Enemy
             Killed?.Invoke(this);
         }
 
-        private void HandleStateChanged(EnemyStateId previous, EnemyStateId next) =>
+        private void HandleStateChanged(EnemyStateId previous, EnemyStateId next)
+        {
+            if (previous == EnemyStateId.Hit && next != EnemyStateId.Hit)
+                health.DamageMultiplier = 1f; // parry counter window over
             StateChanged?.Invoke(this, previous, next);
+        }
 
         private void UpdateAnimator()
         {
@@ -323,12 +441,21 @@ namespace Game4026.Enemy
                 transform.rotation, Quaternion.LookRotation(direction), turnSpeed * deltaTime);
         }
 
-        public bool IsAttackReady => attack.IsReady(currentTime);
-        public float AttackWindup => attack.WindupFor(data);
-        public float AttackRecovery => attack.RecoveryDuration;
-        public void BeginAttack() => attack.BeginWindup();
-        public bool ResolveAttack() => attack.Resolve(target, data, currentTime);
-        public void CancelAttack() => attack.Cancel();
+        public bool TrySelectAttack()
+        {
+            // Spec 4.5: the selector runs on the perception interval, not every frame.
+            if (target == null || currentTime < nextAttackSelectTime)
+                return false;
+            nextAttackSelectTime = currentTime + perceptionInterval;
+            return attack.TrySelect(data, distanceToTarget, currentTime);
+        }
+
+        public float AttackHoldRange => attack.HoldRange(data);
+        public void BeginAttack() => attack.Begin(data, currentTime);
+        public bool TickAttack(float deltaTime) => attack.Tick(currentTime, deltaTime, target);
+        public void CancelAttack() => attack.Cancel(currentTime);
+
+        public float CurrentStaggerDuration => staggerDuration > 0f ? staggerDuration : data.StaggerDuration;
 
         public void SetInvulnerable(bool value) => health.IsInvulnerable = value;
 
@@ -360,7 +487,13 @@ namespace Game4026.Enemy
             Gizmos.color = new Color(0.6f, 0.6f, 0.6f, 0.4f);
             Gizmos.DrawWireSphere(p, d.LoseTargetRange);
             Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.8f);
-            Gizmos.DrawWireSphere(p, d.AttackRange);
+            Gizmos.DrawWireSphere(p, AttackSelector.HoldRange(d.Attacks));
+            float reach = 0f;
+            foreach (AttackDefinition a in d.Attacks)
+                if (a != null && a.IsSupported && a.MaxRange > reach)
+                    reach = a.MaxRange;
+            Gizmos.color = new Color(1f, 0.5f, 0.1f, 0.6f);
+            Gizmos.DrawWireSphere(p, reach);
             Gizmos.color = Color.cyan;
             Gizmos.DrawSphere(EyePosition, 0.05f);
         }

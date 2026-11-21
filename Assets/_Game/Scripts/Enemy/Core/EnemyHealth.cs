@@ -32,6 +32,13 @@ namespace Game4026.Enemy
             set => Model.IsInvulnerable = value;
         }
 
+        /// <summary>Runtime multiplier on all damage (parry counter window). Reset by <see cref="ResetState"/>.</summary>
+        public float DamageMultiplier
+        {
+            get => Model.DamageMultiplier;
+            set => Model.DamageMultiplier = value;
+        }
+
         private EnemyHealthModel Model
         {
             get

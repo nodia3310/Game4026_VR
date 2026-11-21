@@ -16,6 +16,7 @@ namespace Game4026.Enemy.DebugTools
         private EnemyStateId shownState = EnemyStateId.None;
         private float shownHealth = -1f;
         private int shownPhase = -1;
+        private AttackDefinition shownStep;
         private PharaohBoss boss;
 
         private void Awake()
@@ -42,14 +43,19 @@ namespace Game4026.Enemy.DebugTools
             EnemyStateId state = controller.CurrentState;
             float health = controller.Health.CurrentHealth;
             int phase = boss != null ? boss.CurrentPhase : -1;
-            if (state != shownState || phase != shownPhase || !Mathf.Approximately(health, shownHealth))
+            AttackDefinition step = controller.Attack != null ? controller.Attack.CurrentStep : null;
+            if (state != shownState || phase != shownPhase || step != shownStep || !Mathf.Approximately(health, shownHealth))
             {
                 shownState = state;
                 shownHealth = health;
                 shownPhase = phase;
+                shownStep = step;
+                string stateText = step != null ? $"{state}:{controller.Attack.Current.name}" : state.ToString();
+                if (step != null && step != controller.Attack.Current)
+                    stateText += $" [{controller.Attack.CurrentStepIndex + 1}]";
                 text = boss != null
-                    ? $"{state}  {health:0}/{controller.Health.MaxHealth:0}  P{phase + 1} {boss.CurrentPhaseName}"
-                    : $"{state}  {health:0}/{controller.Health.MaxHealth:0}";
+                    ? $"{stateText}  {health:0}/{controller.Health.MaxHealth:0}  P{phase + 1} {boss.CurrentPhaseName}"
+                    : $"{stateText}  {health:0}/{controller.Health.MaxHealth:0}";
             }
 
             if (style == null)

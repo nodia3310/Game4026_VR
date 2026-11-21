@@ -26,14 +26,18 @@ namespace Game4026.Enemy
         void FaceTarget(float deltaTime);
 
         // Attack
-        bool IsAttackReady { get; }
-        /// <summary>Windup seconds, already scaled by attack speed.</summary>
-        float AttackWindup { get; }
-        float AttackRecovery { get; }
+        /// <summary>Chase asks this (throttled): true when a move is in range and off cooldown; it is then started by <see cref="BeginAttack"/>.</summary>
+        bool TrySelectAttack();
+        /// <summary>While no move is ready, Chase holds position (facing the player) inside this distance.</summary>
+        float AttackHoldRange { get; }
         void BeginAttack();
-        /// <summary>Runs the hit check once and starts the cooldown. Returns true on a hit.</summary>
-        bool ResolveAttack();
+        /// <summary>One frame of the move (telegraph, swing, hit checks, recovery). False once it has finished.</summary>
+        bool TickAttack(float deltaTime);
         void CancelAttack();
+
+        // Stagger
+        /// <summary>How long the current Hit state lasts (staggerDuration, or longer after a parry).</summary>
+        float CurrentStaggerDuration { get; }
 
         // Lifecycle
         void SetInvulnerable(bool value);

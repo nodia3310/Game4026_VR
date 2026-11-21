@@ -23,6 +23,15 @@ namespace Game4026.Enemy
         /// <summary>While true (e.g. during spawn), all damage is ignored.</summary>
         public bool IsInvulnerable { get; set; }
 
+        private float damageMultiplier = 1f;
+
+        /// <summary>Runtime multiplier on all damage (e.g. 1.5 while staggered by a parry). Reset to 1 by <see cref="Reset"/>.</summary>
+        public float DamageMultiplier
+        {
+            get => damageMultiplier;
+            set => damageMultiplier = float.IsNaN(value) || float.IsInfinity(value) ? 1f : Mathf.Max(0f, value);
+        }
+
         public EnemyHealthModel(float maxHealth, float weakPointMultiplier, float hitCooldown, float staggerThreshold)
         {
             if (!(maxHealth > 0f) || float.IsInfinity(maxHealth))
@@ -56,7 +65,7 @@ namespace Game4026.Enemy
             if (hasAcceptedHit && time < lastAcceptedHitTime + hitCooldown)
                 return false;
 
-            float scaled = isWeakPoint ? baseDamage * weakPointMultiplier : baseDamage;
+            float scaled = (isWeakPoint ? baseDamage * weakPointMultiplier : baseDamage) * damageMultiplier;
             float applied = Mathf.Min(scaled, CurrentHealth);
 
             CurrentHealth -= applied;
@@ -81,6 +90,7 @@ namespace Game4026.Enemy
             CurrentHealth = maxHealth;
             IsDead = false;
             IsInvulnerable = false;
+            damageMultiplier = 1f;
             hasAcceptedHit = false;
             lastAcceptedHitTime = 0f;
         }

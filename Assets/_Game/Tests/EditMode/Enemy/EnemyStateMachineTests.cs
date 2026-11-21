@@ -13,7 +13,7 @@ namespace Game4026.Tests.Enemy
         [SetUp]
         public void SetUp()
         {
-            // Defaults: spawn 1.5, detect 12, lose 18, attack range 1.6, windup 0.7, stagger 0.5, despawn 1.5
+            // Defaults: spawn 1.5, detect 12, lose 18, stagger 0.5, despawn 1.5; fake attack range 1.6, move 1.2 s
             data = ScriptableObject.CreateInstance<EnemyData>();
             ctx = new FakeEnemyContext(data);
         }
@@ -197,39 +197,25 @@ namespace Game4026.Tests.Enemy
         // ---- Attack ----
 
         [Test]
-        public void Attack_WindupThenSingleResolveThenRecoveryThenChase()
+        public void Attack_StopsAndPlaysMoveUntilRunnerFinishes_ThenChase()
         {
             SeePlayerAt(1.5f);
+            ctx.Moving = true;
             StartIn(EnemyStateId.Attack);
             Assert.AreEqual(1, ctx.AttackBegins);
+            Assert.IsFalse(ctx.Moving);
 
-            ctx.Run(0.6f);
-            Assert.AreEqual(0, ctx.AttackResolves, "No hit check during windup.");
-            Assert.Greater(ctx.FaceCalls, 0, "Faces the player during windup.");
+            ctx.Run(1.0f);
+            Assert.AreEqual(EnemyStateId.Attack, ctx.State, "Move still playing.");
 
-            ctx.Run(0.2f);
-            Assert.AreEqual(1, ctx.AttackResolves);
-            Assert.AreEqual(EnemyStateId.Attack, ctx.State, "Still recovering.");
-
-            ctx.Run(0.6f);
-            Assert.AreEqual(1, ctx.AttackResolves, "Hit check runs once per attack.");
+            ctx.Run(0.3f);
             Assert.AreEqual(EnemyStateId.Chase, ctx.State);
-            Assert.AreEqual(0, ctx.AttackCancels);
+            Assert.AreEqual(1, ctx.AttackFinishes);
+            Assert.AreEqual(0, ctx.AttackCancels, "A finished move is not cancelled.");
         }
 
         [Test]
-        public void Attack_UsesContextWindup_ForFasterAttacks()
-        {
-            SeePlayerAt(1.5f);
-            ctx.AttackWindupOverride = 0.3f; // e.g. boss phase 3
-            StartIn(EnemyStateId.Attack);
-
-            ctx.Run(0.34f);
-            Assert.AreEqual(1, ctx.AttackResolves);
-        }
-
-        [Test]
-        public void Attack_StaggeredDuringWindup_CancelsWithoutHit()
+        public void Attack_StaggeredMidMove_Cancels()
         {
             SeePlayerAt(1.5f);
             StartIn(EnemyStateId.Attack);
@@ -238,7 +224,30 @@ namespace Game4026.Tests.Enemy
             ctx.Machine.ChangeState(EnemyStateId.Hit);
 
             Assert.AreEqual(1, ctx.AttackCancels);
-            Assert.AreEqual(0, ctx.AttackResolves);
+            Assert.AreEqual(0, ctx.AttackFinishes);
+        }
+
+        [Test]
+        public void Chase_OutsideAllMoveRangesButBeyondHoldRange_KeepsChasing()
+        {
+            SeePlayerAt(4f);
+            ctx.AttackSelectRange = 1.6f;
+            StartIn(EnemyStateId.Chase);
+            ctx.Run(0.1f);
+
+            Assert.AreEqual(EnemyStateId.Chase, ctx.State);
+            Assert.Greater(ctx.ChaseCalls, 0);
+        }
+
+        [Test]
+        public void Chase_FarMoveAvailable_AttacksFromRange()
+        {
+            SeePlayerAt(4f);
+            ctx.AttackSelectRange = 5f; // e.g. a lunge with range 3-5
+            StartIn(EnemyStateId.Chase);
+            ctx.Run(0.02f);
+
+            Assert.AreEqual(EnemyStateId.Attack, ctx.State);
         }
 
         // ---- Hit ----
@@ -306,6 +315,19 @@ namespace Game4026.Tests.Enemy
 
             Assert.AreEqual(EnemyStateId.Idle, from);
             Assert.AreEqual(EnemyStateId.Chase, to);
+        }
+
+        [Test]
+        public void Hit_UsesContextStaggerDuration_ForParryStagger()
+        {
+            SeePlayerAt(5f); // out of attack range, so Chase does not attack right away
+            ctx.StaggerOverride = 1.5f;
+            StartIn(EnemyStateId.Hit);
+
+            ctx.Run(1.4f);
+            Assert.AreEqual(EnemyStateId.Hit, ctx.State);
+            ctx.Run(0.2f);
+            Assert.AreEqual(EnemyStateId.Chase, ctx.State);
         }
     }
 }
