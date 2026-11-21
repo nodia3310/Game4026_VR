@@ -97,5 +97,61 @@ namespace Game4026.Tests.Bridges
             Assert.IsTrue(attack.IsAttacking);
             Assert.AreEqual(100f, health.CurrentHealth);
         }
+
+        // ---- Body weapon (statues): the whole body can be parried, and still takes damage otherwise ----
+
+        private void MakeBodyWeapon()
+        {
+            var so = new UnityEditor.SerializedObject(blade.GetComponent<EnemyWeapon>());
+            so.FindProperty("passDamageWhenNotParrying").boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        [Test]
+        public void BodyWeapon_OutsideWindow_MeleeDamagesEnemy()
+        {
+            MakeBodyWeapon();
+            melee.ApplyHit(Hit(3f)); // 24 damage, no attack running
+            Assert.AreEqual(76f, health.CurrentHealth, 1e-4f);
+            Assert.AreEqual(0, parries);
+        }
+
+        [Test]
+        public void BodyWeapon_InsideWindow_ParriesInsteadOfDamage()
+        {
+            MakeBodyWeapon();
+            StartSwingAndWait(0.5f);
+            melee.ApplyHit(Hit(3f));
+            Assert.AreEqual(1, parries);
+            Assert.AreEqual(100f, health.CurrentHealth);
+        }
+
+        [Test]
+        public void BodyWeapon_Arrow_DamagesButNeverParries()
+        {
+            MakeBodyWeapon();
+            StartSwingAndWait(0.5f);
+            Assert.IsTrue(arrow.ApplyImpact(blade, blade.transform.position, 30f));
+            Assert.AreEqual(0, parries);
+            Assert.IsTrue(attack.IsAttacking);
+            Assert.Less(health.CurrentHealth, 100f);
+        }
+
+        [Test]
+        public void Arrow_OnFlyingBolt_DoesNotReflect()
+        {
+            var boltGo = new GameObject("Bolt");
+            try
+            {
+                var boltCollider = boltGo.AddComponent<SphereCollider>();
+                var bolt = boltGo.AddComponent<EnemyProjectile>();
+                bolt.Launch(null, Vector3.zero, Vector3.forward, 7f, 10f);
+                Assert.IsFalse(arrow.ApplyImpact(boltCollider, Vector3.zero, 30f));
+                Assert.IsFalse(bolt.IsReflected);
+                Assert.IsTrue(melee.ApplyHit(new MeleeHit { Collider = boltCollider, Target = boltGo, Point = Vector3.zero, Speed = 3f }));
+                Assert.IsTrue(bolt.IsReflected, "Melee reflects it.");
+            }
+            finally { Object.DestroyImmediate(boltGo); }
+        }
     }
 }

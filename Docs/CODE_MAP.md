@@ -22,6 +22,7 @@
 - EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier
 - EnemyWeapon — Scripts/Enemy/Core/EnemyWeapon.cs — 掛在敵人武器（刀身 Collider）上的 IDamageable：招架窗內被 A 的武器打到 → EnemyAttack.TryParry；窗外只擋住、不傷本體；leftHand 標記左右手；事件 Deflected/Blocked
 - AttackIndicator — Scripts/Enemy/Core/AttackIndicator.cs — 刀尖光點提示：預警時小橘光、招架窗打開瞬間亮閃、招架成功白閃；跟著揮動那隻手的武器（鏡像招式 = 左手）
+- StatueLocomotion — Scripts/Enemy/Core/StatueLocomotion.cs — 無骨架雕像的程式動作：彈跳走路、各招（Hop/Roll/Slam/Shoot）的預警與動作、生成升起、硬直搖晃、死亡倒下沉地；只動 Model 子物件
 - EnemyGeometry — Scripts/Enemy/Core/EnemyGeometry.cs — 忽略高度的水平距離與扇形判定
 - AssemblyInfo — Scripts/Enemy/AssemblyInfo.cs — InternalsVisibleTo Enemy EditMode / PlayMode 與 Bridges EditMode 測試（EnemyController.Tick、AttackDefinition.Create、EnemyData.SetAttacks）
 
@@ -29,6 +30,9 @@
 - AttackType — Scripts/Enemy/Combat/AttackType.cs — Melee / Lunge / Combo / Projectile / AreaSlam / Charge（Projectile、Charge 是 M4，不會被選到）
 - AttackDefinition — Scripts/Enemy/Combat/AttackDefinition.cs — ScriptableObject，一招一份：動畫狀態、速度、鏡像、預警停格、擊中秒數、收招、距離、冷卻、權重、傷害、判定範圍、突進、連段步驟、砸地半徑
 - AttackSelector — Scripts/Enemy/Combat/AttackSelector.cs — 純 C#：依距離、各招冷卻、全域冷卻、權重選招；HoldRange（沒招可出時停下的距離）
+- EnemyProjectile — Scripts/Enemy/Combat/EnemyProjectile.cs — 有飛行時間的光彈：直線飛、打到玩家（身體到頭線段）或環境就結束；被近戰武器打到就反彈飛回發射者弱點（微追蹤、×1.5 速）
+- EnemyProjectilePool — Scripts/Enemy/Combat/EnemyProjectilePool.cs — 每種光彈 Prefab 一個 ObjectPool，同時上限 8 個
+- IParryTarget — Scripts/Enemy/Combat/IParryTarget.cs — 可被招架/反彈的東西（EnemyWeapon、EnemyProjectile）；箭改呼叫 TakeUnparryableHit
 - AttackRunner — Scripts/Enemy/Combat/AttackRunner.cs — 純 C# 出招時間軸（起手 → 預警停格 → 揮下 → 判定 → 收招／連段下一下）；IAttackHost、AttackStepTiming
 
 ## Enemy Boss（`Assets/_Game/Scripts/Enemy/Boss/`，`Game4026.Enemy`）
@@ -65,6 +69,10 @@
 - EnemyData_Mummy / _AnubisGuard / _Sekhmet / _Pharaoh — Assets/_Game/Data/Enemies/*.asset — 四種敵人的暫定數值（規格第 5 節）
 - 招式資產 — Assets/_Game/Data/Enemies/Attacks/*.asset — 阿努比斯 5 招（Anubis_QuickSlash / Backhand / HeavySlash / LungeSlash / TripleSlash + TripleSlash_1–3 步驟）；其他敵人各一招（Default_Swing、Mummy_Swing、Sekhmet_HeavySwing、Pharaoh_Swing，數值與時間沿用舊的單招）
 - Enemy_AnubisGuard 的武器 — 雙手 `mixamorig:Right/LeftHand/Weapon_Dagger`（dagger_low_poly.glb + CapsuleCollider + EnemyWeapon + Tip），根物件掛 AttackIndicator
+- Enemy_ObsidianOracle — Assets/_Game/Prefabs/Enemies/Enemy_ObsidianOracle.prefab — 黑曜石神諭：Model（aztec_statue_sculpture.glb，1.5 m）、Body（BoxCollider + EnemyWeapon 傷害穿透）、Forehead_WeakPoint（金色紋章）、Eye（發射點）；StatueLocomotion、AttackIndicator
+- EnemyData_ObsidianOracle / Oracle_* — Assets/_Game/Data/Enemies/ — 80 HP；5 招：Stomp、Headbutt、Roll、LeapSlam、LaserEye
+- Projectile_LaserBolt — Assets/_Game/Prefabs/Enemies/Projectiles/Projectile_LaserBolt.prefab — 0.6 m 紅色光彈（M_LaserBolt + M_AttackGlint 光暈，CapsuleCollider 讓武器打得到）
+- M_LaserBolt / M_WeakPointEmblem — Assets/_Game/Prefabs/Enemies/Materials/ — URP Unlit 紅 / 金
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
@@ -84,6 +92,7 @@
 - EnemyStateMachineTests — Tests/EditMode/Enemy/EnemyStateMachineTests.cs — 規格 4.4 的狀態轉換表
 - FakeEnemyContext — Tests/EditMode/Enemy/FakeEnemyContext.cs — 測試用 IEnemyContext（不需要 NavMesh / Play Mode）
 - EnemyAttackTests — Tests/EditMode/Enemy/EnemyAttackTests.cs — 出招時間、命中範圍與角度、AreaSlam、連段、突進距離、打斷、攻速倍率、預設招式
+- EnemyProjectileTests — Tests/EditMode/Enemy/EnemyProjectileTests.cs — 飛行、打中玩家、壽命、反彈（一次、方向、速度）、箭不能反彈、線段距離
 - AttackSelectorTests — Tests/EditMode/Enemy/AttackSelectorTests.cs — 距離篩選、權重、各招與全域冷卻、不支援的類型、HoldRange
 - EnemyAnimatorTests — Tests/EditMode/Enemy/EnemyAnimatorTests.cs — 移動混合、預警停格速度、收招跟動畫長度
 - EnemyGeometryTests — Tests/EditMode/Enemy/EnemyGeometryTests.cs — 水平距離與扇形
@@ -100,5 +109,6 @@
 - PlayModeWorld — Tests/PlayMode/Enemy/PlayModeWorld.cs — 共用 fixture：執行中烘焙 NavMesh、物件池、用程式建的敵人模板
 - BossPlayModeTests — Tests/PlayMode/Enemy/BossPlayModeTests.cs — 法老三階段、無敵、小兵、弱點、跨階段、物件池重用
 - EnemyGcTests — Tests/PlayMode/Enemy/EnemyGcTests.cs — 4 隻敵人追擊與攻擊 720 幀，敵人腳本 0 bytes GC
+- ProjectilePlayModeTests — Tests/PlayMode/Enemy/ProjectilePlayModeTests.cs — 真的敵人開火：沒反彈打中玩家、反彈打中弱點（20 × 2.5）
 - ParryPlayModeTests — Tests/PlayMode/Enemy/ParryPlayModeTests.cs — 真的 EnemyController：招架窗內打武器 → 硬直、×1.5 傷害、結束後恢復、玩家沒被打到
 - EncounterPlayModeTests — Tests/PlayMode/Enemy/EncounterPlayModeTests.cs — 執行中烘焙 NavMesh：遭遇戰開始到 Cleared、物件池重用、ForceClear、Boss 觸發與擊敗、生成點檢查

@@ -5,6 +5,7 @@
 ## 目前狀態
 - 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
 - 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
+- 黑曜石神諭（M2.7，使用者追加）：`Enemy_ObsidianOracle`（頭像雕像，無骨架彈跳），5 招：震地、頭槌、滾動、跳砸、鐳射眼；全部可反彈（EditMode 233/233；PlayMode 19/19）
 - 招架（M2.6，使用者追加）：阿努比斯雙手持匕首，所有招式都能在擊中前 0.35 秒內用武器招架 → 整招取消、硬直 1.5 秒、受傷 ×1.5；刀尖光點提示招架時機（EditMode 214/214；PlayMode 17/17）
 - 阿努比斯（`Enemy_AnubisGuard`）有 5 招：快速揮擊、反手揮擊（鏡像）、重擊（起手停格 0.8 秒）、突進斬（Jump Attack 動畫）、三連斬；其他敵人各一招，時間沿用舊數值
 - 傷害橋接完成，含場景安裝器（Bridges）
@@ -25,6 +26,10 @@
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
+- 2026-11-21（神諭）：`aztec_statue_sculpture.glb`（深色石雕半身像）對應圖鑑的 The Obsidian Oracle，弱點 = 額頭紋章（圖鑑：紋章是魔法焦點）。招式依使用者要求改成彈跳、撞擊、滾動、鐳射眼，加近身震地。
+- 2026-11-21（神諭）：雕像身體本身就是武器：Body 上的 `EnemyWeapon` 開 `passDamageWhenNotParrying`，招架窗內打身體 = 招架，窗外照常扣血。
+- 2026-11-21（神諭）：鐳射是一顆 0.6 m 長、7 m/s 的光彈（`EnemyProjectile`），不是整條光束；沒有招架窗，飛行中隨時可以用近戰武器打回去，飛回去打發射者的弱點（20 × 2.5 = 50）。箭不能反彈。
+- 2026-11-21（神諭）：`AttackDefinition` 新增 `leap`（AreaSlam 先跳過去）、`lungeStopDistance`（每招停在玩家前多遠）、`lungeArcHeight`、`statueMotion`、`projectilePrefab`/`projectileSpeed`。
 - 2026-11-21（招架）：攻擊前的「頓一拍」是預警停格，保留；另加 `AttackIndicator` 光點提示。
 - 2026-11-21（招架）：所有招式都能招架；成功 = 整招取消（含連段剩下的）、硬直 1.5 秒、期間受傷 ×1.5（使用者選的）。
 - 2026-11-21（招架）：招架用既有合約：匕首上的 `EnemyWeapon` 實作 `IDamageable`，A 的武器打到刀身就會呼叫它。窗外打到刀身只是被擋，不傷本體。
@@ -80,6 +85,17 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-21（黑曜石神諭）
+- 完成：StatueLocomotion、EnemyProjectile + Pool、IParryTarget、EnemyWeapon 傷害穿透、EnemyAttack 發射（muzzle）與每招停止距離、AttackRunner 支援跳躍 AreaSlam；MockWeapon 按 F 也會反彈最近的光彈；Enemy_ObsidianOracle、5 招資產、光彈 Prefab、2 個材質
+- 模型：face 在 glb 的 +X，Prefab 裡轉 -90° 朝 +Z、放大 1.25 倍（1.5 m）；額頭/眼睛位置用網格輪廓取樣決定（眼 y 1.0、額頭 y 1.12）
+- 實測（EnemyAI 場景）：9 m 外出滾動、滾到 1.0 m 命中；近身震地；5 m 跳砸（截圖確認在空中）；震地被 F 招架 → 硬直；鐳射光彈飛行（截圖），F 反彈 → 命中額頭 50 傷害、硬直
+- 測試：EditMode 233/233、PlayMode 19/19
+- 問題：
+  - 第一次測鐳射，光彈 0.16 秒就消失：是 MockPlayer 被我傳送到地板外掉下去，光彈朝下打到地板，不是程式問題。
+  - 鐳射測試時我在 Play Mode 暫時把 EnemyData 的招式改成只剩鐳射（資產不會被 Play Mode 還原），測完已改回 5 招。
+  - 近身只會一直震地 → 頭槌最小距離 1.5 改 0.9。
+- 需要在 Editor 手動做：無。要在場景測試，把 `Enemy_ObsidianOracle` 拖進 EnemyAI 場景，或加到波次資產。
+
 ### 2026-11-21（招架、攻擊提示、阿努比斯拿匕首）
 - 完成：
   - `AttackDefinition.parryWindow`；`AttackRunner` 招架窗（`IsParryWindowOpen`、`OnParryWindowOpened`）；`EnemyAttack.TryParry` + 事件 `ParryWindowOpened`/`Parried`

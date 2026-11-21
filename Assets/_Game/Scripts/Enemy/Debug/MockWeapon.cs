@@ -46,19 +46,36 @@ namespace Game4026.Enemy.DebugTools
         /// </summary>
         public bool TryParryNearest()
         {
+            // A flying bolt in range is reflected first (it is the more urgent threat).
+            EnemyProjectile nearestBolt = null;
+            float bestBolt = parryRange * parryRange;
+            foreach (EnemyProjectile p in FindObjectsByType<EnemyProjectile>(FindObjectsInactive.Exclude)) // key press only
+            {
+                if (!p.IsFlying || p.IsReflected)
+                    continue;
+                float d = (p.transform.position - transform.position).sqrMagnitude;
+                if (d <= bestBolt) { bestBolt = d; nearestBolt = p; }
+            }
+            if (nearestBolt != null)
+            {
+                bool reflected = nearestBolt.Reflect();
+                Debug.Log(reflected ? "[MockWeapon] REFLECT!" : "[MockWeapon] reflect failed", nearestBolt);
+                return reflected;
+            }
+
             EnemyWeapon nearest = null;
             float best = parryRange * parryRange;
             foreach (EnemyWeapon w in FindObjectsByType<EnemyWeapon>(FindObjectsInactive.Exclude)) // key press only
             {
-                float d = (w.transform.position - transform.position).sqrMagnitude;
+                float d = (w.Tip.position - transform.position).sqrMagnitude;
                 if (d <= best) { best = d; nearest = w; }
             }
             if (nearest == null)
             {
-                Debug.Log("[MockWeapon] parry: no enemy weapon in range");
+                Debug.Log("[MockWeapon] parry: no enemy weapon or bolt in range");
                 return false;
             }
-            bool parried = nearest.TryDeflect(nearest.Tip.position, Time.time);
+            bool parried = nearest.TryDeflect(nearest.Tip.position, Time.time); // no damage: a body weapon is not hurt by a missed parry
             Debug.Log(parried ? "[MockWeapon] PARRY!" : "[MockWeapon] parry missed (no parry window open)", nearest);
             return parried;
         }

@@ -171,7 +171,7 @@ namespace Game4026.Enemy
             hitDone = false;
             lungeBegun = false;
             lungeDone = 0f;
-            isLunge = step.Type == AttackType.Lunge;
+            isLunge = step.MovesForward; // Lunge, or a leaping AreaSlam
 
             float playback = step.AnimSpeed * speed;
             float clipStart = Mathf.Min(step.ClipStartTime, step.HitTime);

@@ -73,6 +73,8 @@ namespace Game4026.Enemy
         /// <summary>True when this life ended through <see cref="ForceClear"/> instead of a kill.</summary>
         public bool WasForceCleared { get; private set; }
         public EnemyHealth Health => health;
+        /// <summary>Line-of-sight origin (also the default projectile muzzle).</summary>
+        public Transform Eye => eye != null ? eye : transform;
         public EnemyAttack Attack => attack;
 
         // ---- Unity ----

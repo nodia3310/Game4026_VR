@@ -15,6 +15,8 @@ namespace Game4026.Enemy
     {
         [Tooltip("A lunge stops this far in front of the player instead of running through them.")]
         [SerializeField, Min(0f)] private float lungeStopDistance = 0.9f;
+        [Tooltip("Where projectiles spawn (e.g. the eyes). Defaults to the controller's eye.")]
+        [SerializeField] private Transform muzzle;
 
         private readonly AttackSelector selector = new AttackSelector();
         private readonly AttackRunner runner = new AttackRunner();
@@ -35,8 +37,10 @@ namespace Game4026.Enemy
         public event Action<EnemyAttack, AttackStepTiming> AttackTelegraph;
         /// <summary>A step started; <see cref="EnemyAnimator"/> plays its clip from this.</summary>
         public event Action<EnemyAttack, AttackStepTiming> StepStarted;
-        /// <summary>A step's hit check ran; bool is true when the player was hit.</summary>
+        /// <summary>A step's hit check ran; bool is true when the player was hit (for Projectile: the bolt was fired).</summary>
         public event Action<EnemyAttack, AttackDefinition, bool> AttackResolved;
+        /// <summary>A Projectile step fired a bolt.</summary>
+        public event Action<EnemyAttack, EnemyProjectile> ProjectileFired;
         /// <summary>The whole move finished normally.</summary>
         public event Action<EnemyAttack, AttackDefinition> AttackFinished;
         /// <summary>Interrupted (stagger or death) before it finished.</summary>
@@ -56,6 +60,7 @@ namespace Game4026.Enemy
         public int CurrentStepIndex => runner.StepIndex;
         public bool IsAttacking => runner.IsRunning;
         public AttackSelector Selector => selector;
+        public Transform Muzzle => muzzle != null ? muzzle : controller != null ? controller.Eye : transform;
 
         /// <summary>
         /// Runtime attack speed (e.g. the boss's last phase). 2 = telegraphs, swings, recovery and cooldowns take half as long.
@@ -194,7 +199,8 @@ namespace Game4026.Enemy
                 lungeDirection = toPlayer / distance;
                 transform.rotation = Quaternion.LookRotation(lungeDirection);
             }
-            lungeTotal = Mathf.Clamp(distance - lungeStopDistance, 0f, step.LungeDistance);
+            float stop = step.LungeStopDistance >= 0f ? step.LungeStopDistance : lungeStopDistance;
+            lungeTotal = Mathf.Clamp(distance - stop, 0f, step.LungeDistance);
         }
 
         void IAttackHost.MoveLunge(float fraction)
@@ -208,11 +214,30 @@ namespace Game4026.Enemy
 
         bool IAttackHost.ResolveHit(AttackDefinition step)
         {
+            if (step.Type == AttackType.Projectile)
+            {
+                bool fired = Fire(step) != null;
+                AttackResolved?.Invoke(this, step, fired);
+                return fired;
+            }
             bool hit = target != null && IsInHitArea(step, transform, target.Body.position);
             if (hit)
                 target.Damageable?.ApplyPlayerDamage(step.Damage);
             AttackResolved?.Invoke(this, step, hit);
             return hit;
+        }
+
+        /// <summary>Fires the step's projectile from the muzzle at the player's head (straight ahead without a player).</summary>
+        public EnemyProjectile Fire(AttackDefinition step)
+        {
+            EnemyProjectile bolt = EnemyProjectilePool.Get(step.ProjectilePrefab);
+            if (bolt == null)
+                return null; // cap reached
+            Vector3 from = Muzzle.position;
+            Vector3 direction = target != null ? target.Head.position - from : transform.forward;
+            bolt.Launch(controller, from, direction, step.ProjectileSpeed * speedMultiplier, step.Damage);
+            ProjectileFired?.Invoke(this, bolt);
+            return bolt;
         }
 
         float IAttackHost.RecoveryOverride => recoveryOverride;

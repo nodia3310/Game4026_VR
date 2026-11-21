@@ -450,5 +450,66 @@ namespace Game4026.Tests.Enemy
 
             Assert.IsFalse(attack.TrySelect(data, 1f, now + 0.9f));
         }
+
+        // ---- Statue moves ----
+
+        [Test]
+        public void LeapSlam_JumpsToPlayer_ThenAreaHit()
+        {
+            PlacePlayer(0f, 5f);
+            AttackDefinition leap = Track(AttackDefinition.Create(AttackType.AreaSlam, hitTime: 0.6f, lungeDistance: 7f,
+                slamRadius: 1.8f, leap: true, stopDistance: 0.3f));
+            Start(leap);
+            Run(0.7f);
+
+            Assert.AreEqual(4.7f, enemyGo.transform.position.z, 0.02f, "Lands 0.3 m short of the player.");
+            Assert.AreEqual(1, receiver.Hits.Count);
+        }
+
+        [Test]
+        public void AreaSlam_WithoutLeap_StaysInPlace()
+        {
+            PlacePlayer(0f, 5f);
+            Start(Make(AttackType.AreaSlam, slamRadius: 1.8f));
+            Run(1f);
+            Assert.AreEqual(0f, enemyGo.transform.position.z, 1e-4f);
+            Assert.AreEqual(0, receiver.Hits.Count, "Player 5 m away: outside the radius.");
+        }
+
+        [Test]
+        public void Lunge_PerMoveStopDistance_OverridesDefault()
+        {
+            PlacePlayer(0f, 6f);
+            Start(Track(AttackDefinition.Create(AttackType.Lunge, hitTime: 0.5f, lungeDistance: 9f, stopDistance: 0.6f)));
+            Run(0.6f);
+            Assert.AreEqual(5.4f, enemyGo.transform.position.z, 0.02f);
+        }
+
+        [Test]
+        public void StatueMotion_AutoFollowsType_ExplicitWins()
+        {
+            Assert.AreEqual(StatueMotion.Hop, Make(AttackType.Lunge).Motion);
+            Assert.AreEqual(StatueMotion.Slam, Make(AttackType.AreaSlam).Motion);
+            Assert.AreEqual(StatueMotion.Shoot, Make(AttackType.Projectile).Motion);
+            Assert.AreEqual(StatueMotion.Roll, Track(AttackDefinition.Create(AttackType.Lunge, motion: StatueMotion.Roll)).Motion);
+        }
+
+        [Test]
+        public void Projectile_NeedsAPrefab_ToBeSelectable()
+        {
+            Assert.IsFalse(Make(AttackType.Projectile).IsSupported);
+            var prefab = Track(new GameObject("BoltPrefab")).AddComponent<EnemyProjectile>();
+            Assert.IsTrue(Track(AttackDefinition.Create(AttackType.Projectile, projectile: prefab)).IsSupported);
+        }
+
+        [Test]
+        public void StatueLocomotion_HopAndArcHelpers()
+        {
+            Assert.AreEqual(0f, StatueLocomotion.HopHeight(1f, 0.2f), 1e-5f, "On the ground between hops.");
+            Assert.AreEqual(0.2f, StatueLocomotion.HopHeight(0.5f, 0.2f), 1e-5f);
+            Assert.AreEqual(0f, StatueLocomotion.ArcHeight(0f, 1.6f), 1e-5f);
+            Assert.AreEqual(1.6f, StatueLocomotion.ArcHeight(0.5f, 1.6f), 1e-5f);
+            Assert.AreEqual(0f, StatueLocomotion.ArcHeight(1f, 1.6f), 1e-5f);
+        }
     }
 }

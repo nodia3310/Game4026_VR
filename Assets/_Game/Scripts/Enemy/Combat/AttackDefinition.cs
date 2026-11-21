@@ -52,6 +52,10 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float lungeDistance = 2f;
         [Tooltip("Seconds of forward push after the telegraph. 0 = push until the hit.")]
         [SerializeField, Min(0f)] private float lungeDuration;
+        [Tooltip("Stop this far from the player. Negative = EnemyAttack's default (0.9 m).")]
+        [SerializeField] private float lungeStopDistance = -1f;
+        [Tooltip("Statues: jump height of the arc while moving forward (visual only).")]
+        [SerializeField, Min(0f)] private float lungeArcHeight;
 
         [Header("Combo")]
         [Tooltip("Steps played in order without returning to Chase. This asset's telegraph, ranges, cooldown, weight and final recovery apply to the whole combo.")]
@@ -59,6 +63,16 @@ namespace Game4026.Enemy
 
         [Header("Area Slam")]
         [SerializeField, Min(0f)] private float slamRadius = 2f;
+        [Tooltip("Leap toward the player before slamming (uses the Lunge fields for distance/stop/arc).")]
+        [SerializeField] private bool leap;
+
+        [Header("Projectile")]
+        [SerializeField] private EnemyProjectile projectilePrefab;
+        [SerializeField, Min(0.1f)] private float projectileSpeed = 7f;
+
+        [Header("Statue (no rig)")]
+        [Tooltip("Procedural body motion for statue enemies (StatueLocomotion). Auto: Lunge=Hop, AreaSlam=Slam, Projectile=Shoot.")]
+        [SerializeField] private StatueMotion statueMotion = StatueMotion.Auto;
 
         private int stateHash, mirrorStateHash;
         private string hashedState;
@@ -86,11 +100,35 @@ namespace Game4026.Enemy
         public float LungeDuration => lungeDuration;
         public AttackDefinition[] ComboSteps => comboSteps;
         public float SlamRadius => slamRadius;
+        public bool Leap => leap;
+        public float LungeStopDistance => lungeStopDistance;
+        public float LungeArcHeight => lungeArcHeight;
+        public EnemyProjectile ProjectilePrefab => projectilePrefab;
+        public float ProjectileSpeed => projectileSpeed;
+
+        /// <summary>True when the step moves the enemy toward the player (Lunge, or a leaping AreaSlam).</summary>
+        public bool MovesForward => attackType == AttackType.Lunge || (attackType == AttackType.AreaSlam && leap);
+
+        public StatueMotion Motion
+        {
+            get
+            {
+                if (statueMotion != StatueMotion.Auto)
+                    return statueMotion;
+                switch (attackType)
+                {
+                    case AttackType.AreaSlam: return StatueMotion.Slam;
+                    case AttackType.Projectile: return StatueMotion.Shoot;
+                    default: return StatueMotion.Hop;
+                }
+            }
+        }
 
         /// <summary>Types the runner can execute today. Others are never selected.</summary>
         public bool IsSupported =>
             attackType == AttackType.Melee || attackType == AttackType.Lunge ||
-            attackType == AttackType.AreaSlam || (attackType == AttackType.Combo && HasComboSteps);
+            attackType == AttackType.AreaSlam || (attackType == AttackType.Combo && HasComboSteps) ||
+            (attackType == AttackType.Projectile && projectilePrefab != null);
 
         public bool HasComboSteps
         {
@@ -131,8 +169,10 @@ namespace Game4026.Enemy
                 foreach (AttackDefinition step in comboSteps)
                     if (step != null && step.attackType == AttackType.Combo)
                         Debug.LogWarning($"[{name}] Combo step '{step.name}' is itself a Combo; it runs as a single Melee step.", this);
-            if (attackType == AttackType.Projectile || attackType == AttackType.Charge)
-                Debug.LogWarning($"[{name}] {attackType} is not implemented yet (M4); this attack will never be used.", this);
+            if (attackType == AttackType.Charge)
+                Debug.LogWarning($"[{name}] Charge is not implemented yet (M4); this attack will never be used.", this);
+            if (attackType == AttackType.Projectile && projectilePrefab == null)
+                Debug.LogWarning($"[{name}] Projectile attack has no projectile prefab; it will never be used.", this);
         }
 
         /// <summary>Code-built attack (fallback melee, tests). Not saved as an asset.</summary>
@@ -142,7 +182,8 @@ namespace Game4026.Enemy
             float hitAngle = 70f, float damage = 10f, float cooldown = 2f, float weight = 1f,
             float lungeDistance = 2f, float lungeDuration = 0f, float clipStart = 0f, float poseTime = -1f,
             AttackDefinition[] combo = null, float slamRadius = 2f, string state = "Attack", bool mirror = false,
-            string name = null, float parryWindow = 0.35f)
+            string name = null, float parryWindow = 0.35f, bool leap = false, float stopDistance = -1f,
+            EnemyProjectile projectile = null, float projectileSpeed = 7f, StatueMotion motion = StatueMotion.Auto)
         {
             var a = CreateInstance<AttackDefinition>();
             a.name = name ?? type.ToString();
@@ -167,6 +208,11 @@ namespace Game4026.Enemy
             a.animatorState = state;
             a.mirror = mirror;
             a.parryWindow = parryWindow;
+            a.leap = leap;
+            a.lungeStopDistance = stopDistance;
+            a.projectilePrefab = projectile;
+            a.projectileSpeed = projectileSpeed;
+            a.statueMotion = motion;
             return a;
         }
     }

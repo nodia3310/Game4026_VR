@@ -249,8 +249,10 @@ namespace Game4026.Contracts
 - **攻擊提示 `AttackIndicator`**：刀尖上的面向鏡頭光點（Unlit 加算材質 `M_AttackGlint`，**不用真光源**）。預警停格時是小的橘色光；**招架窗打開的瞬間閃一下亮黃白光**（＝「攻擊來了，現在擋」），到擊中前縮小；招架成功時白色爆閃。光點跟著正在揮的那隻手的匕首。
 - **桌面測試**：`MockWeapon` 按 **F** 對 3 公尺內最近的敵人武器做一次招架（滑鼠點不到移動中的匕首）。
 
-#### `EnemyProjectile : MonoBehaviour, IDamageable`（M4）
-- 用物件池管理；直線飛行，碰到環境就消失，碰到玩家就呼叫 `ApplyPlayerDamage`。
+#### `EnemyProjectile : MonoBehaviour, IDamageable`（已完成）
+- 用物件池管理（`EnemyProjectilePool`，同時上限 8 個）；直線飛行，碰到環境就消失，碰到玩家就呼叫 `ApplyPlayerDamage`（玩家判定用「身體到頭的線段」距離，VR 頭不一定有 Collider）。
+- 實作：反彈後飛向發射者的 `WeakPoint`（沒有就飛向眼睛），會微幅追蹤；速度 ×1.5；對敵人的傷害 20（打到弱點再 ×倍率）；顏色由紅變金。箭打到不會反彈（`IParryTarget`）。
+- `AttackDefinition` 欄位：`projectilePrefab`、`projectileSpeed`；從 `EnemyAttack.muzzle`（預設眼睛）朝玩家頭部發射。
 - **可被反彈**：它本身實作 `IDamageable`，所以玩家的武器打到它時，A 的武器會照合約呼叫 `TakeDamage` → 投射物改為飛回發射者，並改成「玩家方」：打到敵人時呼叫敵人的 `IDamageable.TakeDamage`（打到 `WeakPoint` 就算弱點傷害）。**不需要改共用合約。**
 - 用自發光或 Unlit 材質，**不要掛真正的光源**；同時存在的投射物上限 8 個。
 
@@ -292,6 +294,8 @@ namespace Game4026.Contracts
 - （M4）`MockWeapon` 也要能打到 `EnemyProjectile`，用來測試反彈。
 
 ### 4.9 雕像移動（`StatueLocomotion`，無骨架敵人用）
+> **實作狀態**：`StatueLocomotion` 已完成（黑曜石神諭在用），走路改成**彈跳**（使用者要求），不是飄浮。每招的動作由 `AttackDefinition.statueMotion`（Hop / Roll / Slam / Shoot，Auto 依類型）決定：預警時後仰/蹲低並抖動，然後跳撞、滾動、跳起砸下或後座力。另有生成時從地下升起、硬直搖晃、死亡倒下沉入地面。`StatuePart` 還沒做。
+
 圖鑑裡大部分敵人是被詛咒的**雕像**，沒有骨架，也不需要走路動畫。用程式移動整個模型，效能最好，也更詭異：
 - **飄浮滑行**：用 `NavMeshAgent` 移動，模型離地 0.1–0.2 公尺，加上緩慢上下浮動（正弦波，幅度 0.05 公尺）。
 - **出招前抖動**：預警期間模型快速小幅抖動（位置 ±0.02 公尺），取代起手動畫。
@@ -408,12 +412,17 @@ namespace Game4026.Contracts
 | 眼鏡蛇噴吐 | Projectile（8 m/s） | 0.6（額頭的眼鏡蛇發光） | 3–10 | 8 | 2.5 | 比卡雕像快、傷害低 |
 | 詛咒震波 | AreaSlam（半徑 2.5） | 1.0 | 0–2.5 | 12 | 6 | 被近身時使用 |
 
-**The Obsidian Oracle**（血量 80；飄浮的半身像）
+**The Obsidian Oracle**（血量 80；**已完成**：`Enemy_ObsidianOracle`，模型 `aztec_statue_sculpture.glb`，1.5 公尺高；不需要骨架，在地上彈跳；弱點是額頭的金色紋章）
 
-| 招式 | 類型 | 預警 | 距離 | 傷害 | 冷卻 | 說明 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 紋章光束 | Projectile（12 m/s） | 1.2（額頭紋章蓄力發光） | 5–15 | 15 | 5 | 很快，要看預警提早閃 |
-| 墜落 | AreaSlam（半徑 3） | 0.8 | 0–3 | 15 | 6 | 升高後整座砸下 |
+使用者指定的招式（取代原本的兩招）。**全部可以反彈**：前四招在擊中前的招架窗內打它的身體就招架（身體 = `EnemyWeapon`，窗外打身體照常扣血）；光彈飛行中隨時可以打回去。
+
+| 招式 | 資產 | 類型 / 動作 | 預警 | 距離 | 傷害 | 冷卻 | 說明 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 震地 | Oracle_Stomp | AreaSlam（半徑 1.8）/ Slam | 0.3 | 0–1.8 | 8 | 3 | 原地跳起砸地，近身用 |
+| 頭槌 | Oracle_Headbutt | Lunge 3 m / Hop | 0.3 | 0.9–3.5 | 10 | 3 | 後仰再跳過來撞 |
+| 滾動 | Oracle_Roll | Lunge 9 m / Roll | 0.5 | 4–10 | 14 | 7 | 整顆滾過來，停在玩家前 0.7 m；之後暈 1 秒 |
+| 跳砸 | Oracle_LeapSlam | AreaSlam 跳躍 7 m（半徑 1.8）/ Slam | 0.35 | 3–7 | 15 | 6 | 高高跳到玩家面前砸下 |
+| 鐳射眼 | Oracle_LaserEye | Projectile 7 m/s / Shoot | 0.7（眼睛發紅光） | 3–14 | 10 | 2.5 | 0.6 m 長的紅色光彈，有飛行時間；打回去命中額頭 = 50 傷害 |
 
 **Statue of the Sphinx**（血量 200，小 Boss；身體受到的傷害只有 20%，只有暈眩時臉部弱點暴露；`ChargeBehavior`）
 
@@ -498,6 +507,11 @@ Assets/_Game/
 - [x] 阿努比斯雙手拿匕首；`EnemyWeapon` 招架、`AttackIndicator` 提示
 - [x] 招架窗、整招取消、1.5 秒硬直、×1.5 傷害；箭不能招架
 - [x] 測試：EditMode（招架窗時間、連段、攻速、橋接）、PlayMode（真的 EnemyController 招架流程）
+
+### M2.7：黑曜石神諭（規格外，使用者追加）
+- [x] `StatueLocomotion`（彈跳移動與各招動作）、`EnemyProjectile`（含反彈）、身體招架（`EnemyWeapon` 傷害穿透）
+- [x] `Enemy_ObsidianOracle` + 5 招資產 + 光彈 Prefab
+- [x] 測試：EditMode（光彈、跳砸、身體武器、箭）、PlayMode（開火打中玩家、反彈打中弱點）
 
 ### M3：生成與遭遇戰
 - [x] 物件池運作正常，反覆生成和回收時不產生新的 Instantiate
