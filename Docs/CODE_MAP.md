@@ -17,12 +17,16 @@
 - EnemyDamageResult — Scripts/Enemy/Core/EnemyDamageResult.cs — 一次有效受擊的結果（實際扣血、擊中點、弱點、硬直、擊殺）
 - EnemyHealth — Scripts/Enemy/Core/EnemyHealth.cs — MonoBehaviour + IDamageable，包裝 Model，提供 Damaged/Died 事件、ResetState、IsInvulnerable
 - WeakPoint — Scripts/Enemy/Core/WeakPoint.cs — 掛在弱點 Collider 子物件上，以 isWeakPoint=true 轉發給父物件的 EnemyHealth，附 Gizmo
-- EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator
+- EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator；HitStop（AI 時鐘扣掉停格時間、LocalTime、DeltaTime、HitStopChanged）
 - EnemyAnimator — Scripts/Enemy/Core/EnemyAnimator.cs — 依 AI 狀態切換 Animator（Locomotion 混合樹／Hit／Death）；每個攻擊步驟交叉淡入招式的狀態（鏡像用 `_Mirror`），預警時起手停格（AttackSpeed=0），最後一下的收招等動畫播完（EnemyAttack.RecoveryOverride）
 - EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier
 - EnemyWeapon — Scripts/Enemy/Core/EnemyWeapon.cs — 掛在敵人武器（刀身 Collider）上的 IDamageable：招架窗內被 A 的武器打到 → EnemyAttack.TryParry；窗外只擋住、不傷本體；leftHand 標記左右手；事件 Deflected/Blocked
 - AttackIndicator — Scripts/Enemy/Core/AttackIndicator.cs — 刀尖光點提示：預警時小橘光、招架窗打開瞬間亮閃、招架成功白閃；跟著揮動那隻手的武器（鏡像招式 = 左手）
 - StatueLocomotion — Scripts/Enemy/Core/StatueLocomotion.cs — 無骨架雕像的程式動作：彈跳走路、各招（Hop/Roll/Slam/Shoot）的預警與動作、生成升起、硬直搖晃、死亡倒下沉地；只動 Model 子物件
+- EnemyHitFeedback — Scripts/Enemy/Feedback/EnemyHitFeedback.cs — 通用打擊感：受擊/招架/擋刀/擊殺時讓敵人 HitStop 定格、模型沿受擊方向抖動、疊 M_HitFlash 閃白、噴火花、播音效、發 HitImpacts
+- HitFeedbackProfile — Scripts/Enemy/Feedback/HitFeedbackProfile.cs — ScriptableObject：每種 HitKind（一般/弱點/硬直/擊殺/招架/擋刀/反彈）的停格、震動、閃光、手把震動、火花；傷害縮放；閃光材質、火花 Prefab、音效
+- HitImpacts — Scripts/Enemy/Feedback/HitImpacts.cs — HitKind、HitImpact，全域同步事件 Played + Count/Last（橋接用來知道剛剛那一下的手感）
+- HitSparkPool — Scripts/Enemy/Feedback/HitSparkPool.cs — 每種火花 Prefab 共用一個粒子系統，Emit 噴出
 - EnemyGeometry — Scripts/Enemy/Core/EnemyGeometry.cs — 忽略高度的水平距離與扇形判定
 - AssemblyInfo — Scripts/Enemy/AssemblyInfo.cs — InternalsVisibleTo Enemy EditMode / PlayMode 與 Bridges EditMode 測試（EnemyController.Tick、AttackDefinition.Create、EnemyData.SetAttacks）
 
@@ -73,6 +77,9 @@
 - EnemyData_ObsidianOracle / Oracle_* — Assets/_Game/Data/Enemies/ — 80 HP；5 招：Stomp、Headbutt、Roll、LeapSlam、LaserEye
 - Projectile_LaserBolt — Assets/_Game/Prefabs/Enemies/Projectiles/Projectile_LaserBolt.prefab — 0.6 m 紅色光彈（M_LaserBolt + M_AttackGlint 光暈，CapsuleCollider 讓武器打得到）
 - M_LaserBolt / M_WeakPointEmblem — Assets/_Game/Prefabs/Enemies/Materials/ — URP Unlit 紅 / 金
+- HitFeedback_Default — Assets/_Game/Data/Enemies/HitFeedback_Default.asset — 所有敵人與光彈共用的打擊感設定
+- M_HitFlash / M_HitSpark — Assets/_Game/Prefabs/Enemies/Materials/ — 閃白疊層（URP Unlit 透明加算）/ 火花（Particles Unlit 加算）
+- FX_HitSpark — Assets/_Game/Prefabs/Enemies/FX/FX_HitSpark.prefab — 拉長的小火花粒子（不自動發射，由 HitSparkPool Emit）
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
@@ -81,7 +88,7 @@
 ## Bridges（`Assets/_Game/Scripts/Bridges/`，`Game4026.Bridges`，引用 Contracts + Interaction + Enemy）
 - ImpactDamageCurve — Scripts/Bridges/ImpactDamageCurve.cs — 速度 → 基礎傷害（速度 × 係數，限制在上下限之間），含近戰／箭預設值
 - DamageDispatch — Scripts/Bridges/DamageDispatch.cs — 對命中 Collider 找 IDamageable 並呼叫 TakeDamage（isWeakPoint=false）；allowParry=false 時（箭）忽略 EnemyWeapon
-- MeleeDamageBridge — Scripts/Bridges/MeleeDamageBridge.cs — 掛在 A 的 MeleeWeapon 旁，聽 Hit 事件扣血
+- MeleeDamageBridge — Scripts/Bridges/MeleeDamageBridge.cs — 掛在 A 的 MeleeWeapon 旁，聽 Hit 事件扣血；依這一下的 HitImpact 震動握武器的手把（hapticScale）
 - ArrowDamageBridge — Scripts/Bridges/ArrowDamageBridge.cs — 掛在 A 的箭上（由安裝器自動加），聽 Impact 事件扣血
 - ArtifactEventBridge — Scripts/Bridges/ArtifactEventBridge.cs — 訂閱場景裡所有 A 的 ArtifactDisplayTrigger.OnArtifactRestored，轉給 EncounterDirector
 - DamageBridgeInstaller — Scripts/Bridges/DamageBridgeInstaller.cs — 場景元件：開場時幫所有 MeleeWeapon 加橋接，每次射擊後幫新的箭加橋接
@@ -96,6 +103,7 @@
 - AttackSelectorTests — Tests/EditMode/Enemy/AttackSelectorTests.cs — 距離篩選、權重、各招與全域冷卻、不支援的類型、HoldRange
 - EnemyAnimatorTests — Tests/EditMode/Enemy/EnemyAnimatorTests.cs — 移動混合、預警停格速度、收招跟動畫長度
 - EnemyGeometryTests — Tests/EditMode/Enemy/EnemyGeometryTests.cs — 水平距離與扇形
+- HitFeedbackTests — Tests/EditMode/Enemy/HitFeedbackTests.cs — 受擊種類優先順序、停格隨傷害增加與上限、震動縮放與曲線、反彈光彈先定格
 
 ## Tests（`Assets/_Game/Tests/EditMode/Bridges/`，`Game4026.Bridges.EditModeTests`）
 - ImpactDamageCurveTests — Tests/EditMode/Bridges/ImpactDamageCurveTests.cs — 公式換算與上下限
@@ -110,5 +118,6 @@
 - BossPlayModeTests — Tests/PlayMode/Enemy/BossPlayModeTests.cs — 法老三階段、無敵、小兵、弱點、跨階段、物件池重用
 - EnemyGcTests — Tests/PlayMode/Enemy/EnemyGcTests.cs — 4 隻敵人追擊與攻擊 720 幀，敵人腳本 0 bytes GC
 - ProjectilePlayModeTests — Tests/PlayMode/Enemy/ProjectilePlayModeTests.cs — 真的敵人開火：沒反彈打中玩家、反彈打中弱點（20 × 2.5）
+- HitFeedbackPlayModeTests — Tests/PlayMode/Enemy/HitFeedbackPlayModeTests.cs — HitStop 凍結 AI 時鐘與 NavMesh 後恢復、出招順延停格時間、受擊依種類觸發反應、震動不留位移
 - ParryPlayModeTests — Tests/PlayMode/Enemy/ParryPlayModeTests.cs — 真的 EnemyController：招架窗內打武器 → 硬直、×1.5 傷害、結束後恢復、玩家沒被打到
 - EncounterPlayModeTests — Tests/PlayMode/Enemy/EncounterPlayModeTests.cs — 執行中烘焙 NavMesh：遭遇戰開始到 Cleared、物件池重用、ForceClear、Boss 觸發與擊敗、生成點檢查

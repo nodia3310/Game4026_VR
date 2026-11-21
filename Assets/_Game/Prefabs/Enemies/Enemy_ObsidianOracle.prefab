@@ -117,6 +117,7 @@ GameObject:
   - component: {fileID: 1268977666485612551}
   - component: {fileID: 2549659751717642369}
   - component: {fileID: 7228662164460101173}
+  - component: {fileID: 8140761247854903009}
   m_Layer: 0
   m_Name: Enemy_ObsidianOracle
   m_TagString: Untagged
@@ -259,10 +260,10 @@ MonoBehaviour:
   anchor: {fileID: 0}
   glintMaterial: {fileID: 2100000, guid: 7575a5e814a1cb7479286ae5af8d7f8e, type: 2}
   telegraphColor: {r: 1, g: 0.55, b: 0.15, a: 0.6}
-  telegraphSize: 0.12
+  telegraphSize: 0.36
   telegraphPulseSpeed: 10
-  flashColor: {r: 1, g: 0.95, b: 0.6, a: 1}
-  flashSize: 0.5
+  flashColor: {r: 1, g: 0.19384421, b: 0.15566039, a: 1}
+  flashSize: 1.01
   flashPopTime: 0.06
   parriedColor: {r: 1, g: 1, b: 1, a: 1}
   parriedSize: 0.7
@@ -281,6 +282,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game4026.Enemy.DebugTools::Game4026.Enemy.DebugTools.EnemyDebugLabel
   controller: {fileID: 5311606340846817565}
   offset: {x: 0, y: 1.9, z: 0}
+--- !u!114 &8140761247854903009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201497268666825568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51014ffc1048d92499ae7706daf42538, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyHitFeedback
+  profile: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
+  visual: {fileID: 0}
+  flashRenderers: []
 --- !u!1 &3680534343934043447
 GameObject:
   m_ObjectHideFlags: 0

@@ -75,7 +75,7 @@ namespace Game4026.Enemy.DebugTools
                 Debug.Log("[MockWeapon] parry: no enemy weapon or bolt in range");
                 return false;
             }
-            bool parried = nearest.TryDeflect(nearest.Tip.position, Time.time); // no damage: a body weapon is not hurt by a missed parry
+            bool parried = nearest.TryDeflect(nearest.Tip.position, nearest.Attack != null ? nearest.Attack.Now : Time.time); // no damage: a body weapon is not hurt by a missed parry
             Debug.Log(parried ? "[MockWeapon] PARRY!" : "[MockWeapon] parry missed (no parry window open)", nearest);
             return parried;
         }

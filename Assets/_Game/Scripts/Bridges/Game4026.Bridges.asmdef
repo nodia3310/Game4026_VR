@@ -1,7 +1,7 @@
 {
   "name": "Game4026.Bridges",
   "rootNamespace": "Game4026.Bridges",
-  "references": ["Game4026.Contracts", "Game4026.Interaction", "Game4026.Enemy"],
+  "references": ["Game4026.Contracts", "Game4026.Interaction", "Game4026.Enemy", "Unity.XR.Interaction.Toolkit"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

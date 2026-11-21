@@ -34,12 +34,14 @@ namespace Game4026.Enemy
         [SerializeField] private Renderer[] tintRenderers = new Renderer[0];
         [SerializeField] private Color flyingColor = new Color(1f, 0.08f, 0.04f, 1f);
         [SerializeField] private Color reflectedColor = new Color(1f, 0.85f, 0.3f, 1f);
+        [Tooltip("Hit feel of the reflect (Reflect entry: the bolt freezes for its hit stop, then flies back). Empty = defaults.")]
+        [SerializeField] private HitFeedbackProfile hitFeedback;
 
         private MaterialPropertyBlock block;
         private EnemyController owner;
         private Transform reflectTarget;
         private Vector3 direction;
-        private float speed, damage, age;
+        private float speed, damage, age, hitStopRemaining;
 
         /// <summary>Reflected by the player's weapon (clang, sparks, haptics).</summary>
         public event Action<EnemyProjectile> Reflected;
@@ -61,6 +63,7 @@ namespace Game4026.Enemy
             speed = flySpeed;
             damage = playerDamage;
             age = 0f;
+            hitStopRemaining = 0f;
             IsReflected = false;
             IsFlying = true;
             reflectTarget = null;
@@ -76,6 +79,14 @@ namespace Game4026.Enemy
         {
             if (!IsFlying)
                 return;
+            if (hitStopRemaining > 0f)
+            {
+                float frozen = Mathf.Min(hitStopRemaining, deltaTime);
+                hitStopRemaining -= frozen;
+                deltaTime -= frozen;
+                if (deltaTime <= 0f)
+                    return;
+            }
             age += deltaTime;
             if (age >= lifetime)
             {
@@ -182,8 +193,24 @@ namespace Game4026.Enemy
                 direction = Vector3.up;
             transform.rotation = Quaternion.LookRotation(direction);
             Tint(reflectedColor);
+            PlayReflectFeedback();
             Reflected?.Invoke(this);
             return true;
+        }
+
+        private void PlayReflectFeedback()
+        {
+            HitFeedbackProfile p = hitFeedback != null ? hitFeedback : HitFeedbackProfile.Default;
+            HitReaction r = p.For(HitKind.Reflect);
+            float stop = p.HitStopFor(HitKind.Reflect, 0f);
+            hitStopRemaining = stop;
+            Vector3 point = transform.position;
+            if (r.sparks > 0f)
+                HitSparkPool.Emit(p.SparkPrefab, point, direction, p.SparkColor(HitKind.Reflect), Mathf.RoundToInt(p.SparkCount * r.sparks));
+            AudioClip clip = p.PickClip(HitKind.Reflect, UnityEngine.Random.value);
+            if (clip != null && Application.isPlaying)
+                AudioSource.PlayClipAtPoint(clip, point, p.Volume);
+            HitImpacts.Raise(new HitImpact(HitKind.Reflect, point, stop, r.haptic, r.hapticDuration));
         }
 
         private void SteerTowardTarget(float deltaTime)

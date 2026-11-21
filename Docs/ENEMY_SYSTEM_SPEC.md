@@ -249,6 +249,29 @@ namespace Game4026.Contracts
 - **攻擊提示 `AttackIndicator`**：刀尖上的面向鏡頭光點（Unlit 加算材質 `M_AttackGlint`，**不用真光源**）。預警停格時是小的橘色光；**招架窗打開的瞬間閃一下亮黃白光**（＝「攻擊來了，現在擋」），到擊中前縮小；招架成功時白色爆閃。光點跟著正在揮的那隻手的匕首。
 - **桌面測試**：`MockWeapon` 按 **F** 對 3 公尺內最近的敵人武器做一次招架（滑鼠點不到移動中的匕首）。
 
+### 4.5c 打擊感（卡肉，已完成，使用者追加）
+
+- **`EnemyHitFeedback`**（`Scripts/Enemy/Feedback/`）：所有敵人通用，掛在敵人根物件上，有沒有骨架都能用。以下事件都會觸發：每次有效受擊、招架成功、打到刀身（窗外）、擊殺。觸發時做這些事：
+  - **Hit stop（卡肉）**：`EnemyController.HitStop(秒)` 讓這隻敵人定格幾幀，期間 AI 時鐘、出招時間軸、NavMesh 移動、Animator、雕像動作全部暫停，結束後從原處繼續。攻擊時間會順延，不會因為停格突然打出來。
+  - **只停敵人，不動 `Time.timeScale`**：VR 玩家的手和頭必須照常動，改全域時間會讓手上武器的物理卡住，也容易暈。
+  - **受擊震動**：定格期間模型沿「玩家 → 敵人」方向抖動並衰減（第一幀往後凹）。
+  - **閃白**：在每個網格上疊一層加算材質 `M_HitFlash`（URP Unlit），逐漸淡出。
+  - **火花**：`FX_HitSpark` 共用粒子，用 Emit 噴出；一般受擊是橘色火花，招架、擋刀和反彈是金色。
+  - **音效**：每種受擊可放多個 AudioClip，隨機挑一個；目前沒有放。
+  - **事件**：`HitImpacts.Played`，全域、同步觸發。
+- **強度依種類**：`HitFeedbackProfile` 資產（`Data/Enemies/HitFeedback_Default.asset`，所有敵人共用）。每一種受擊各有停格秒數、震動、閃光、手把震動、火花，可以調：
+  - 一般 0.06 s
+  - 弱點 0.09 s
+  - 打出硬直 0.10 s
+  - 擊殺 0.16 s
+  - 招架 0.14 s
+  - 擋刀 0.035 s
+  - 反彈光彈 0.07 s（停的是光彈本身）
+  - 傷害越高，停格越久（每點 +0.0015 s，上限 0.2 s）
+  - 想讓重型敵人手感不同，複製一份 Profile 給它就好
+- **手把震動**：`MeleeDamageBridge` 打到東西時，讀這一下觸發的反應，讓握著武器的那隻手（XRI `XRBaseInputInteractor.SendHapticImpulse`）震動。招架和擊殺震得最強。Bridges asmdef 加了 `Unity.XR.Interaction.Toolkit` 的引用；**A 的程式沒動**。
+- **時鐘**：`EnemyAttack.Now` = Time.time 減去所有停格時間。`EnemyWeapon` 判斷招架時用這個時鐘，不用 Time.time。
+
 #### `EnemyProjectile : MonoBehaviour, IDamageable`（已完成）
 - 用物件池管理（`EnemyProjectilePool`，同時上限 8 個）；直線飛行，碰到環境就消失，碰到玩家就呼叫 `ApplyPlayerDamage`（玩家判定用「身體到頭的線段」距離，VR 頭不一定有 Collider）。
 - 實作：反彈後飛向發射者的 `WeakPoint`（沒有就飛向眼睛），會微幅追蹤；速度 ×1.5；對敵人的傷害 20（打到弱點再 ×倍率）；顏色由紅變金。箭打到不會反彈（`IParryTarget`）。
@@ -512,6 +535,12 @@ Assets/_Game/
 - [x] `StatueLocomotion`（彈跳移動與各招動作）、`EnemyProjectile`（含反彈）、身體招架（`EnemyWeapon` 傷害穿透）
 - [x] `Enemy_ObsidianOracle` + 5 招資產 + 光彈 Prefab
 - [x] 測試：EditMode（光彈、跳砸、身體武器、箭）、PlayMode（開火打中玩家、反彈打中弱點）
+
+### M2.8：打擊感（規格外，使用者追加）
+- [x] `EnemyController.HitStop`（只停單一敵人）、`EnemyHitFeedback`（震動、閃白、火花、音效欄位）、`HitFeedbackProfile`、`HitImpacts`
+- [x] 光彈被反彈時先定格再飛回；近戰橋接依反應強度震動手把
+- [x] 所有敵人 Prefab 掛上並指定共用 Profile
+- [x] 測試：EditMode（種類優先順序、傷害縮放、震動曲線、光彈定格、手把強度）、PlayMode（AI 時鐘與 NavMesh 暫停/恢復、出招順延、受擊觸發）
 
 ### M3：生成與遭遇戰
 - [x] 物件池運作正常，反覆生成和回收時不產生新的 Instantiate

@@ -355,6 +355,7 @@ GameObject:
   - component: {fileID: 4074402262020610101}
   - component: {fileID: 7598522577044195692}
   - component: {fileID: 4462846471709904948}
+  - component: {fileID: 4655474103051094986}
   m_Layer: 0
   m_Name: Enemy_Placeholder
   m_TagString: Untagged
@@ -428,8 +429,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e51e3ccfdff3fa64db673a62f8b77c77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyAttack
-  recoveryDuration: 0.5
-  hitRangePadding: 0.3
+  lungeStopDistance: 0.9
+  muzzle: {fileID: 0}
 --- !u!114 &4074402262020610101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -490,12 +491,26 @@ MonoBehaviour:
   hitState: Hit
   deathState: Death
   attackClip: {fileID: -203655887218126122, guid: c098cc3da571a6642bfe14b8e0693ce6, type: 3}
-  attackImpactTime: 0.77
   recoveryFollowsClip: 1
-  attackSpeedRange: {x: 0.5, y: 2.5}
   crossFade: 0.15
+  comboCrossFade: 0.08
   hitCrossFade: 0.05
   locomotionDamping: 0.1
+--- !u!114 &4655474103051094986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8770251294825056679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51014ffc1048d92499ae7706daf42538, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyHitFeedback
+  profile: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
+  visual: {fileID: 0}
+  flashRenderers: []
 --- !u!1001 &791801502043863916
 PrefabInstance:
   m_ObjectHideFlags: 0

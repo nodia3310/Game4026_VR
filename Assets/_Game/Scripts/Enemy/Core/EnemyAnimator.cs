@@ -65,6 +65,7 @@ namespace Game4026.Enemy
         private void OnEnable()
         {
             controller.StateChanged += HandleStateChanged;
+            controller.HitStopChanged += HandleHitStop;
             if (attack != null)
                 attack.StepStarted += HandleStepStarted;
         }
@@ -72,6 +73,9 @@ namespace Game4026.Enemy
         private void OnDisable()
         {
             controller.StateChanged -= HandleStateChanged;
+            controller.HitStopChanged -= HandleHitStop;
+            if (animator != null)
+                animator.speed = 1f;
             if (attack != null)
                 attack.StepStarted -= HandleStepStarted;
         }
@@ -82,11 +86,11 @@ namespace Game4026.Enemy
                 return;
             float speed = agent.enabled ? agent.velocity.magnitude : 0f;
             animator.SetFloat(LocomotionParam, LocomotionBlend(speed, controller.Data.MoveSpeed, controller.Data.ChaseSpeed),
-                locomotionDamping, Time.deltaTime);
+                locomotionDamping, Mathf.Max(controller.DeltaTime, 1e-5f));
 
             if (!stepActive)
                 return;
-            stepElapsed += Time.deltaTime;
+            stepElapsed += controller.DeltaTime; // stays on the AI clock through hit stops
             SetAttackSpeed(StepPlaybackAt(stepElapsed, holdStart, holdEnd, playback));
         }
 
@@ -114,6 +118,12 @@ namespace Game4026.Enemy
             AnimationClip clip = step.Clip != null ? step.Clip : attackClip;
             if (clip != null)
                 attack.RecoveryOverride = RecoveryForClip(clip.length, step.HitTime, playback, crossFade);
+        }
+
+        private void HandleHitStop(EnemyController _, bool frozen)
+        {
+            if (animator != null)
+                animator.speed = frozen ? 0f : 1f;
         }
 
         private void SetAttackSpeed(float speed)

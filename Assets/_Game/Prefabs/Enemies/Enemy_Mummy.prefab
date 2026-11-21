@@ -202,10 +202,33 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1146695130516663043, guid: 9634a939c43e1b141b5087624d446811, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3193770025116719205}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8770251294825056679, guid: 9634a939c43e1b141b5087624d446811, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4720516330779826494}
   m_SourcePrefab: {fileID: 100100000, guid: 9634a939c43e1b141b5087624d446811, type: 3}
 --- !u!4 &3967503044876646519 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1146695130516663043, guid: 9634a939c43e1b141b5087624d446811, type: 3}
   m_PrefabInstance: {fileID: 4100113885220737908}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4706462610941254355 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8770251294825056679, guid: 9634a939c43e1b141b5087624d446811, type: 3}
+  m_PrefabInstance: {fileID: 4100113885220737908}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4720516330779826494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4706462610941254355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51014ffc1048d92499ae7706daf42538, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyHitFeedback
+  profile: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
+  visual: {fileID: 0}
+  flashRenderers: []

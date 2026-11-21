@@ -5,6 +5,7 @@
 ## 目前狀態
 - 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
 - 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
+- 打擊感（M2.8，使用者追加）：所有敵人通用的 `EnemyHitFeedback`，打中時只讓敵人定格（卡肉）、抖動、閃白、噴火花、手把震動；招架/擊殺最重；數值在 `HitFeedback_Default` 資產調（EditMode 239/239；PlayMode 22/22）
 - 黑曜石神諭（M2.7，使用者追加）：`Enemy_ObsidianOracle`（頭像雕像，無骨架彈跳），5 招：震地、頭槌、滾動、跳砸、鐳射眼；全部可反彈（EditMode 233/233；PlayMode 19/19）
 - 招架（M2.6，使用者追加）：阿努比斯雙手持匕首，所有招式都能在擊中前 0.35 秒內用武器招架 → 整招取消、硬直 1.5 秒、受傷 ×1.5；刀尖光點提示招架時機（EditMode 214/214；PlayMode 17/17）
 - 阿努比斯（`Enemy_AnubisGuard`）有 5 招：快速揮擊、反手揮擊（鏡像）、重擊（起手停格 0.8 秒）、突進斬（Jump Attack 動畫）、三連斬；其他敵人各一招，時間沿用舊數值
@@ -85,6 +86,30 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-21（打擊感 / 卡肉）
+- 完成：
+  - `EnemyController.HitStop`：只停這隻敵人。AI 時鐘扣掉停格時間，出招、硬直、冷卻都順延；NavMeshAgent 暫停寫位置；Animator speed 0；StatueLocomotion 和 EnemyAnimator 改用 `controller.DeltaTime`
+  - `EnemyHitFeedback`、`HitFeedbackProfile`、`HitImpacts`、`HitSparkPool`
+  - 光彈被反彈時先定格 0.07 秒
+  - `MeleeDamageBridge` 依反應強度震動手把
+  - `EnemyWeapon` 和 `MockWeapon` 的招架改用 `EnemyAttack.Now`
+- 資產：
+  - `HitFeedback_Default.asset`
+  - `M_HitFlash`、`M_HitSpark`
+  - `FX/FX_HitSpark.prefab`
+  - 6 個敵人 Prefab 都掛上了 EnemyHitFeedback，光彈 Prefab 也指定了 Profile
+- 決定：
+  - 不改 `Time.timeScale`。VR 改全域時間會讓玩家手上的物理武器卡住，而且容易暈，所以只停敵人；玩家那一側用手把震動補。
+  - 音效欄位先留空，等有音檔再放進 Profile。
+- 實測（EnemyAI 場景）：
+  - 打神諭和巡邏阿努比斯，兩隻都觸發了停格、閃白、抖動，停格 0.083 秒（15 傷害）
+  - 用 A/B 截圖確認閃白有顯示
+- 問題：
+  - 閃白材質原本複製自 M_AttackGlint（Particles Unlit），結果完全看不到：Particles shader 會乘頂點色，而模型沒有頂點色，乘出來是 0。改成 URP Unlit 透明加算後正常。
+  - 透明度原本也乘進亮度，強度被平方變得太淡；改成 alpha 固定為 1，Profile 的 flash 數值就是線性亮度。
+- 測試：EditMode 239/239、PlayMode 22/22
+- 需要在 Editor 手動做：無。手感數值在 `Assets/_Game/Data/Enemies/HitFeedback_Default.asset`。
+
 ### 2026-11-21（黑曜石神諭）
 - 完成：StatueLocomotion、EnemyProjectile + Pool、IParryTarget、EnemyWeapon 傷害穿透、EnemyAttack 發射（muzzle）與每招停止距離、AttackRunner 支援跳躍 AreaSlam；MockWeapon 按 F 也會反彈最近的光彈；Enemy_ObsidianOracle、5 招資產、光彈 Prefab、2 個材質
 - 模型：face 在 glb 的 +X，Prefab 裡轉 -90° 朝 +Z、放大 1.25 倍（1.5 m）；額頭/眼睛位置用網格輪廓取樣決定（眼 y 1.0、額頭 y 1.12）

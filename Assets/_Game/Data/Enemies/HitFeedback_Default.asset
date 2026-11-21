@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4aa29db829e5c642a73da5d87e03e5a, type: 3}
+  m_Name: HitFeedback_Default
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.HitFeedbackProfile
+  normal:
+    hitStop: 0.06
+    shake: 0.02
+    flash: 0.55
+    haptic: 0.35
+    hapticDuration: 0.05
+    sparks: 1
+  weakPoint:
+    hitStop: 0.09
+    shake: 0.03
+    flash: 1
+    haptic: 0.6
+    hapticDuration: 0.08
+    sparks: 1.6
+  stagger:
+    hitStop: 0.1
+    shake: 0.035
+    flash: 0.85
+    haptic: 0.6
+    hapticDuration: 0.08
+    sparks: 1.3
+  kill:
+    hitStop: 0.16
+    shake: 0.045
+    flash: 1
+    haptic: 0.9
+    hapticDuration: 0.14
+    sparks: 2.2
+  parry:
+    hitStop: 0.14
+    shake: 0.03
+    flash: 0.9
+    haptic: 1
+    hapticDuration: 0.12
+    sparks: 2
+  blocked:
+    hitStop: 0.035
+    shake: 0.012
+    flash: 0
+    haptic: 0.25
+    hapticDuration: 0.04
+    sparks: 0.6
+  reflect:
+    hitStop: 0.07
+    shake: 0
+    flash: 0
+    haptic: 0.7
+    hapticDuration: 0.08
+    sparks: 1.2
+  hitStopPerDamage: 0.0015
+  maxHitStop: 0.2
+  referenceDamage: 20
+  shakeFrequency: 50
+  flashMaterial: {fileID: 2100000, guid: 2cfe42207493a794b8755a80a14658b4, type: 2}
+  flashColor: {r: 1, g: 0.92, b: 0.8, a: 1}
+  flashDuration: 0.1
+  sparkPrefab: {fileID: 2987062068186101911, guid: 5ab2c952dba653a4ba6b02d2b2f51cba, type: 3}
+  sparkCount: 10
+  hitSparkColor: {r: 1, g: 0.55, b: 0.25, a: 1}
+  parrySparkColor: {r: 1, g: 0.9, b: 0.55, a: 1}
+  hitClips: []
+  weakPointClips: []
+  killClips: []
+  parryClips: []
+  blockedClips: []
+  volume: 0.8

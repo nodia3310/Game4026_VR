@@ -114,7 +114,7 @@ namespace Game4026.Enemy
         {
             if (model == null)
                 return;
-            float dt = Time.deltaTime;
+            float dt = controller.DeltaTime; // 0 during a hit stop: the pose holds
             stateTime += dt;
             Vector3 rootDelta = transform.position - lastRootPosition;
             lastRootPosition = transform.position;

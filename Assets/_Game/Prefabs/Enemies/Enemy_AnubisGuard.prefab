@@ -134,6 +134,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyWeapon
   attack: {fileID: 3379297757337744242}
   leftHand: 1
+  passDamageWhenNotParrying: 0
   tip: {fileID: 1254574826824436657}
 --- !u!1 &7368410144693437595
 GameObject:
@@ -207,6 +208,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyWeapon
   attack: {fileID: 3379297757337744242}
   leftHand: 0
+  passDamageWhenNotParrying: 0
   tip: {fileID: 5858428251741487733}
 --- !u!1001 &1450134060087758234
 PrefabInstance:
@@ -453,6 +455,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8770251294825056679, guid: 9634a939c43e1b141b5087624d446811, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1915664208879852810}
+    - targetCorrespondingSourceObject: {fileID: 8770251294825056679, guid: 9634a939c43e1b141b5087624d446811, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1030403756890798561}
   m_SourcePrefab: {fileID: 100100000, guid: 9634a939c43e1b141b5087624d446811, type: 3}
 --- !u!1 &1496217061182641104 stripped
 GameObject:
@@ -483,6 +488,21 @@ MonoBehaviour:
   parriedColor: {r: 1, g: 1, b: 1, a: 1}
   parriedSize: 0.7
   parriedTime: 0.18
+--- !u!114 &1030403756890798561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1496217061182641104}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51014ffc1048d92499ae7706daf42538, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyHitFeedback
+  profile: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
+  visual: {fileID: 0}
+  flashRenderers: []
 --- !u!114 &3379297757337744242 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4868458333637273861, guid: 9634a939c43e1b141b5087624d446811, type: 3}

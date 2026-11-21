@@ -153,5 +153,28 @@ namespace Game4026.Tests.Bridges
             }
             finally { Object.DestroyImmediate(boltGo); }
         }
+
+        private sealed class ReactingTarget : MonoBehaviour, Game4026.Contracts.IDamageable
+        {
+            public void TakeDamage(float damage, Vector3 hitPoint, bool isWeakPoint) =>
+                HitImpacts.Raise(new HitImpact(HitKind.Parry, hitPoint, 0.1f, 0.8f, 0.1f));
+        }
+
+        [Test]
+        public void MeleeHit_RumblesWithTheReactionItCaused()
+        {
+            var go = new GameObject("Reacting");
+            try
+            {
+                var col = go.AddComponent<SphereCollider>();
+                go.AddComponent<ReactingTarget>();
+                Assert.IsTrue(melee.ApplyHit(new MeleeHit { Collider = col, Target = go, Point = Vector3.zero, Speed = 3f }));
+                Assert.AreEqual(0.8f, melee.LastHapticAmplitude, 1e-5f);
+
+                melee.ApplyHit(Hit(3f)); // blade, no attack running: blocked, no feedback component here
+                Assert.AreEqual(0f, melee.LastHapticAmplitude);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
     }
 }

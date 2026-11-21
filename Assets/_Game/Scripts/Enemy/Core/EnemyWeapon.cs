@@ -45,7 +45,7 @@ namespace Game4026.Enemy
                 Debug.LogWarning($"{nameof(EnemyWeapon)} on '{name}' has no {nameof(EnemyAttack)} in its parents.", this);
         }
 
-        public void TakeDamage(float damage, Vector3 hitPoint, bool isWeakPoint) => TryDeflect(hitPoint, Time.time, damage);
+        public void TakeDamage(float damage, Vector3 hitPoint, bool isWeakPoint) => TryDeflect(hitPoint, Attack != null ? Attack.Now : Time.time, damage);
 
         /// <summary>
         /// Returns true when the hit parried an attack. Otherwise the blade blocks it, or, for a body weapon,

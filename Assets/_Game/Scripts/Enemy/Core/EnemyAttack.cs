@@ -52,6 +52,10 @@ namespace Game4026.Enemy
 
         /// <summary>True while the current step can be deflected by the player's weapon.</summary>
         public bool IsParryWindowOpen => runner.IsParryWindowOpen;
+        /// <summary>Frozen (hit stop) time removed from the owner's AI clock; set by <see cref="EnemyController"/>.</summary>
+        internal float ClockOffset { get; set; }
+        /// <summary>The owner's AI clock: use this, not Time.time, when calling <see cref="TryParry"/> from a hit.</summary>
+        public float Now => Time.time - ClockOffset;
 
         /// <summary>The move being played (null when idle).</summary>
         public AttackDefinition Current => runner.Attack;

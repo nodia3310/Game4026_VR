@@ -60,6 +60,10 @@ namespace Game4026.Enemy
         private bool animatorHasSpeed;
         private bool animatorHasState;
 
+        // Hit stop: real seconds left frozen, and total frozen time removed from the AI clock.
+        private float hitStopRemaining, clockOffset, localDeltaTime;
+        private bool agentFrozen, agentUpdatedRotation;
+
         /// <summary>(controller, previous, next)</summary>
         public event Action<EnemyController, EnemyStateId, EnemyStateId> StateChanged;
         /// <summary>Raised once after death + despawnDuration (also after <see cref="ForceClear"/>).</summary>
@@ -68,6 +72,8 @@ namespace Game4026.Enemy
         public event Action<EnemyController> Killed;
         /// <summary>The player's weapon deflected an attack (SFX, sparks, haptics). (controller, step)</summary>
         public event Action<EnemyController, AttackDefinition> Parried;
+        /// <summary>Hit stop started (true) or ended (false). Animation drivers pause on it.</summary>
+        public event Action<EnemyController, bool> HitStopChanged;
 
         public EnemyStateId CurrentState => machine != null ? machine.CurrentId : EnemyStateId.None;
         /// <summary>True when this life ended through <see cref="ForceClear"/> instead of a kill.</summary>
@@ -76,6 +82,12 @@ namespace Game4026.Enemy
         /// <summary>Line-of-sight origin (also the default projectile muzzle).</summary>
         public Transform Eye => eye != null ? eye : transform;
         public EnemyAttack Attack => attack;
+        /// <summary>True while frozen by <see cref="HitStop"/>.</summary>
+        public bool IsHitStopped => hitStopRemaining > 0f;
+        /// <summary>This frame's AI delta time: 0 while frozen. Animation drivers use it instead of Time.deltaTime.</summary>
+        public float DeltaTime => localDeltaTime;
+        /// <summary>The AI clock (Time.time minus all frozen time).</summary>
+        public float LocalTime => currentTime;
 
         // ---- Unity ----
 
@@ -121,9 +133,73 @@ namespace Game4026.Enemy
             health.Damaged -= HandleDamaged;
             health.Died -= HandleDied;
             attack.Parried -= HandleParried;
+            if (hitStopRemaining > 0f)
+                EndHitStop();
         }
 
-        private void Update() => Tick(Time.time, Time.deltaTime);
+        private void Update() => Step(Time.time, Time.deltaTime);
+
+        /// <summary>
+        /// One real frame: spends hit-stop time first (the AI clock does not advance while frozen), then ticks with
+        /// what is left. Every AI timer (attack timeline, stagger, cooldowns) therefore shifts by the frozen time.
+        /// </summary>
+        internal void Step(float realTime, float realDeltaTime)
+        {
+            float dt = realDeltaTime;
+            if (hitStopRemaining > 0f)
+            {
+                float frozen = Mathf.Min(hitStopRemaining, dt);
+                hitStopRemaining -= frozen;
+                clockOffset += frozen;
+                dt -= frozen;
+                attack.ClockOffset = clockOffset;
+                if (hitStopRemaining <= 0f)
+                    EndHitStop();
+            }
+            localDeltaTime = dt;
+            Tick(realTime - clockOffset, dt);
+        }
+
+        /// <summary>
+        /// Freezes this enemy for <paramref name="seconds"/> of real time ("卡肉"): AI, attack timeline, NavMesh movement
+        /// and animation pause, then resume exactly where they were. A new hit stop during one keeps the longer remainder.
+        /// </summary>
+        public void HitStop(float seconds)
+        {
+            if (!(seconds > 0f))
+                return;
+            bool wasFrozen = hitStopRemaining > 0f;
+            hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
+            if (wasFrozen)
+                return;
+            if (agent != null && agent.enabled)
+            {
+                // Stop the agent writing the transform; its own simulation is put back on resume.
+                agentFrozen = true;
+                agentUpdatedRotation = agent.updateRotation;
+                agent.updatePosition = false;
+                agent.updateRotation = false;
+            }
+            if (animator != null)
+                animator.speed = 0f;
+            HitStopChanged?.Invoke(this, true);
+        }
+
+        private void EndHitStop()
+        {
+            hitStopRemaining = 0f;
+            if (agentFrozen && agent != null)
+            {
+                agentFrozen = false;
+                if (agent.enabled)
+                    agent.nextPosition = transform.position;
+                agent.updatePosition = true;
+                agent.updateRotation = agentUpdatedRotation;
+            }
+            if (animator != null)
+                animator.speed = 1f;
+            HitStopChanged?.Invoke(this, false);
+        }
 
         /// <summary>
         /// One AI frame. Every time-based rule reads <paramref name="now"/> (never Time.time directly),
@@ -160,7 +236,9 @@ namespace Game4026.Enemy
             nextAttackSelectTime = 0f;
             staggerDuration = 0f;
             staggerEndTime = 0f;
-            currentTime = Time.time;
+            if (hitStopRemaining > 0f)
+                EndHitStop();
+            currentTime = Time.time - clockOffset;
             if (agent != null)
                 agent.enabled = true;
             machine.ChangeState(EnemyStateId.Spawn);
