@@ -52,6 +52,8 @@ namespace Game4026.Enemy
         private float lastSeenTime = float.NegativeInfinity;
         private float nextPerceptionTime;
         private float nextRepathTime;
+        private float nextAttackSelectTime;
+        private float staggerDuration, staggerEndTime;
         private Vector3 lastDestination;
         private int patrolIndex = -1;
         private float currentTime;
@@ -64,6 +66,8 @@ namespace Game4026.Enemy
         public event Action<EnemyController> Despawned;
         /// <summary>Raised when the player kills this enemy (not for <see cref="ForceClear"/>).</summary>
         public event Action<EnemyController> Killed;
+        /// <summary>The player's weapon deflected an attack (SFX, sparks, haptics). (controller, step)</summary>
+        public event Action<EnemyController, AttackDefinition> Parried;
 
         public EnemyStateId CurrentState => machine != null ? machine.CurrentId : EnemyStateId.None;
         /// <summary>True when this life ended through <see cref="ForceClear"/> instead of a kill.</summary>
@@ -106,6 +110,7 @@ namespace Game4026.Enemy
         {
             health.Damaged += HandleDamaged;
             health.Died += HandleDied;
+            attack.Parried += HandleParried;
             Respawn();
         }
 
@@ -113,6 +118,7 @@ namespace Game4026.Enemy
         {
             health.Damaged -= HandleDamaged;
             health.Died -= HandleDied;
+            attack.Parried -= HandleParried;
         }
 
         private void Update() => Tick(Time.time, Time.deltaTime);
@@ -149,6 +155,9 @@ namespace Game4026.Enemy
             lastSeenTime = float.NegativeInfinity;
             nextPerceptionTime = 0f;
             nextRepathTime = 0f;
+            nextAttackSelectTime = 0f;
+            staggerDuration = 0f;
+            staggerEndTime = 0f;
             currentTime = Time.time;
             if (agent != null)
                 agent.enabled = true;
@@ -220,7 +229,32 @@ namespace Game4026.Enemy
         private void HandleDamaged(EnemyHealth _, EnemyDamageResult result)
         {
             if (!result.Killed && result.CausedStagger)
-                machine.ChangeState(EnemyStateId.Hit);
+                Stagger(data.StaggerDuration);
+        }
+
+        private void HandleParried(EnemyAttack _, AttackDefinition move, AttackDefinition step)
+        {
+            if (CurrentState == EnemyStateId.Dead)
+                return;
+            // Before entering Hit, so the counter window is active from the first frame of the stagger.
+            health.DamageMultiplier = data.ParriedDamageMultiplier; // cleared when the stagger ends
+            Stagger(data.ParryStaggerDuration);
+            Parried?.Invoke(this, step);
+        }
+
+        /// <summary>
+        /// Enters Hit for <paramref name="seconds"/>. A shorter stagger during a longer one (e.g. a normal hit during the
+        /// parry stagger) restarts the Hit reaction but keeps the remaining time.
+        /// </summary>
+        public void Stagger(float seconds)
+        {
+            if (CurrentState == EnemyStateId.Dead || CurrentState == EnemyStateId.None)
+                return;
+            if (CurrentState == EnemyStateId.Hit)
+                seconds = Mathf.Max(seconds, staggerEndTime - currentTime);
+            staggerDuration = seconds;
+            staggerEndTime = currentTime + seconds;
+            machine.ChangeState(EnemyStateId.Hit);
         }
 
         private void HandleDied(EnemyHealth _)
@@ -229,8 +263,12 @@ namespace Game4026.Enemy
             Killed?.Invoke(this);
         }
 
-        private void HandleStateChanged(EnemyStateId previous, EnemyStateId next) =>
+        private void HandleStateChanged(EnemyStateId previous, EnemyStateId next)
+        {
+            if (previous == EnemyStateId.Hit && next != EnemyStateId.Hit)
+                health.DamageMultiplier = 1f; // parry counter window over
             StateChanged?.Invoke(this, previous, next);
+        }
 
         private void UpdateAnimator()
         {
@@ -323,12 +361,21 @@ namespace Game4026.Enemy
                 transform.rotation, Quaternion.LookRotation(direction), turnSpeed * deltaTime);
         }
 
-        public bool IsAttackReady => attack.IsReady(currentTime);
-        public float AttackWindup => attack.WindupFor(data);
-        public float AttackRecovery => attack.RecoveryDuration;
-        public void BeginAttack() => attack.BeginWindup();
-        public bool ResolveAttack() => attack.Resolve(target, data, currentTime);
-        public void CancelAttack() => attack.Cancel();
+        public bool TrySelectAttack()
+        {
+            // Spec 4.5: the selector runs on the perception interval, not every frame.
+            if (target == null || currentTime < nextAttackSelectTime)
+                return false;
+            nextAttackSelectTime = currentTime + perceptionInterval;
+            return attack.TrySelect(data, distanceToTarget, currentTime);
+        }
+
+        public float AttackHoldRange => attack.HoldRange(data);
+        public void BeginAttack() => attack.Begin(data, currentTime);
+        public bool TickAttack(float deltaTime) => attack.Tick(currentTime, deltaTime, target);
+        public void CancelAttack() => attack.Cancel(currentTime);
+
+        public float CurrentStaggerDuration => staggerDuration > 0f ? staggerDuration : data.StaggerDuration;
 
         public void SetInvulnerable(bool value) => health.IsInvulnerable = value;
 
@@ -360,7 +407,13 @@ namespace Game4026.Enemy
             Gizmos.color = new Color(0.6f, 0.6f, 0.6f, 0.4f);
             Gizmos.DrawWireSphere(p, d.LoseTargetRange);
             Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.8f);
-            Gizmos.DrawWireSphere(p, d.AttackRange);
+            Gizmos.DrawWireSphere(p, AttackSelector.HoldRange(d.Attacks));
+            float reach = 0f;
+            foreach (AttackDefinition a in d.Attacks)
+                if (a != null && a.IsSupported && a.MaxRange > reach)
+                    reach = a.MaxRange;
+            Gizmos.color = new Color(1f, 0.5f, 0.1f, 0.6f);
+            Gizmos.DrawWireSphere(p, reach);
             Gizmos.color = Color.cyan;
             Gizmos.DrawSphere(EyePosition, 0.05f);
         }

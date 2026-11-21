@@ -21,10 +21,8 @@ MonoBehaviour:
   chaseSpeed: 1.2
   detectionRange: 12
   loseTargetRange: 18
-  attackRange: 1.8
-  attackWindup: 1.2
-  attackDamage: 25
-  attackCooldown: 3.5
-  attackAngle: 70
+  attacks:
+  - {fileID: 11400000, guid: c9bb1b114d36c4b41a2feccfd583cef2, type: 2}
+  globalAttackCooldown: 0
   spawnDuration: 1.5
   despawnDuration: 2.5

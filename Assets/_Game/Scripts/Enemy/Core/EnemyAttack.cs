@@ -1,49 +1,64 @@
 using System;
 using Game4026.Contracts;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Game4026.Enemy
 {
     /// <summary>
-    /// Melee attack (spec 4.5): windup event, then a distance + angle check (no physics colliders).
-    /// A hit calls <see cref="IPlayerDamageReceiver.ApplyPlayerDamage"/> exactly once per attack.
+    /// Attack host (spec 4.5): picks moves from <see cref="EnemyData.Attacks"/> with an <see cref="AttackSelector"/>
+    /// and plays them with an <see cref="AttackRunner"/>. Hit checks are distance + angle (no physics colliders);
+    /// a hit calls <see cref="IPlayerDamageReceiver.ApplyPlayerDamage"/> once per step.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class EnemyAttack : MonoBehaviour
+    public sealed class EnemyAttack : MonoBehaviour, IAttackHost
     {
-        [Tooltip("Seconds after the hit check before the enemy can move again.")]
-        [SerializeField, Min(0f)] private float recoveryDuration = 0.5f;
-        [Tooltip("Extra reach added to EnemyData.attackRange for the hit check (spec: 0.3 m).")]
-        [SerializeField, Min(0f)] private float hitRangePadding = 0.3f;
+        [Tooltip("A lunge stops this far in front of the player instead of running through them.")]
+        [SerializeField, Min(0f)] private float lungeStopDistance = 0.9f;
 
-        private float nextReadyTime;
+        private readonly AttackSelector selector = new AttackSelector();
+        private readonly AttackRunner runner = new AttackRunner();
+
+        private EnemyController controller;
+        private NavMeshAgent agent;
+        private EnemyData data;
+        private PlayerTarget target;
         private float speedMultiplier = 1f;
-
-        /// <summary>Windup started: play telegraph SFX/VFX here so the player can dodge.</summary>
-        public event Action<EnemyAttack> AttackWindup;
-        /// <summary>Hit check done; bool is true when the player was hit.</summary>
-        public event Action<EnemyAttack, bool> AttackResolved;
-        /// <summary>Windup interrupted (stagger or death) before the hit check.</summary>
-        public event Action<EnemyAttack> AttackCancelled;
-
         private float recoveryOverride = -1f;
+        private int pendingIndex = -1;
+        private Vector3 lungeDirection;
+        private float lungeTotal;
 
-        /// <summary>Seconds after the hit check before moving again. Uses <see cref="RecoveryOverride"/> when it is set.</summary>
-        public float RecoveryDuration => recoveryOverride >= 0f ? recoveryOverride : recoveryDuration;
+        /// <summary>A move started (once per attack, also for combos).</summary>
+        public event Action<EnemyAttack, AttackDefinition> AttackStarted;
+        /// <summary>A step's telegraph started: warning SFX/VFX (glow, growl) so the player can react.</summary>
+        public event Action<EnemyAttack, AttackStepTiming> AttackTelegraph;
+        /// <summary>A step started; <see cref="EnemyAnimator"/> plays its clip from this.</summary>
+        public event Action<EnemyAttack, AttackStepTiming> StepStarted;
+        /// <summary>A step's hit check ran; bool is true when the player was hit.</summary>
+        public event Action<EnemyAttack, AttackDefinition, bool> AttackResolved;
+        /// <summary>The whole move finished normally.</summary>
+        public event Action<EnemyAttack, AttackDefinition> AttackFinished;
+        /// <summary>Interrupted (stagger or death) before it finished.</summary>
+        public event Action<EnemyAttack, AttackDefinition> AttackCancelled;
+        /// <summary>A step's parry window opened: the strike lands in (HitDelay − ParryOpen) seconds.</summary>
+        public event Action<EnemyAttack, AttackStepTiming> ParryWindowOpened;
+        /// <summary>The player's weapon deflected this step; the whole move was cancelled. (attack, move, step)</summary>
+        public event Action<EnemyAttack, AttackDefinition, AttackDefinition> Parried;
+
+        /// <summary>True while the current step can be deflected by the player's weapon.</summary>
+        public bool IsParryWindowOpen => runner.IsParryWindowOpen;
+
+        /// <summary>The move being played (null when idle).</summary>
+        public AttackDefinition Current => runner.Attack;
+        /// <summary>The combo step being played (the move itself when not a combo).</summary>
+        public AttackDefinition CurrentStep => runner.Step;
+        public int CurrentStepIndex => runner.StepIndex;
+        public bool IsAttacking => runner.IsRunning;
+        public AttackSelector Selector => selector;
 
         /// <summary>
-        /// Runtime recovery time, e.g. set by <see cref="EnemyAnimator"/> so the attack clip can finish.
-        /// Negative = use the Inspector value.
-        /// </summary>
-        public float RecoveryOverride
-        {
-            get => recoveryOverride;
-            set => recoveryOverride = float.IsNaN(value) ? -1f : value;
-        }
-        public float HitRangePadding => hitRangePadding;
-
-        /// <summary>
-        /// Runtime attack speed (e.g. the boss's last phase). 2 = windup and cooldown take half as long.
+        /// Runtime attack speed (e.g. the boss's last phase). 2 = telegraphs, swings, recovery and cooldowns take half as long.
         /// Reset to 1 by <see cref="ResetState"/>.
         /// </summary>
         public float SpeedMultiplier
@@ -52,35 +67,172 @@ namespace Game4026.Enemy
             set => speedMultiplier = Mathf.Max(0.1f, value);
         }
 
-        public float WindupFor(EnemyData data) => data.AttackWindup / speedMultiplier;
-        public float CooldownFor(EnemyData data) => data.AttackCooldown / speedMultiplier;
-
-        public bool IsReady(float time) => time >= nextReadyTime;
-
-        public void BeginWindup() => AttackWindup?.Invoke(this);
-
-        /// <summary>Runs the hit check, applies damage on a hit and starts the cooldown.</summary>
-        public bool Resolve(PlayerTarget target, EnemyData data, float time)
+        /// <summary>
+        /// Recovery wanted by the animation for the current step (set by <see cref="EnemyAnimator"/> on
+        /// <see cref="StepStarted"/> so the clip can finish). The longer of this and the move's recovery is used.
+        /// Negative = none. Cleared at each step start.
+        /// </summary>
+        public float RecoveryOverride
         {
-            nextReadyTime = time + CooldownFor(data);
-
-            bool hit = target != null && EnemyGeometry.IsInAttackCone(
-                transform.position, transform.forward, target.Body.position,
-                data.AttackRange + hitRangePadding, data.AttackAngle);
-
-            if (hit)
-                target.Damageable?.ApplyPlayerDamage(data.AttackDamage);
-
-            AttackResolved?.Invoke(this, hit);
-            return hit;
+            get => recoveryOverride;
+            set => recoveryOverride = float.IsNaN(value) ? -1f : value;
         }
 
-        public void Cancel() => AttackCancelled?.Invoke(this);
+        private void Awake()
+        {
+            controller = GetComponent<EnemyController>();
+            agent = GetComponent<NavMeshAgent>();
+        }
+
+        /// <summary>Chooses a move for this distance; true when one is ready. <see cref="Begin"/> starts it.</summary>
+        public bool TrySelect(EnemyData enemyData, float distance, float now)
+        {
+            if (runner.IsRunning || enemyData == null)
+                return false;
+            pendingIndex = selector.Select(enemyData.Attacks, distance, now, UnityEngine.Random.value);
+            if (pendingIndex >= 0)
+                data = enemyData;
+            return pendingIndex >= 0;
+        }
+
+        /// <summary>Starts the move chosen by <see cref="TrySelect"/>, or forces one (tests, scripted bosses).</summary>
+        public bool Begin(EnemyData enemyData, float now, AttackDefinition forced = null)
+        {
+            data = enemyData;
+            AttackDefinition[] attacks = enemyData != null ? enemyData.Attacks : null;
+            AttackDefinition move = forced;
+            int index = -1;
+            if (move == null && attacks != null && pendingIndex >= 0 && pendingIndex < attacks.Length)
+            {
+                index = pendingIndex;
+                move = attacks[index];
+            }
+            pendingIndex = -1;
+            if (move == null)
+                return false;
+
+            if (index < 0 && attacks != null)
+                index = Array.IndexOf(attacks, move);
+            selector.MarkStarted(index, move, now, speedMultiplier);
+            AttackStarted?.Invoke(this, move);
+            runner.Start(move, speedMultiplier, this);
+            return true;
+        }
+
+        /// <summary>One frame of the current move. Returns false once it has finished.</summary>
+        public bool Tick(float now, float deltaTime, PlayerTarget player)
+        {
+            target = player;
+            if (!runner.IsRunning)
+                return false;
+            AttackDefinition move = runner.Attack;
+            if (runner.Tick(deltaTime, this))
+                return true;
+            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, speedMultiplier);
+            AttackFinished?.Invoke(this, move);
+            return false;
+        }
+
+        public void Cancel(float now)
+        {
+            pendingIndex = -1;
+            if (!runner.IsRunning)
+                return;
+            AttackDefinition move = runner.Attack;
+            runner.Stop();
+            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, speedMultiplier);
+            AttackCancelled?.Invoke(this, move);
+        }
+
+        /// <summary>
+        /// The player's weapon hit this enemy's weapon. Inside the parry window the whole move (rest of a combo too)
+        /// is cancelled without damaging the player and <see cref="Parried"/> is raised. Returns false otherwise.
+        /// </summary>
+        public bool TryParry(float now)
+        {
+            if (!runner.IsParryWindowOpen)
+                return false;
+            AttackDefinition move = runner.Attack;
+            AttackDefinition step = runner.Step;
+            pendingIndex = -1;
+            runner.Stop();
+            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, speedMultiplier);
+            Parried?.Invoke(this, move, step);
+            return true;
+        }
+
+        public float HoldRange(EnemyData enemyData) => enemyData != null ? AttackSelector.HoldRange(enemyData.Attacks) : 0f;
 
         public void ResetState()
         {
-            nextReadyTime = 0f;
+            runner.Stop();
+            selector.Reset();
+            pendingIndex = -1;
             speedMultiplier = 1f;
+            recoveryOverride = -1f;
+        }
+
+        // ---- IAttackHost ----
+
+        void IAttackHost.FaceTarget(float deltaTime)
+        {
+            if (controller != null)
+                controller.FaceTarget(deltaTime);
+        }
+
+        void IAttackHost.BeginLunge(AttackDefinition step)
+        {
+            lungeDirection = transform.forward;
+            lungeTotal = step.LungeDistance;
+            if (target == null)
+                return;
+            Vector3 toPlayer = target.Body.position - transform.position;
+            toPlayer.y = 0f;
+            float distance = toPlayer.magnitude;
+            if (distance > 1e-3f)
+            {
+                lungeDirection = toPlayer / distance;
+                transform.rotation = Quaternion.LookRotation(lungeDirection);
+            }
+            lungeTotal = Mathf.Clamp(distance - lungeStopDistance, 0f, step.LungeDistance);
+        }
+
+        void IAttackHost.MoveLunge(float fraction)
+        {
+            Vector3 delta = lungeDirection * (lungeTotal * fraction);
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+                agent.Move(delta); // stays on the NavMesh, so it cannot go through walls
+            else
+                transform.position += delta;
+        }
+
+        bool IAttackHost.ResolveHit(AttackDefinition step)
+        {
+            bool hit = target != null && IsInHitArea(step, transform, target.Body.position);
+            if (hit)
+                target.Damageable?.ApplyPlayerDamage(step.Damage);
+            AttackResolved?.Invoke(this, step, hit);
+            return hit;
+        }
+
+        float IAttackHost.RecoveryOverride => recoveryOverride;
+
+        void IAttackHost.OnStepStarted(in AttackStepTiming timing)
+        {
+            recoveryOverride = -1f;
+            StepStarted?.Invoke(this, timing);
+            if (timing.HoldDuration > 0f)
+                AttackTelegraph?.Invoke(this, timing);
+        }
+
+        void IAttackHost.OnParryWindowOpened(in AttackStepTiming timing) => ParryWindowOpened?.Invoke(this, timing);
+
+        /// <summary>AreaSlam: anywhere within slamRadius (any height). Others: the hit cone in front.</summary>
+        public static bool IsInHitArea(AttackDefinition step, Transform enemy, Vector3 playerBody)
+        {
+            if (step.Type == AttackType.AreaSlam)
+                return EnemyGeometry.HorizontalDistance(enemy.position, playerBody) <= step.SlamRadius;
+            return EnemyGeometry.IsInAttackCone(enemy.position, enemy.forward, playerBody, step.HitRange, step.HitAngle);
         }
     }
 }

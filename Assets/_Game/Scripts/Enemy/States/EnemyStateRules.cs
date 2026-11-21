@@ -9,9 +9,6 @@ namespace Game4026.Enemy
         public static bool ShouldLoseTarget(IEnemyContext c) =>
             !c.HasTarget || c.DistanceToTarget > c.Data.LoseTargetRange || c.TimeSinceTargetSeen > c.LoseSightSeconds;
 
-        public static bool CanStartAttack(IEnemyContext c) =>
-            c.HasTarget && c.DistanceToTarget <= c.Data.AttackRange && c.IsAttackReady;
-
         public static EnemyStateId CalmState(IEnemyContext c) =>
             c.HasPatrolPoints ? EnemyStateId.Patrol : EnemyStateId.Idle;
     }

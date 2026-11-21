@@ -15,18 +15,24 @@ namespace Game4026.Tests.Enemy
         public float LoseSightSeconds { get; set; } = 5f;
         public bool HasPatrolPoints { get; set; }
         public bool ReachedDestination { get; set; }
+        /// <summary>A move is off cooldown (cleared when one finishes, like a cooldown starting).</summary>
         public bool IsAttackReady { get; set; } = true;
-        /// <summary>Negative = use Data.AttackWindup.</summary>
-        public float AttackWindupOverride = -1f;
-        public float AttackWindup => AttackWindupOverride >= 0f ? AttackWindupOverride : Data.AttackWindup;
-        public float AttackRecovery { get; set; } = 0.5f;
-        public bool AttackHits { get; set; } = true;
+        /// <summary>Moves can be picked within this distance.</summary>
+        public float AttackSelectRange = 1.6f;
+        public float AttackHoldRange { get; set; } = 1.6f;
+        /// <summary>How long a move plays before the runner reports it finished.</summary>
+        public float AttackDuration = 1.2f;
+        public float AttackElapsed;
+
+        /// <summary>Negative = Data.StaggerDuration.</summary>
+        public float StaggerOverride = -1f;
+        public float CurrentStaggerDuration => StaggerOverride >= 0f ? StaggerOverride : Data.StaggerDuration;
 
         public bool Invulnerable;
         public bool Moving;
         public float MoveSpeed;
         public int PatrolMoves, ChaseCalls, FaceCalls;
-        public int AttackBegins, AttackResolves, AttackCancels;
+        public int AttackBegins, AttackTicks, AttackFinishes, AttackCancels, AttackSelects;
         public int DeathCalls, DespawnCalls;
 
         public FakeEnemyContext(EnemyData data)
@@ -49,9 +55,22 @@ namespace Game4026.Tests.Enemy
         public void MoveToNextPatrolPoint() { PatrolMoves++; Moving = true; }
         public void ChaseTarget() { ChaseCalls++; Moving = true; }
         public void FaceTarget(float deltaTime) => FaceCalls++;
-        public void BeginAttack() => AttackBegins++;
-        // Like EnemyAttack.Resolve: the hit check starts the cooldown.
-        public bool ResolveAttack() { AttackResolves++; IsAttackReady = false; return AttackHits; }
+        public bool TrySelectAttack()
+        {
+            AttackSelects++;
+            return IsAttackReady && DistanceToTarget <= AttackSelectRange;
+        }
+        public void BeginAttack() { AttackBegins++; AttackElapsed = 0f; }
+        public bool TickAttack(float deltaTime)
+        {
+            AttackTicks++;
+            AttackElapsed += deltaTime;
+            if (AttackElapsed < AttackDuration - 1e-5f)
+                return true;
+            AttackFinishes++;
+            IsAttackReady = false;
+            return false;
+        }
         public void CancelAttack() => AttackCancels++;
         public void SetInvulnerable(bool value) => Invulnerable = value;
         public void OnDeath() => DeathCalls++;

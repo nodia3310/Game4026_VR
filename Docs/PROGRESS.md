@@ -3,7 +3,10 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
-- 里程碑：**M1–M4 全部完成**；之後加上模型與動畫（EditMode 177/177；PlayMode 16/16）
+- 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
+- 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
+- 招架（M2.6，使用者追加）：阿努比斯雙手持匕首，所有招式都能在擊中前 0.35 秒內用武器招架 → 整招取消、硬直 1.5 秒、受傷 ×1.5；刀尖光點提示招架時機（EditMode 214/214；PlayMode 17/17）
+- 阿努比斯（`Enemy_AnubisGuard`）有 5 招：快速揮擊、反手揮擊（鏡像）、重擊（起手停格 0.8 秒）、突進斬（Jump Attack 動畫）、三連斬；其他敵人各一招，時間沿用舊數值
 - 傷害橋接完成，含場景安裝器（Bridges）
 - 模型與動畫：所有敵人（基底 Enemy_Placeholder 與四個 Variant、場景的巡邏示範）都用 Anubis 模型 + AC_Anubis + EnemyAnimator；各自弱點掛在骨頭上（衛兵/基底：頭，木乃伊/法老：胸口，塞克邁特：背後）。各種敵人目前外觀相同，只有大小不同。
 - Git（2026-11-18 收工時）：
@@ -11,7 +14,9 @@
   - 模型與動畫已 commit 並 push（`6111b70`，模型/貼圖走 Git LFS）。PR #3 頁面已在瀏覽器開好（main ← feature/enemy-ai，不刪任何檔案），**使用者還要按 Create pull request**；下次先確認 PR #3 是否建立/合併
   - 沒有 gh CLI：開 PR 用預先填好的 GitHub compare 網址；查 PR 狀態可用 `https://api.github.com/repos/nodia3310/Game4026_VR/pulls?head=nodia3310:feature/enemy-ai&state=all`
   - `ProfilerCaptures/` 是 M4 的 Profiler 錄檔，沒進 git，可以刪
-- 下一步（規格之外，建議）：
+- 下一步：
+  0. 使用者在 EnemyAI 場景實際看阿努比斯 5 招的手感，調招式資產數值（冷卻、權重、預警、傷害）
+  0b. 新規格 M4：StatueLocomotion / StatuePart、EnemyProjectile（反彈）、WingShield、卡雕像與伊西斯（需要模型）
   1. 確認 PR #3 建立並合併
   2. 各種敵人換成自己的模型（木乃伊、塞克邁特、法老）；人形 Mixamo 模型可沿用 AC_Anubis 與 EnemyAnimator，只要在 Variant 裡換掉 Model
   3. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測；確認 A 的武器 targetMask 包含敵人 Collider 的 Layer
@@ -20,6 +25,22 @@
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
+- 2026-11-21（招架）：攻擊前的「頓一拍」是預警停格，保留；另加 `AttackIndicator` 光點提示。
+- 2026-11-21（招架）：所有招式都能招架；成功 = 整招取消（含連段剩下的）、硬直 1.5 秒、期間受傷 ×1.5（使用者選的）。
+- 2026-11-21（招架）：招架用既有合約：匕首上的 `EnemyWeapon` 實作 `IDamageable`，A 的武器打到刀身就會呼叫它。窗外打到刀身只是被擋，不傷本體。
+- 2026-11-21（招架）：招架窗 = 擊中前 `parryWindow` 秒（阿努比斯 0.35，突進斬 0.4，三連斬每下 0.3）；光點在窗打開時亮閃。
+- 2026-11-21（招架）：箭不能招架（`DamageDispatch` 的 allowParry=false），之後可改。
+- 2026-11-21（招架）：阿努比斯改成**雙持**匕首：反手揮擊和三連斬第二下用 Humanoid 鏡像，實際是左手在揮，單手拿刀會變成空手揮砍。只要單手的話，刪掉左手的 `Weapon_Dagger` 並把那兩招的 mirror 關掉。
+- 2026-11-21（招架）：一般硬直打在招架硬直中途時，保留較長的剩餘時間（`EnemyController.Stagger`）。
+- 2026-11-21：Edited 規格的設計內容採用，但路徑／命名空間／合約維持 `_Game`、`Game4026.*`、既有簽名（使用者已確認）。
+- 2026-11-21（M2.5）：規格的 `EnemyAttackRunner` 由既有的 `EnemyAttack` 元件承擔（不改元件名稱，Prefab 不用重掛），時間軸邏輯在純 C# 的 `AttackRunner`，選招在 `AttackSelector`。
+- 2026-11-21（M2.5）：命中用計時，不用動畫事件 `OnAttackHit`；`hitTime` 填動畫的擊中秒數，有沒有 Animator 時間都一樣。
+- 2026-11-21（M2.5）：預警 = 動畫播到起手姿勢（`telegraphPoseTime`）後停格 `telegraphTime` 秒（規格寫「停在起手」）；停格結束前面向玩家，揮下後方向鎖定，玩家側閃可躲。
+- 2026-11-21（M2.5）：Animator 用狀態名稱（`animatorState`）而不是 Trigger；鏡像用獨立的 `Attack_Mirror` 狀態，避免同一狀態連段時鏡像參數瞬間翻轉。
+- 2026-11-21（M2.5）：冷卻：各招從出招開始算，`globalAttackCooldown` 從整招結束（含被打斷）開始算。舊的單招敵人轉成資產時，冷卻 = 舊冷卻 + 舊前搖、全域冷卻 0，節奏和以前一樣。
+- 2026-11-21（M2.5）：沒招可出時，在「近身招式的最大距離」內停下面向玩家，否則繼續追（突進斬冷卻中會走近改用近戰）。
+- 2026-11-21（M2.5）：突進斬停在玩家前 0.9 公尺（`EnemyAttack.lungeStopDistance`），方向在預警結束時鎖定。
+- 2026-11-21（M2.5）：EnemyData 移除舊的 attackRange/Windup/Damage/Cooldown/Angle，改成 `attacks[]` + `globalAttackCooldown`；`attacks` 空的時候用一招預設近戰（舊預設值）。
 - 2026-11-18：棄用 `Assets/_Project/`、`Anubis.*`，改用現有的 `Assets/_Game/`、`Game4026.*`（Enemy 程式在 `Game4026.Enemy`）。
 - 2026-11-18：共用合約沿用 `Game4026.Contracts` 的既有簽名（`TakeDamage(float, Vector3, bool)`、`ApplyPlayerDamage(float)`、`ArtifactRestoredEvent`）；規格原本的 `DamageInfo`、`PlayerTarget`、`GameEvents`、`WeaponType` 列為提案，尚未採用。
 - 2026-11-18：規格以 `Docs/ENEMY_SYSTEM_SPEC.md` 為準，`設計文檔.md` 不參考。
@@ -59,6 +80,33 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-21（招架、攻擊提示、阿努比斯拿匕首）
+- 完成：
+  - `AttackDefinition.parryWindow`；`AttackRunner` 招架窗（`IsParryWindowOpen`、`OnParryWindowOpened`）；`EnemyAttack.TryParry` + 事件 `ParryWindowOpened`/`Parried`
+  - `EnemyData.parryStaggerDuration`/`parriedDamageMultiplier`；`EnemyHealth(Model).DamageMultiplier`；`IEnemyContext.CurrentStaggerDuration`，HitState 改用它；`EnemyController.Stagger(seconds)`、`Parried` 事件
+  - 新增 `EnemyWeapon`、`AttackIndicator`、材質 `M_AttackGlint`；`DamageDispatch` allowParry，箭傳 false
+  - `Enemy_AnubisGuard` 雙手加 `Weapon_Dagger`（長 0.45 公尺，刀身膠囊碰撞）；根物件加 AttackIndicator
+  - `MockWeapon` 按 F 招架最近的敵人武器
+  - 測試：EnemyAttackTests +7、EnemyHealthModelTests +2、EnemyStateMachineTests +1、EnemyWeaponBridgeTests 3、ParryPlayModeTests 1
+- 握法：用手的骨頭算方向（只有食指與拇指骨頭）。刀身從拳頭拇指側伸出，揮砍時看起來像舉刀往下刺。
+- 實測（EnemyAI 場景，截圖確認）：右手揮時匕首與光點在右手刀尖；鏡像招式（三連斬第二下）在左手；招架窗在擊中前 0.35/0.4/0.3 秒打開。腳本測試：預警時按 F → 失敗、玩家被打；窗內按 F → 招架成功、硬直 1.5 秒、打身體 10 → 扣 15、硬直結束倍率回到 1。
+- 問題：第一次實測，硬直開始的同一刻打到只扣 10，因為倍率在進 Hit 之後才設；改成先設倍率再進硬直，並加 PlayMode 測試防止回歸。
+- 測試：EditMode 214/214、PlayMode 17/17（GC 測試仍 0 bytes）
+- 需要在 Editor 手動做：無。和 A 整合時確認 A 武器的 `targetMask` 包含匕首 Collider 的 Layer（目前是 Default）。
+
+### 2026-11-21（M2.5：資料驅動攻擊、阿努比斯 5 招）
+- 完成：
+  - 新增 `Combat/`：AttackType、AttackDefinition、AttackSelector、AttackRunner；EnemyAttack 改寫成選招 + 出招元件；IEnemyContext 攻擊介面改成 TrySelectAttack / AttackHoldRange / BeginAttack / TickAttack / CancelAttack；AttackState、ChaseState 跟著改；EnemyAnimator 改成依每個步驟播動畫並在預警時停格；EnemyDebugLabel 顯示招式
+  - AC_Anubis 加 `Attack_Mirror`、`JumpAttack` 狀態；`anubis_2@Standing Melee Run Jump Attack.fbx` 的動畫改名 JumpAttack，旋轉與高度烘進姿勢（原地播放，前衝交給 NavMeshAgent）
+  - 招式資產 13 個（`Data/Enemies/Attacks/`），掛到 5 份 EnemyData
+  - 測試：EnemyAttackTests 重寫（20 個）、新增 AttackSelectorTests（9 個），狀態機與 EnemyAnimator 測試更新
+- 擊中格：用 Editor 取樣右手軌跡找出 QuickerAttack 起手姿勢 0.55 秒、擊中 0.77 秒；Jump Attack 起跳 0.75 秒、擊中 1.58 秒、根部前進約 4.6 公尺
+- 實測（EnemyAI 場景，單獨一隻阿努比斯）：5 招都會出；近身隨機出快速揮擊／反手／重擊／三連斬，玩家退到 4 公尺會出突進斬（4.7 → 0.9 公尺命中）；每招判定時動畫都在擊中格（normalized 0.48 = 0.77/1.6；突進斬 0.46–0.48）；重擊停格 0.8 秒；三連斬第三下玩家已離開 → 揮空
+- 測試：EditMode 201/201、PlayMode 16/16（GC 測試仍 0 bytes）
+- 問題：我取樣動畫的 eval 腳本第一次丟例外，在 EnemyAI 場景留下 3 個 `anubis_2@T-Pose WithSKin(Clone)`，進 Play Mode 時場景被自動存檔。已刪掉並重存，場景與 git 版本一致。之後 eval 裡 Instantiate 要用 try/finally 清掉。
+- 需要在 Editor 手動做：無
+- 備註：`ENEMY_SYSTEM_SPEC_Edited.md` 沒動；內容已併進 `ENEMY_SYSTEM_SPEC.md`，使用者確認後可刪
+
 ### 2026-11-19（GLB 的 PARSING JSON Failed）
 - 原因：`Assets/Models` 底下 44 個 `.glb` 在工作目錄裡是 Git LFS 指標文字，glTFast 把指標當 JSON 解析。本體已在本地 LFS 物件庫，沒有重新下載。
 - 完成：`git lfs pull --include="*.glb"` 把本體 checkout 出來，並在開啟中的 Editor 重新匯入。44 個都匯成 GameObject。Git 狀態沒有新增修改。

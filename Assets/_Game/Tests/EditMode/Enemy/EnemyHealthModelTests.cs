@@ -148,5 +148,29 @@ namespace Game4026.Tests.Enemy
             Assert.IsFalse(model.IsInvulnerable);
             Assert.IsTrue(model.TryApplyDamage(10f, Vector3.zero, false, 5f, out _), "Cooldown from the previous life must not carry over.");
         }
+
+        [Test]
+        public void DamageMultiplier_ScalesAllDamage_WithWeakPoint_AndResets()
+        {
+            var m = new EnemyHealthModel(100f, 2.5f, 0f, 1000f);
+            m.DamageMultiplier = 1.5f;
+            m.TryApplyDamage(10f, Vector3.zero, false, 0f, out EnemyDamageResult body);
+            m.TryApplyDamage(10f, Vector3.zero, true, 1f, out EnemyDamageResult weak);
+
+            Assert.AreEqual(15f, body.AppliedDamage, 1e-4f);
+            Assert.AreEqual(37.5f, weak.AppliedDamage, 1e-4f);
+            m.Reset();
+            Assert.AreEqual(1f, m.DamageMultiplier);
+        }
+
+        [Test]
+        public void DamageMultiplier_InvalidValues_AreSafe()
+        {
+            var m = new EnemyHealthModel(100f, 2.5f, 0f, 1000f);
+            m.DamageMultiplier = float.NaN;
+            Assert.AreEqual(1f, m.DamageMultiplier);
+            m.DamageMultiplier = -3f;
+            Assert.AreEqual(0f, m.DamageMultiplier);
+        }
     }
 }

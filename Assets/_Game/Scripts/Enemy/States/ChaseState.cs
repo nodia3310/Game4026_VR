@@ -22,13 +22,13 @@ namespace Game4026.Enemy
                 return;
             }
 
-            if (EnemyStateRules.CanStartAttack(context))
+            if (context.HasTarget && context.TrySelectAttack())
             {
                 context.RequestState(EnemyStateId.Attack);
                 return;
             }
 
-            if (context.DistanceToTarget <= context.Data.AttackRange)
+            if (context.DistanceToTarget <= context.AttackHoldRange)
             {
                 // In range but on cooldown: hold position and keep facing the player.
                 context.StopMoving();

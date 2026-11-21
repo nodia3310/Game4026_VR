@@ -1,14 +1,13 @@
 namespace Game4026.Enemy
 {
     /// <summary>
-    /// Windup (faces the player, can be dodged) → one hit check → recovery → Chase.
-    /// Being staggered or killed during the windup cancels the attack.
+    /// Plays the move picked in Chase (telegraph → swing → hit check → recovery; combos chain steps), then Chase.
+    /// Being staggered or killed cancels the whole move.
     /// </summary>
     public sealed class AttackState : IEnemyState
     {
         private readonly IEnemyContext context;
-        private float elapsed;
-        private bool resolved;
+        private bool running;
 
         public AttackState(IEnemyContext context) => this.context = context;
 
@@ -16,36 +15,24 @@ namespace Game4026.Enemy
 
         public void Enter()
         {
-            elapsed = 0f;
-            resolved = false;
+            running = true;
             context.StopMoving();
             context.BeginAttack();
         }
 
         public void Tick(float deltaTime)
         {
-            elapsed += deltaTime;
-
-            if (!resolved)
-            {
-                context.FaceTarget(deltaTime);
-                if (elapsed < context.AttackWindup)
-                    return;
-
-                context.ResolveAttack();
-                resolved = true;
-                elapsed = 0f;
+            if (context.TickAttack(deltaTime))
                 return;
-            }
-
-            if (elapsed >= context.AttackRecovery)
-                context.RequestState(EnemyStateId.Chase);
+            running = false;
+            context.RequestState(EnemyStateId.Chase);
         }
 
         public void Exit()
         {
-            if (!resolved)
+            if (running)
                 context.CancelAttack();
+            running = false;
         }
     }
 }

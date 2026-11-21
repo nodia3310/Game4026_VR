@@ -1,6 +1,6 @@
 namespace Game4026.Enemy
 {
-    /// <summary>Stagger: stops for staggerDuration, then Chase. Re-entering restarts the timer.</summary>
+    /// <summary>Stagger: stops for the context's stagger duration (staggerDuration, longer after a parry), then Chase. Re-entering restarts the timer.</summary>
     public sealed class HitState : IEnemyState
     {
         private readonly IEnemyContext context;
@@ -19,7 +19,7 @@ namespace Game4026.Enemy
         public void Tick(float deltaTime)
         {
             elapsed += deltaTime;
-            if (elapsed >= context.Data.StaggerDuration)
+            if (elapsed >= context.CurrentStaggerDuration)
                 context.RequestState(EnemyStateId.Chase);
         }
 

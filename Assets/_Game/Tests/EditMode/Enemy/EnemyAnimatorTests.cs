@@ -19,9 +19,15 @@ namespace Game4026.Tests.Enemy
         public void LocomotionBlend_ChaseNotFasterThanMove_RunsAboveMoveSpeed() =>
             Assert.AreEqual(2f, EnemyAnimator.LocomotionBlend(1.5f, 1.2f, 1.2f));
 
+        [TestCase(0.1f, 1.5f)]  // before the hold
+        [TestCase(0.35f, 0f)]   // holding the wind-up pose (telegraph)
+        [TestCase(0.9f, 1.5f)]  // swinging
+        public void StepPlaybackAt_FreezesDuringTelegraphHold(float elapsed, float expected) =>
+            Assert.AreEqual(expected, EnemyAnimator.StepPlaybackAt(elapsed, 0.3f, 0.8f, 1.5f));
+
         [Test]
-        public void AttackPlaybackSpeed_LandsImpactOnWindupEnd() =>
-            Assert.AreEqual(0.6f / 0.4f, EnemyAnimator.AttackPlaybackSpeed(0.6f, 0.4f, new Vector2(0.5f, 2.5f)), 1e-4f);
+        public void StepPlaybackAt_NoTelegraph_NeverFreezes() =>
+            Assert.AreEqual(1.2f, EnemyAnimator.StepPlaybackAt(0.3f, 0.3f, 0.3f, 1.2f));
 
         [Test]
         public void RecoveryForClip_WaitsForRestOfClipAtPlaybackSpeed() =>
@@ -36,28 +42,21 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
-        public void EnemyAttack_RecoveryOverride_ReplacesInspectorValue_NegativeRestores()
+        public void EnemyAttack_RecoveryOverride_NaNMeansNone_ResetClears()
         {
             var go = new GameObject("Attack");
             try
             {
                 var attack = go.AddComponent<EnemyAttack>();
-                float inspector = attack.RecoveryDuration;
                 attack.RecoveryOverride = 1.25f;
-                Assert.AreEqual(1.25f, attack.RecoveryDuration);
-                attack.RecoveryOverride = -1f;
-                Assert.AreEqual(inspector, attack.RecoveryDuration);
+                Assert.AreEqual(1.25f, attack.RecoveryOverride);
+                attack.RecoveryOverride = float.NaN;
+                Assert.AreEqual(-1f, attack.RecoveryOverride);
+                attack.RecoveryOverride = 2f;
+                attack.ResetState();
+                Assert.AreEqual(-1f, attack.RecoveryOverride);
             }
             finally { Object.DestroyImmediate(go); }
-        }
-
-        [Test]
-        public void AttackPlaybackSpeed_IsClamped()
-        {
-            var range = new Vector2(0.5f, 2.5f);
-            Assert.AreEqual(2.5f, EnemyAnimator.AttackPlaybackSpeed(0.6f, 0.1f, range));
-            Assert.AreEqual(0.5f, EnemyAnimator.AttackPlaybackSpeed(0.6f, 5f, range));
-            Assert.AreEqual(2.5f, EnemyAnimator.AttackPlaybackSpeed(0.6f, 0f, range));
         }
     }
 }

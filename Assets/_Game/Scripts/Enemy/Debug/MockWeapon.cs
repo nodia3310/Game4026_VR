@@ -15,6 +15,9 @@ namespace Game4026.Enemy.DebugTools
         [SerializeField, Min(0f)] private float damage = 20f;
         [SerializeField, Min(0.1f)] private float range = 15f;
         [SerializeField] private LayerMask hitMask = ~0;
+        [Header("Parry (desktop)")]
+        [SerializeField] private Key parryKey = Key.F;
+        [SerializeField, Min(0.1f)] private float parryRange = 3f;
 
         public float Damage { get => damage; set => damage = value; }
 
@@ -26,11 +29,38 @@ namespace Game4026.Enemy.DebugTools
 
         private void Update()
         {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard[parryKey].wasPressedThisFrame)
+                TryParryNearest();
+
             Mouse mouse = Mouse.current;
             if (mouse == null || viewCamera == null || !mouse.leftButton.wasPressedThisFrame)
                 return;
 
             Fire(viewCamera.ScreenPointToRay(mouse.position.ReadValue()));
+        }
+
+        /// <summary>
+        /// Desktop parry: hits the nearest enemy weapon within <see cref="parryRange"/> the way A's weapon would
+        /// (a moving dagger is hard to click). Returns true when an attack was deflected.
+        /// </summary>
+        public bool TryParryNearest()
+        {
+            EnemyWeapon nearest = null;
+            float best = parryRange * parryRange;
+            foreach (EnemyWeapon w in FindObjectsByType<EnemyWeapon>(FindObjectsInactive.Exclude)) // key press only
+            {
+                float d = (w.transform.position - transform.position).sqrMagnitude;
+                if (d <= best) { best = d; nearest = w; }
+            }
+            if (nearest == null)
+            {
+                Debug.Log("[MockWeapon] parry: no enemy weapon in range");
+                return false;
+            }
+            bool parried = nearest.TryDeflect(nearest.Tip.position, Time.time);
+            Debug.Log(parried ? "[MockWeapon] PARRY!" : "[MockWeapon] parry missed (no parry window open)", nearest);
+            return parried;
         }
 
         /// <summary>Raycasts once and damages the first IDamageable hit. Returns true on a damageable hit.</summary>

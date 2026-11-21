@@ -1151,6 +1151,8 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  parryKey: 20
+  parryRange: 3
 --- !u!114 &1415295875
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9dd94b1bb62c3b9498677e3880e95807, type: 3}
+  m_Name: Anubis_TripleSlash
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.AttackDefinition
+  attackType: 2
+  animatorState: Attack
+  clip: {fileID: 0}
+  animSpeed: 1
+  mirror: 0
+  clipStartTime: 0
+  telegraphTime: 0.4
+  telegraphPoseTime: -1
+  hitTime: 0.7
+  recoveryTime: 0.6
+  parryWindow: 0.35
+  minRange: 0
+  maxRange: 1.8
+  cooldown: 7
+  weight: 1
+  damage: 10
+  hitRange: 1.9
+  hitAngle: 70
+  lungeDistance: 2
+  lungeDuration: 0
+  comboSteps:
+  - {fileID: 11400000, guid: 7ca3464a225d1f34f8be1a344b409113, type: 2}
+  - {fileID: 11400000, guid: 2cb20233552363e40bab04aa3f2350fd, type: 2}
+  - {fileID: 11400000, guid: 7532f3addfb77fc4c8c994dda47ccc27, type: 2}
+  slamRadius: 2

@@ -21,10 +21,12 @@ MonoBehaviour:
   chaseSpeed: 2.6
   detectionRange: 12
   loseTargetRange: 18
-  attackRange: 2.4
-  attackWindup: 0.7
-  attackDamage: 12
-  attackCooldown: 2
-  attackAngle: 70
+  attacks:
+  - {fileID: 11400000, guid: 213b823f905d7574592d543aca41a17e, type: 2}
+  - {fileID: 11400000, guid: cbb645eb0096d9a48be7e7265f507ff2, type: 2}
+  - {fileID: 11400000, guid: 3744cc7a9a6be0f4fafb19aa25b42387, type: 2}
+  - {fileID: 11400000, guid: 4aecc2923d3c0ec4583d382484f2e75f, type: 2}
+  - {fileID: 11400000, guid: 332f3f2b595d575428f1a055c855030a, type: 2}
+  globalAttackCooldown: 0.8
   spawnDuration: 1.5
   despawnDuration: 2.5
