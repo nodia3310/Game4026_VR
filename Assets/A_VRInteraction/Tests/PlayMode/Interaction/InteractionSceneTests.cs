@@ -25,7 +25,7 @@ namespace Game4026.Tests.Interaction
     /// <summary>Integration checks load the authored room, not substitute test objects.</summary>
     public sealed class InteractionSceneTests
     {
-        const string Path = "Assets/_Game/Scenes/InteractionTest.unity";
+        const string Path = "Assets/A_VRInteraction/Scenes/InteractionTest.unity";
         InteractionDesktopMode desktop;
         InteractionTestFeedback feedback;
         Scene loadedScene;

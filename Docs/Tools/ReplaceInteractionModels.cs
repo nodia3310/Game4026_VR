@@ -11,13 +11,13 @@ using Game4026.Interaction.TestScene;
 // Editor API migration for the supplied FBX files; source models are left untouched.
 public static class ReplaceInteractionModels
 {
-    const string Source="Assets/Weapon-20261111T153418Z-1-001 1/Weapon/SM_ORPH_";
-    const string Destination="Assets/_Game/InteractionTest/Materials/";
+    const string Source="Assets/A_VRInteraction/Models/ImportedTools/Weapon/SM_ORPH_";
+    const string Destination="Assets/A_VRInteraction/InteractionTestAssets/Materials/";
     static Material steel, rubber, wood, painted, lens;
     public static string Main()
     {
         var scene=SceneManager.GetActiveScene();
-        if(Application.isPlaying || scene.path!="Assets/_Game/Scenes/InteractionTest.unity" || scene.isDirty)
+        if(Application.isPlaying || scene.path!="Assets/A_VRInteraction/Scenes/InteractionTest.unity" || scene.isDirty)
             throw new InvalidOperationException("Open the saved InteractionTest scene in Edit mode first.");
         var primary=UnityEngine.Object.FindAnyObjectByType<MeleeWeapon>();
         if(!primary || primary.transform.Find("Imported Model")) throw new InvalidOperationException("Already migrated or no original weapon. Inspect before editing.");

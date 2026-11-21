@@ -20,8 +20,8 @@ using Game4026.Interaction.TestScene;
 // Run through Unity CLI script run. Never overwrites an existing scene.
 public static class BuildInteractionTest
 {
-    public const string ScenePath = "Assets/_Game/Scenes/InteractionTest.unity";
-    const string Art = "Assets/_Game/InteractionTest";
+    public const string ScenePath = "Assets/A_VRInteraction/Scenes/InteractionTest.unity";
+    const string Art = "Assets/A_VRInteraction/InteractionTestAssets";
     static Material gray, dark, blue, gold, white, lineMat;
     static int targetLayer, propLayer, artifactLayer;
     static Transform root;
@@ -31,7 +31,7 @@ public static class BuildInteractionTest
         if (File.Exists(ScenePath)) throw new InvalidOperationException("Scene already exists. Inspect/edit it; do not regenerate over user content.");
         for (int i = 0; i < SceneManager.sceneCount; i++)
             if (SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("An open scene is dirty; preserve it before building.");
-        Directory.CreateDirectory("Assets/_Game/Scenes"); Directory.CreateDirectory(Art + "/Materials"); Directory.CreateDirectory(Art + "/Prefabs");
+        Directory.CreateDirectory("Assets/A_VRInteraction/Scenes"); Directory.CreateDirectory(Art + "/Materials"); Directory.CreateDirectory(Art + "/Prefabs");
         AssetDatabase.Refresh();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         targetLayer = Layer("InteractionTestTarget"); propLayer = Layer("InteractionTestProp"); artifactLayer = Layer("InteractionTestArtifact");
