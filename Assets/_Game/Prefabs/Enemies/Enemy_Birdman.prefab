@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &490236645355712694
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 630167458155996110}
+  m_Layer: 0
+  m_Name: Indicator (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &630167458155996110
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 490236645355712694}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.957, y: 0.775, z: -0.178}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7566770873416236405}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2184795520648503982
 GameObject:
   m_ObjectHideFlags: 0
@@ -40,6 +71,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7993988841665099324}
+  - {fileID: 630167458155996110}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!195 &5143253961818211178
@@ -133,11 +165,11 @@ MonoBehaviour:
   hoverHeight: 0.45
   bobHeight: 0.06
   bobRate: 0.5
-  moveLean: 12
+  moveLean: 20.8
   bankAngle: 14
   smoothing: 8
   windUpLean: 10
-  swingLean: 14
+  swingLean: 20.3
   diveRise: 1.4
   diveLean: 30
   guardLean: 8
@@ -192,6 +224,7 @@ MonoBehaviour:
   comboCrossFade: 0.08
   hitCrossFade: 0.05
   locomotionDamping: 0.1
+  telegraphCreep: 0.15
 --- !u!114 &5170370068835378470
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -211,8 +244,8 @@ MonoBehaviour:
   telegraphSize: 0.12
   telegraphPulseSpeed: 10
   flashColor: {r: 1, g: 0.1339755, b: 0.0990566, a: 1}
-  flashSize: 1.14
-  flashPopTime: 0.06
+  flashSize: 1.5
+  flashPopTime: 0.48
   parriedColor: {r: 1, g: 1, b: 1, a: 1}
   parriedSize: 0.7
   parriedTime: 0.18
@@ -653,6 +686,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.WeakPoint
   owner: {fileID: 1883823118491807105}
   gizmoColor: {r: 1, g: 0.85, b: 0, a: 0.9}
+--- !u!1 &5534878015261881276
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2230749123427223093}
+  m_Layer: 0
+  m_Name: Indicator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2230749123427223093
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5534878015261881276}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.047457878, y: 0.0000038519493, z: 0.000000029802315, w: 0.9988733}
+  m_LocalPosition: {x: -0.026, y: 0.069, z: 0.052}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1505587731697161731}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7737527610277193170
 GameObject:
   m_ObjectHideFlags: 0
@@ -830,6 +894,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -4552761745763994618, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1466125141528401483}
+    - targetCorrespondingSourceObject: {fileID: -4552761745763994618, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2230749123427223093}
     - targetCorrespondingSourceObject: {fileID: 7781707717565560, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6980438985426754468}
