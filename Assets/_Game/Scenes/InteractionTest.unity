@@ -330,7 +330,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 1247621805}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -1031,6 +1033,9 @@ GameObject:
   - component: {fileID: 252311414}
   - component: {fileID: 252311413}
   - component: {fileID: 252311412}
+  - component: {fileID: 252311419}
+  - component: {fileID: 252311418}
+  - component: {fileID: 252311417}
   m_Layer: 0
   m_Name: Test Room Services
   m_TagString: Untagged
@@ -1077,6 +1082,7 @@ MonoBehaviour:
   bow: {fileID: 495026429}
   display: {fileID: 1402834104}
   flashlight: {fileID: 397200877}
+  reboundWeapon: {fileID: 462544921}
   statusText: {fileID: 1531047199}
   targetRenderers:
   - {fileID: 1479747475}
@@ -1209,6 +1215,55 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &252311417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252311411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a6b7b00b8fd5e749abfef2d5ac582f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.ArtifactEventBridge
+  director: {fileID: 252311418}
+  logInstalls: 1
+--- !u!114 &252311418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252311411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ead48792816447d4daf67b8993e8dd67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EncounterDirector
+  encounters: []
+  bossEncounter: {fileID: 0}
+--- !u!114 &252311419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252311411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31ad8a9c03e6f6147b7e892fe2af4da7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.DamageBridgeInstaller
+  meleeDamage:
+    DamagePerSpeed: 8
+    MinDamage: 5
+    MaxDamage: 40
+  arrowDamage:
+    DamagePerSpeed: 1
+    MinDamage: 10
+    MaxDamage: 35
+  logInstalls: 1
 --- !u!1001 &266698694
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2005,6 +2060,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -2039,7 +2097,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 1098213271}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -2391,7 +2451,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 1038202709}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -2593,6 +2655,7 @@ GameObject:
   - component: {fileID: 462544918}
   - component: {fileID: 462544917}
   - component: {fileID: 462544916}
+  - component: {fileID: 462544921}
   m_Layer: 9
   m_Name: Melee weapon - Axe
   m_TagString: Untagged
@@ -2621,6 +2684,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -2655,7 +2721,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 943438958}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -2841,6 +2909,25 @@ Transform:
   - {fileID: 1152076777}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &462544921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 462544915}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 876177368fa48bd4c96f0fd85af3c8d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Interaction::Game4026.Interaction.Melee.ReboundingWeapon
+  minimumThrowSpeed: 1.8
+  maximumOutboundSeconds: 2
+  impactDamage: 20
+  returnSpeed: 6
+  arcHeight: 0.8
+  catchRadius: 0.45
+  catchSeconds: 0.24
 --- !u!1 &464803874
 GameObject:
   m_ObjectHideFlags: 0
@@ -3216,7 +3303,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 1316022524}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -6524,6 +6613,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -6558,7 +6650,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 1677034096}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -7430,7 +7524,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 223302599}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 1
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -8673,6 +8769,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -8707,7 +8806,9 @@ MonoBehaviour:
   throwVelocityScale: 1
   throwAngularVelocityScale: 1
   gripPose: {fileID: 46380854}
+  handGripAxis: {x: 0, y: 0, z: 0}
   useDynamicGrip: 0
+  keepHandOnGrip: 0
   onGrabbed:
     m_PersistentCalls:
       m_Calls: []
@@ -8917,11 +9018,15 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1583084557}
-  m_Text: 'VR: grip = grab / release   trigger = use
+  m_Text: 'VR: Grip grab/release | Trigger use
+
+    Axe: swing + release Grip | press Grip on cue
 
     Desktop: WASD move | RMB look | Tab hand
 
-    Q grab / release | E use | arrows + R/F move hand'
+    Arrows + R/F move hand | Q grab/release/catch
+
+    E use/throw axe'
   m_OffsetZ: 0
   m_CharacterSize: 0.042
   m_LineSpacing: 1
@@ -11346,7 +11451,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2093938545}
   m_SourcePrefab: {fileID: 100100000, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
 --- !u!143 &2093938540 stripped
 CharacterController:
@@ -11373,6 +11481,20 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
   m_PrefabInstance: {fileID: 2093938539}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2093938545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2093938544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd118f8b55861934790c3d5f0cd84297, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Contracts::Game4026.Contracts.PlayerTarget
+  head: {fileID: 2093938541}
+  body: {fileID: 0}
 --- !u!1 &2110867844
 GameObject:
   m_ObjectHideFlags: 0

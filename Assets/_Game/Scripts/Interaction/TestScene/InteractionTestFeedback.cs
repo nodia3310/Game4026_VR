@@ -17,6 +17,7 @@ namespace Game4026.Interaction.TestScene
         [SerializeField] private BowDrawAim bow;
         [SerializeField] private ArtifactDisplayTrigger display;
         [SerializeField] private GrabbableFlashlight flashlight;
+        [SerializeField] private ReboundingWeapon reboundWeapon;
         [SerializeField] private TextMesh statusText;
         [SerializeField] private Renderer[] targetRenderers = new Renderer[0];
         [SerializeField] private AudioSource audioSource;
@@ -69,6 +70,12 @@ namespace Game4026.Interaction.TestScene
             if (ray) ray.Fired += HandleRay;
             if (bow) bow.Shot += HandleBow;
             if (display) display.OnArtifactRestored += HandleRestored;
+            if (reboundWeapon)
+            {
+                reboundWeapon.Rebounded += HandleRebound;
+                reboundWeapon.CatchWindowOpened += HandleCatchWindow;
+                reboundWeapon.ReturnEnded += HandleReturnEnded;
+            }
         }
 
         private void OnDisable()
@@ -79,6 +86,12 @@ namespace Game4026.Interaction.TestScene
             if (ray) ray.Fired -= HandleRay;
             if (bow) bow.Shot -= HandleBow;
             if (display) display.OnArtifactRestored -= HandleRestored;
+            if (reboundWeapon)
+            {
+                reboundWeapon.Rebounded -= HandleRebound;
+                reboundWeapon.CatchWindowOpened -= HandleCatchWindow;
+                reboundWeapon.ReturnEnded -= HandleReturnEnded;
+            }
             RestoreColors();
         }
 
@@ -120,6 +133,26 @@ namespace Game4026.Interaction.TestScene
             lastEvent = "Locked: " + restored.ArtifactId;
             if (statusText) statusText.color = Color.green;
             PlayTone(1.8f);
+        }
+
+        private void HandleRebound(Collider collider)
+        {
+            lastEvent = "Axe returning";
+            var target = collider.GetComponentInParent<MeleeHitTarget>();
+            if (target) FlashTarget(target.transform, Color.yellow);
+            PlayTone(0.9f);
+        }
+
+        private void HandleCatchWindow()
+        {
+            lastEvent = "Catch now - Grip / Q";
+            PlayTone(1.75f);
+        }
+
+        private void HandleReturnEnded(bool caught)
+        {
+            lastEvent = caught ? "Axe caught" : "Axe dropped";
+            PlayTone(caught ? 1.25f : 0.65f);
         }
 
         private void FlashTarget(Transform hitTarget, Color color)

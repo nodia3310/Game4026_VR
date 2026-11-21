@@ -1,4 +1,5 @@
 using System;
+using Game4026.Contracts;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
@@ -23,6 +24,8 @@ namespace Game4026.Interaction.Melee
         [Header("Queries")]
         [SerializeField, Min(0.005f)] private float sweepRadius = 0.035f;
         [SerializeField] private LayerMask targetMask = ~0;
+        [Tooltip("Additional layers where only colliders with a parent IDamageable can emit a hit.")]
+        [SerializeField] private LayerMask damageableTargetMask;
         [Tooltip("Include all solid walls/props. Keep enemy-only trigger layers out if they should not block.")]
         [SerializeField] private LayerMask blockerMask = ~0;
         [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
@@ -163,6 +166,10 @@ namespace Game4026.Interaction.Melee
 
         private static bool InMask(Collider collider, LayerMask mask) => (mask.value & (1 << collider.gameObject.layer)) != 0;
 
+        private bool IsTarget(Collider collider) =>
+            InMask(collider, targetMask) ||
+            (InMask(collider, damageableTargetMask) && collider.GetComponentInParent<IDamageable>() != null);
+
         private static GameObject Identity(Collider collider)
         {
             var target = collider.GetComponentInParent<MeleeHitTarget>();
@@ -178,7 +185,7 @@ namespace Game4026.Interaction.Melee
             float speed = distance / dt;
             // An unmoving handle must not inherit the tip's striking speed.
             if (speed < startSpeed) return;
-            int mask = targetMask.value | blockerMask.value;
+            int mask = targetMask.value | damageableTargetMask.value | blockerMask.value;
             int count = Physics.OverlapSphereNonAlloc(start, sweepRadius, overlaps, mask, triggerInteraction);
             if (count >= overlaps.Length) { ++QueryOverflowCount; return; }
             // Any initial solid overlap stops this path. Candidate contacts at the starting point
@@ -189,7 +196,7 @@ namespace Game4026.Interaction.Melee
                 var collider = overlaps[i];
                 if (Ignore(collider)) continue;
                 if (InMask(collider, blockerMask)) blockedAtStart = true;
-                if (InMask(collider, targetMask))
+                if (IsTarget(collider))
                     TryEmit(collider, collider.ClosestPoint(start), direction, speed);
             }
             if (blockedAtStart || distance <= 0.00001f) return;
@@ -207,7 +214,7 @@ namespace Game4026.Interaction.Melee
             {
                 var hit = casts[i];
                 if (Ignore(hit.collider)) continue;
-                if (InMask(hit.collider, targetMask)) TryEmit(hit.collider, hit.point, direction, speed);
+                if (IsTarget(hit.collider)) TryEmit(hit.collider, hit.point, direction, speed);
                 if (InMask(hit.collider, blockerMask)) break;
             }
         }

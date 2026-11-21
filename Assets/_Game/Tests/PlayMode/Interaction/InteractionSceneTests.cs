@@ -2,6 +2,9 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using Game4026.Bridges;
+using Game4026.Contracts;
+using Game4026.Enemy;
 using Game4026.Interaction.Artifacts;
 using Game4026.Interaction.Grabbing;
 using Game4026.Interaction.Melee;
@@ -13,7 +16,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace Game4026.Tests.Interaction
 {
@@ -109,6 +114,8 @@ namespace Game4026.Tests.Interaction
             }
             var bow = Object.FindAnyObjectByType<BowDrawAim>();
             var xrRig = Field<GameObject>(desktop, "xrRig");
+            Assert.That(xrRig.GetComponent<PlayerTarget>().Head, Is.SameAs(Field<Camera>(desktop, "xrCamera").transform));
+            Assert.That(PlayerTarget.Current.Head, Is.SameAs(desktop.DesktopCamera.transform));
             var nearCasters = xrRig.GetComponentsInChildren<Component>(true)
                 .Where(c => c && c.GetType().Name == "SphereInteractionCaster").ToArray();
             Assert.That(nearCasters.Length, Is.EqualTo(2));
@@ -248,6 +255,7 @@ namespace Game4026.Tests.Interaction
             Assert.That(feedback.BowShotCount, Is.EqualTo(1));
             var arrows = Object.FindObjectsByType<ArrowProjectile>();
             Assert.That(arrows.Length, Is.EqualTo(1));
+            Assert.That(arrows[0].GetComponent<ArrowDamageBridge>(), Is.Not.Null);
             var projectileBody = arrows[0].GetComponent<Rigidbody>();
             Assert.That(projectileBody, Is.Not.Null);
             Assert.That(projectileBody.useGravity, Is.True);
@@ -262,10 +270,16 @@ namespace Game4026.Tests.Interaction
             var artifact = Object.FindAnyObjectByType<RestorableArtifact>();
             var physical = artifact.GetComponent<PhysicalGrabbable>();
             var display = Object.FindAnyObjectByType<ArtifactDisplayTrigger>();
+            var director = Object.FindAnyObjectByType<EncounterDirector>();
+            var hall = new GameObject("Canopic Jar encounter").AddComponent<EncounterController>();
+            hall.Configure(null, null, 1, null, ArtifactType.CanopicJar);
+            director.Configure(new[] { hall }, null);
             var snap = Field<Transform>(display, "snapPoint");
             Grab(desktop.RightHand, physical, snap.position + Vector3.up * .02f);
             yield return Settle(30);
             Assert.That(display.IsRestored, Is.False, "Being inside while held must not restore.");
+            Assert.That(director.Progress.RestoredCount, Is.Zero);
+            Assert.That(hall.IsCleared, Is.False);
             desktop.RightHand.Release();
             yield return Settle(40);
             Assert.That(display.IsRestored, Is.True);
@@ -277,6 +291,9 @@ namespace Game4026.Tests.Interaction
             Assert.That(feedback.RestorationCount, Is.EqualTo(1));
             yield return Settle(30);
             Assert.That(feedback.RestorationCount, Is.EqualTo(1));
+            Assert.That(director.Progress.RestoredCount, Is.EqualTo(1));
+            Assert.That(director.Progress.IsRestored(ArtifactType.CanopicJar), Is.True);
+            Assert.That(hall.WasForceCleared, Is.True);
         }
 
         [UnityTest]
@@ -307,6 +324,142 @@ namespace Game4026.Tests.Interaction
                 yield return null;
                 Pose(physical,new Vector3(-5f,1f,7f));
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Melee_ActualHeldSweepDamagesDefaultLayerEnemy()
+        {
+            var melee = Object.FindAnyObjectByType<ReboundingWeapon>().GetComponent<MeleeWeapon>();
+            var physical = melee.GetComponent<PhysicalGrabbable>();
+            Assert.That(melee.GetComponent<MeleeDamageBridge>(), Is.Not.Null);
+
+            var enemy = new GameObject("Default-layer enemy health");
+            enemy.SetActive(false);
+            enemy.transform.position = new Vector3(3.2f, 1.7f, 3.4f);
+            enemy.AddComponent<BoxCollider>().size = new Vector3(.2f, .8f, .25f);
+            var health = enemy.AddComponent<EnemyHealth>();
+            health.Initialize(AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/_Game/Data/Enemies/EnemyData_Default.asset"));
+            enemy.SetActive(true);
+
+            var tip = Field<Transform>(melee, "bladeTip").localPosition;
+            Grab(desktop.RightHand, physical, new Vector3(2.6f, 1.7f - tip.y, 3.4f - tip.z));
+            yield return Settle();
+            melee.ResetSampling();
+            for (int i = 0; i < 24 && health.CurrentHealth == health.MaxHealth; i++)
+            {
+                desktop.RightHand.transform.position += Vector3.right * .045f;
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.That(health.CurrentHealth, Is.LessThan(health.MaxHealth));
+        }
+
+        [UnityTest]
+        public IEnumerator Axe_PhysicalThrowReboundsToMovingHand_RequiresNewGripPress()
+        {
+            var weapon = Object.FindAnyObjectByType<ReboundingWeapon>();
+            var axe = weapon.GetComponent<PhysicalGrabbable>();
+            var handObject = new GameObject("Simulated XR controller");
+            var volume = handObject.AddComponent<SphereCollider>();
+            volume.isTrigger = true;
+            volume.radius = 0.12f;
+            var hand = handObject.AddComponent<XRDirectInteractor>();
+            hand.handedness = InteractorHandedness.Right;
+            hand.selectInput.inputSourceMode = XRInputButtonReader.InputSourceMode.ManualValue;
+
+            var start = new Vector3(0f, 1.65f, 3.5f);
+            Pose(axe, start);
+            hand.transform.position = start;
+            hand.selectInput.QueueManualState(true, 1f);
+            hand.interactionManager.SelectEnter((IXRSelectInteractor)hand, axe.Grab);
+            yield return Settle();
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+
+            Collider hit = null;
+            bool canCatch = false;
+            weapon.Rebounded += collider => hit = collider;
+            weapon.CatchWindowOpened += () => canCatch = true;
+            for (int i = 0; i < 10; i++)
+            {
+                hand.transform.position += Vector3.forward * .14f;
+                yield return new WaitForFixedUpdate();
+            }
+            hand.selectInput.QueueManualState(false, 0f);
+            for (int i = 0; i < 55 && hit == null; i++) yield return new WaitForFixedUpdate();
+            Assert.That(hit, Is.Not.Null, "XRI release velocity should send the axe into a solid collider.");
+            Assert.That(hit.GetComponentInParent<MeleeHitTarget>()?.name, Is.EqualTo("Range compound target"));
+
+            Assert.That(desktop.LeftHand.TryGrab(axe.Grab), Is.False);
+            hand.transform.position += Vector3.right * .35f;
+            hand.selectInput.QueueManualState(true, 1f);
+            float impactHeight = axe.Body.position.y;
+            float apex = impactHeight;
+            for (int i = 0; i < 45 && !canCatch; i++)
+            {
+                yield return new WaitForFixedUpdate();
+                apex = Mathf.Max(apex, axe.Body.position.y);
+            }
+            Assert.That(apex - impactHeight, Is.GreaterThan(.4f));
+            Assert.That(canCatch, Is.True);
+            Assert.That(axe.IsHeld, Is.False, "Holding Grip from an early press cannot catch the axe.");
+
+            hand.selectInput.QueueManualState(false, 0f);
+            yield return null;
+            hand.selectInput.QueueManualState(true, 1f);
+            yield return null;
+            yield return null;
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+            Assert.That(axe.Body.detectCollisions, Is.True);
+            Assert.That(axe.Body.isKinematic, Is.False);
+            yield return Settle();
+            Assert.That(Vector3.Distance(axe.Grab.attachTransform.position, hand.transform.position), Is.LessThan(.1f));
+        }
+
+        [UnityTest]
+        public IEnumerator Axe_EnemyTriggersApplyOneHit_AndMissDropsTheWeapon()
+        {
+            var weapon = Object.FindAnyObjectByType<ReboundingWeapon>();
+            var axe = weapon.GetComponent<PhysicalGrabbable>();
+            var enemy = new GameObject("Compound enemy hitbox").AddComponent<ReboundDamageReceiver>();
+            enemy.transform.position = new Vector3(1.5f, 1.5f, 5.7f);
+            for (int i = 0; i < 2; i++)
+            {
+                var hitbox = new GameObject("Enemy trigger").AddComponent<BoxCollider>();
+                hitbox.transform.SetParent(enemy.transform, false);
+                hitbox.isTrigger = true;
+            }
+
+            var hand = desktop.RightHand;
+            Grab(hand, axe, new Vector3(1.5f, 1.6f, 4.5f));
+            yield return Settle();
+            bool? caught = null;
+            weapon.ReturnEnded += result => caught = result;
+            var queueThrow = typeof(ReboundingWeapon).GetMethod("QueueDesktopThrow", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(queueThrow.Invoke(weapon, new object[] { hand, Vector3.forward * 9f }), Is.True);
+            hand.Release();
+
+            for (int i = 0; i < 110 && !caught.HasValue; i++) yield return new WaitForFixedUpdate();
+            Assert.That(caught, Is.EqualTo(false));
+            Assert.That(enemy.Hits, Is.EqualTo(1));
+            Assert.That(enemy.Damage, Is.EqualTo(20f));
+            Assert.That(axe.IsHeld, Is.False);
+            Assert.That(weapon.IsInFlight, Is.False);
+            Assert.That(axe.Body.detectCollisions, Is.True);
+            float dropHeight = axe.Body.position.y;
+            yield return Settle(18);
+            Assert.That(axe.Body.position.y, Is.LessThan(dropHeight - .2f));
+            Assert.That(hand.TryGrab(axe.Grab), Is.True, "A missed axe can be picked up again.");
+        }
+    }
+
+    public sealed class ReboundDamageReceiver : MonoBehaviour, IDamageable
+    {
+        public int Hits { get; private set; }
+        public float Damage { get; private set; }
+
+        public void TakeDamage(float damage, Vector3 hitPoint, bool isWeakPoint)
+        {
+            Hits++;
+            Damage += damage;
         }
     }
 }

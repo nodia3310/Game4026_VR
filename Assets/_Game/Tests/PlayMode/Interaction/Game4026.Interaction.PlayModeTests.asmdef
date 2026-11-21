@@ -1,6 +1,6 @@
 {
   "name": "Game4026.Interaction.PlayModeTests",
-  "references": ["Game4026.Interaction", "Game4026.Contracts", "Unity.XR.Interaction.Toolkit"],
+  "references": ["Game4026.Interaction", "Game4026.Contracts", "Game4026.Bridges", "Game4026.Enemy", "Unity.XR.Interaction.Toolkit"],
   "autoReferenced": false,
   "optionalUnityReferences": ["TestAssemblies"]
 }

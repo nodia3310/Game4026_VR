@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using Game4026.Contracts;
 using Game4026.Interaction.Melee;
 using Game4026.Interaction.Ranged;
 using UnityEngine;
@@ -37,7 +38,7 @@ namespace Game4026.Interaction.TestScene
         public DesktopTestHand RightHand { get; private set; }
         public DesktopTestHand ActiveHand { get; private set; }
         public Camera DesktopCamera => desktopCamera;
-        public const string Controls = "DESKTOP: WASD move | RMB look | Tab hand | Q grab/release | E use\nArrows move hand X/Y | R/F hand forward/back | Shift fast hand (melee)";
+        public const string Controls = "DESKTOP: WASD move | RMB look | Tab hand | Q grab/release/catch | E use/throw axe\nArrows move hand X/Y | R/F hand forward/back | Shift fast hand (melee)";
 
         private IEnumerator Start()
         {
@@ -79,6 +80,9 @@ namespace Game4026.Interaction.TestScene
             desktopCamera.enabled = true;
             desktopCamera.nearClipPlane = 0.03f;
             cameraObject.tag = "MainCamera";
+            if (xrRig.TryGetComponent<PlayerTarget>(out _))
+                cameraObject.AddComponent<PlayerTarget>();
+
             var manager = FindAnyObjectByType<XRInteractionManager>();
             if (manager == null) manager = desktopRig.AddComponent<XRInteractionManager>();
             LeftHand = MakeHand("Desktop left hand", -0.25f, InteractorHandedness.Left, manager, out leftMaterial);
@@ -154,9 +158,18 @@ namespace Game4026.Interaction.TestScene
             if (keyboard.qKey.wasPressedThisFrame)
             {
                 if (ActiveHand.hasSelection) ActiveHand.Release();
-                else GrabNearest();
+                else CatchOrGrab();
             }
-            if (keyboard.eKey.wasPressedThisFrame) ActiveHand.ActivateSelected();
+            if (keyboard.eKey.wasPressedThisFrame)
+            {
+                const float throwSpeed = 9f;
+                if (ActiveHand.firstInteractableSelected is XRBaseInteractable item &&
+                    item.TryGetComponent<ReboundingWeapon>(out var weapon) &&
+                    weapon.QueueDesktopThrow(ActiveHand, ActiveHand.transform.forward * throwSpeed))
+                    ActiveHand.Release();
+                else
+                    ActiveHand.ActivateSelected();
+            }
             SyncReferences();
         }
 
@@ -166,14 +179,18 @@ namespace Game4026.Interaction.TestScene
             xrCamera.transform.SetPositionAndRotation(desktopCamera.transform.position, desktopCamera.transform.rotation);
         }
 
-        private void GrabNearest()
+        private void CatchOrGrab()
         {
+            foreach (var weapon in FindObjectsByType<ReboundingWeapon>())
+                if (weapon.TryCatch(ActiveHand)) return;
+
             XRBaseInteractable nearest = null;
             float closest = grabRadius * grabRadius;
             foreach (var item in FindObjectsByType<XRBaseInteractable>())
             {
                 if (!item.isActiveAndEnabled || item.isSelected ||
-                    (!(item is XRGrabInteractable) && !(item is XRSimpleInteractable))) continue;
+                    (!(item is XRGrabInteractable) && !(item is XRSimpleInteractable)) ||
+                    !ActiveHand.interactionManager.IsSelectPossible(ActiveHand, item)) continue;
                 foreach (var collider in item.colliders)
                 {
                     if (collider == null || !collider.enabled) continue;
@@ -236,14 +253,25 @@ namespace Game4026.Interaction.TestScene
         }
         public bool TryGrab(XRBaseInteractable item)
         {
-            // Unlike CanSelect, IsSelectPossible does not require isSelectActive in XRI 3.6.
             if (item == null || hasSelection || item.isSelected || interactionManager == null ||
                 !interactionManager.IsSelectPossible(this, item)) return false;
-            target = item;
-            selecting = true;
             interactionManager.SelectEnter((IXRSelectInteractor)this, item);
-            if (!hasSelection) { selecting = false; target = null; }
             return hasSelection;
+        }
+        protected override void OnSelectEntered(SelectEnterEventArgs args)
+        {
+            target = args.interactableObject as XRBaseInteractable;
+            selecting = true;
+            base.OnSelectEntered(args);
+        }
+        protected override void OnSelectExited(SelectExitEventArgs args)
+        {
+            if (!hasSelection)
+            {
+                selecting = false;
+                target = null;
+            }
+            base.OnSelectExited(args);
         }
         public void Release()
         {
