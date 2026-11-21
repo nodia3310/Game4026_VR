@@ -146,6 +146,33 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void Chase_NoAttackSlot_CirclesAtWaitDistanceInsteadOfAttacking()
+        {
+            SeePlayerAt(1.5f);
+            ctx.MustWaitForTurn = true;
+            StartIn(EnemyStateId.Chase);
+            ctx.Run(0.3f);
+            Assert.AreEqual(EnemyStateId.Chase, ctx.State);
+            Assert.Greater(ctx.CircleCalls, 0);
+            Assert.AreEqual(0, ctx.AttackBegins);
+
+            ctx.MustWaitForTurn = false; // a slot frees up
+            ctx.Run(0.1f);
+            Assert.AreEqual(EnemyStateId.Attack, ctx.State);
+        }
+
+        [Test]
+        public void Chase_NoAttackSlot_FarAway_StillClosesIn()
+        {
+            SeePlayerAt(8f);
+            ctx.MustWaitForTurn = true;
+            StartIn(EnemyStateId.Chase);
+            ctx.Run(0.1f);
+            Assert.AreEqual(0, ctx.CircleCalls);
+            Assert.Greater(ctx.ChaseCalls, 0);
+        }
+
+        [Test]
         public void Chase_InAttackRangeOnCooldown_HoldsAndFacesPlayer()
         {
             SeePlayerAt(1.5f);

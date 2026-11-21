@@ -29,6 +29,12 @@ namespace Game4026.Enemy
         [Tooltip("Minimum seconds after any move ends before the next one starts.")]
         [SerializeField, Min(0f)] private float globalAttackCooldown = 1.2f;
 
+        [Header("Group combat (attack slots)")]
+        [Tooltip("Attack slots this enemy takes while attacking (see AttackCoordinator). Elites take more, so fewer others attack with them.")]
+        [SerializeField, Min(1)] private int attackSlotCost = 1;
+        [Tooltip("Without a free slot (or out of the player's view) the enemy waits about this far from the player and circles.")]
+        [SerializeField, Min(0.5f)] private float waitDistance = 3.5f;
+
         [Header("Parry")]
         [Tooltip("Stagger seconds after the player deflects an attack with their weapon.")]
         [SerializeField, Min(0f)] private float parryStaggerDuration = 1.5f;
@@ -53,6 +59,8 @@ namespace Game4026.Enemy
                         Debug.LogWarning($"[{name}] attack '{a.name}' maxRange ({a.MaxRange}) is larger than detectionRange ({detectionRange}).", this);
         }
 
+        public int AttackSlotCost => attackSlotCost;
+        public float WaitDistance => waitDistance;
         public float MaxHealth => maxHealth;
         public float WeakPointMultiplier => weakPointMultiplier;
         public float HitCooldown => hitCooldown;

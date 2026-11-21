@@ -64,6 +64,10 @@ namespace Game4026.Enemy
         private float hitStopElapsed, hitStopLength, hitStopScale, clockOffset, localDeltaTime, timeScale = 1f;
         private float baseMoveSpeed = -1f, baseAngularSpeed = -1f;
 
+        // Waiting for an attack slot: circling the player.
+        private bool circling, rotationBeforeCircling = true;
+        private float circleSign = 1f, nextCircleFlip;
+
         /// <summary>(controller, previous, next)</summary>
         public event Action<EnemyController, EnemyStateId, EnemyStateId> StateChanged;
         /// <summary>Raised once after death + despawnDuration (also after <see cref="ForceClear"/>).</summary>
@@ -137,6 +141,8 @@ namespace Game4026.Enemy
             attack.Parried -= HandleParried;
             if (IsHitStopped)
                 EndHitStop();
+            AttackTokens.Release(this);
+            EndCircling();
         }
 
         private void Update() => Step(Time.time, Time.deltaTime);
@@ -259,6 +265,9 @@ namespace Game4026.Enemy
             nextAttackSelectTime = 0f;
             staggerDuration = 0f;
             staggerEndTime = 0f;
+            AttackTokens.Release(this);
+            EndCircling();
+            circleSign = UnityEngine.Random.value < 0.5f ? -1f : 1f;
             if (IsHitStopped)
                 EndHitStop();
             currentTime = Time.time - clockOffset;
@@ -370,6 +379,10 @@ namespace Game4026.Enemy
         {
             if (previous == EnemyStateId.Hit && next != EnemyStateId.Hit)
                 health.DamageMultiplier = 1f; // parry counter window over
+            if (previous == EnemyStateId.Attack)
+                AttackTokens.Release(this); // someone else's turn
+            if (previous == EnemyStateId.Chase)
+                EndCircling();
             StateChanged?.Invoke(this, previous, next);
         }
 
@@ -408,6 +421,7 @@ namespace Game4026.Enemy
 
         public void StopMoving()
         {
+            EndCircling();
             if (!AgentUsable)
                 return;
             agent.isStopped = true;
@@ -433,6 +447,11 @@ namespace Game4026.Enemy
         {
             if (target == null)
                 return;
+            if (circling)
+            {
+                EndCircling();
+                SetMoveSpeed(data.ChaseSpeed);
+            }
             Vector3 destination = target.Body.position;
             float now = currentTime;
             bool moved = (destination - lastDestination).sqrMagnitude > repathDistance * repathDistance;
@@ -471,7 +490,68 @@ namespace Game4026.Enemy
             if (target == null || currentTime < nextAttackSelectTime)
                 return false;
             nextAttackSelectTime = currentTime + perceptionInterval;
+            if (MustWaitForTurn)
+                return false;
             return attack.TrySelect(data, distanceToTarget, currentTime);
+        }
+
+        /// <summary>True while the player is looking roughly toward this enemy (see <see cref="AttackTokens.ViewHalfAngle"/>).</summary>
+        public bool IsInPlayerView =>
+            target == null || AttackTokens.InView(transform.position, target.Head.position, target.Head.forward, AttackTokens.ViewHalfAngle);
+
+        public bool MustWaitForTurn =>
+            AttackTokens.Enabled && !AttackTokens.IsHolder(this) &&
+            (!AttackTokens.HasRoom(this, data.AttackSlotCost) || !IsInPlayerView);
+
+        public float WaitDistance => data.WaitDistance;
+
+        /// <summary>Walks around the player at the wait distance, facing them; out of view, it walks toward their front.</summary>
+        public void CircleTarget(float deltaTime)
+        {
+            if (target == null)
+                return;
+            if (!circling)
+            {
+                circling = true;
+                SetMoveSpeed(data.MoveSpeed);
+                if (agent != null)
+                {
+                    rotationBeforeCircling = agent.updateRotation;
+                    agent.updateRotation = false; // strafe: keep facing the player
+                }
+                nextCircleFlip = currentTime + UnityEngine.Random.Range(3f, 6f);
+                nextRepathTime = 0f;
+            }
+            FaceTarget(deltaTime);
+            if (currentTime >= nextCircleFlip)
+            {
+                circleSign = -circleSign;
+                nextCircleFlip = currentTime + UnityEngine.Random.Range(3f, 6f);
+            }
+            if (currentTime < nextRepathTime)
+                return;
+            nextRepathTime = currentTime + repathInterval;
+
+            Vector3 center = target.Body.position;
+            Vector3 from = transform.position - center;
+            from.y = 0f;
+            if (from.sqrMagnitude < 1e-4f)
+                from = -transform.forward;
+            float direction = circleSign;
+            float view = AttackTokens.AngleFromView(transform.position, target.Head.position, target.Head.forward);
+            if (Mathf.Abs(view) > AttackTokens.ViewHalfAngle)
+                direction = view > 0f ? -1f : 1f; // come round into the player's view
+            Vector3 point = center + Quaternion.AngleAxis(direction * 35f, Vector3.up) * (from.normalized * data.WaitDistance);
+            SetDestination(point);
+        }
+
+        private void EndCircling()
+        {
+            if (!circling)
+                return;
+            circling = false;
+            if (agent != null)
+                agent.updateRotation = rotationBeforeCircling;
         }
 
         /// <summary>
@@ -491,7 +571,11 @@ namespace Game4026.Enemy
         }
 
         public float AttackHoldRange => attack.HoldRange(data);
-        public void BeginAttack() => attack.Begin(data, currentTime);
+        public void BeginAttack()
+        {
+            AttackTokens.TryTake(this, data.AttackSlotCost); // reactions (ForceAttack) go ahead even without a slot
+            attack.Begin(data, currentTime);
+        }
         public bool TickAttack(float deltaTime) => attack.Tick(currentTime, deltaTime, target);
         public void CancelAttack() => attack.Cancel(currentTime);
 

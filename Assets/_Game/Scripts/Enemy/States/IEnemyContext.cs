@@ -31,6 +31,12 @@ namespace Game4026.Enemy
         /// <summary>While no move is ready, Chase holds position (facing the player) inside this distance.</summary>
         float AttackHoldRange { get; }
         void BeginAttack();
+        /// <summary>No attack slot for this enemy right now (others are attacking, or it is outside the player's view).</summary>
+        bool MustWaitForTurn { get; }
+        /// <summary>Waiting distance from the player while <see cref="MustWaitForTurn"/>.</summary>
+        float WaitDistance { get; }
+        /// <summary>Walk around the player at <see cref="WaitDistance"/>, facing them, drifting toward their view.</summary>
+        void CircleTarget(float deltaTime);
         /// <summary>One frame of the move (telegraph, swing, hit checks, recovery). False once it has finished.</summary>
         bool TickAttack(float deltaTime);
         void CancelAttack();

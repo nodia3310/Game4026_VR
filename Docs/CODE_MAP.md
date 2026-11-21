@@ -17,7 +17,7 @@
 - EnemyDamageResult — Scripts/Enemy/Core/EnemyDamageResult.cs — 一次有效受擊的結果（實際扣血、擊中點、弱點、硬直、擊殺）
 - EnemyHealth — Scripts/Enemy/Core/EnemyHealth.cs — MonoBehaviour + IDamageable，包裝 Model，提供 Damaged/Died 事件、ResetState、IsInvulnerable；有 EnemyGuard 時先問它要不要擋
 - WeakPoint — Scripts/Enemy/Core/WeakPoint.cs — 掛在弱點 Collider 子物件上，以 isWeakPoint=true 轉發給父物件的 EnemyHealth，附 Gizmo
-- EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator；HitStop(秒, 倍率) 慢動作（AI 時鐘扣掉少走的時間、TimeScale 同步到 NavMesh 速度與 Animator、LocalTime、DeltaTime、HitStopChanged）；ForceAttack（反應招式，例如被打舉盾）
+- EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator；HitStop(秒, 倍率) 慢動作（AI 時鐘扣掉少走的時間、TimeScale 同步到 NavMesh 速度與 Animator、LocalTime、DeltaTime、HitStopChanged）；ForceAttack（反應招式，例如被打舉盾）；攻擊名額（MustWaitForTurn、CircleTarget 繞圈等待）
 - EnemyAnimator — Scripts/Enemy/Core/EnemyAnimator.cs — 依 AI 狀態切換 Animator（Locomotion 混合樹／Hit／Death）；每個攻擊步驟交叉淡入招式的狀態（鏡像用 `_Mirror`），預警時起手停格（AttackSpeed=0），最後一下的收招等動畫播完（EnemyAttack.RecoveryOverride）
 - EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier；Queue（下一招指定）、IsGuarding / EndGuard（翼盾）
 - EnemyWeapon — Scripts/Enemy/Core/EnemyWeapon.cs — 掛在敵人武器（刀身 Collider）上的 IDamageable：招架窗內被 A 的武器打到 → EnemyAttack.TryParry；窗外只擋住、不傷本體；leftHand 標記左右手；事件 Deflected/Blocked
@@ -34,6 +34,8 @@
 - AssemblyInfo — Scripts/Enemy/AssemblyInfo.cs — InternalsVisibleTo Enemy EditMode / PlayMode 與 Bridges EditMode 測試（EnemyController.Tick、AttackDefinition.Create、EnemyData.SetAttacks）
 
 ## Enemy Combat（`Assets/_Game/Scripts/Enemy/Combat/`，`Game4026.Enemy`）
+- AttackTokens — Scripts/Enemy/Combat/AttackTokens.cs — 一打多的攻擊名額（全域）：最多幾個同時出招、菁英佔較多、只有玩家視線內的敵人能拿；InView / AngleFromView
+- AttackCoordinator — Scripts/Enemy/Combat/AttackCoordinator.cs — 場景元件：攻擊名額的開關、數量、視線角度（沒放就用預設 2 個 / 70°）
 - AttackType — Scripts/Enemy/Combat/AttackType.cs — Melee / Lunge / Combo / Projectile / AreaSlam / Charge（未實作，不會被選到）/ Guard（舉盾，不傷人）
 - AttackDefinition — Scripts/Enemy/Combat/AttackDefinition.cs — ScriptableObject，一招一份：動畫狀態、速度、鏡像、預警停格、擊中秒數、收招、距離、冷卻、權重、傷害、判定範圍、突進、連段步驟、砸地半徑
 - AttackSelector — Scripts/Enemy/Combat/AttackSelector.cs — 純 C#：依距離、各招冷卻、全域冷卻、權重選招；HoldRange（沒招可出時停下的距離）
@@ -89,7 +91,7 @@
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
-- EnemyAI 測試場景 — Assets/_Game/Scenes/Test/EnemyAI.unity — 地板 + 兩面牆（已烘焙 NavMesh）、巡邏點、Enemy_PatrolDemo、MockPlayer、EnemyPool（預熱 4 隻）、3 個生成點、Encounter_Hall_Rosetta（觸發區）、Encounter_Boss、EncounterDirector（+ DebugArtifactButton、ArtifactEventBridge）
+- EnemyAI 測試場景 — Assets/_Game/Scenes/Test/EnemyAI.unity — AttackCoordinator、地板 + 兩面牆（已烘焙 NavMesh）、巡邏點、Enemy_PatrolDemo、MockPlayer、EnemyPool（預熱 4 隻）、3 個生成點、Encounter_Hall_Rosetta（觸發區）、Encounter_Boss、EncounterDirector（+ DebugArtifactButton、ArtifactEventBridge）
 
 ## Bridges（`Assets/_Game/Scripts/Bridges/`，`Game4026.Bridges`，引用 Contracts + Interaction + Enemy）
 - ImpactDamageCurve — Scripts/Bridges/ImpactDamageCurve.cs — 速度 → 基礎傷害（速度 × 係數，限制在上下限之間），含近戰／箭預設值
@@ -102,6 +104,7 @@
 ## Tests（`Assets/_Game/Tests/EditMode/Enemy/`，`Game4026.Enemy.EditModeTests`）
 - EnemyHealthModelTests — Tests/EditMode/Enemy/EnemyHealthModelTests.cs — 受擊規則單元測試（倍率、冷卻、硬直、死亡、Reset、無效傷害）
 - EnemyHealthComponentTests — Tests/EditMode/Enemy/EnemyHealthComponentTests.cs — 模擬 A 的呼叫路徑：Collider → GetComponentInParent<IDamageable> → TakeDamage
+- AttackTokensTests — Tests/EditMode/Enemy/AttackTokensTests.cs — 名額上限與釋放、菁英、關閉、視線範圍
 - EnemyStateMachineTests — Tests/EditMode/Enemy/EnemyStateMachineTests.cs — 規格 4.4 的狀態轉換表
 - FakeEnemyContext — Tests/EditMode/Enemy/FakeEnemyContext.cs — 測試用 IEnemyContext（不需要 NavMesh / Play Mode）
 - EnemyAttackTests — Tests/EditMode/Enemy/EnemyAttackTests.cs — 出招時間、命中範圍與角度、AreaSlam、連段、突進距離、打斷、攻速倍率、預設招式
@@ -125,6 +128,7 @@
 - BossPlayModeTests — Tests/PlayMode/Enemy/BossPlayModeTests.cs — 法老三階段、無敵、小兵、弱點、跨階段、物件池重用
 - EnemyGcTests — Tests/PlayMode/Enemy/EnemyGcTests.cs — 4 隻敵人追擊與攻擊 720 幀，敵人腳本 0 bytes GC
 - ProjectilePlayModeTests — Tests/PlayMode/Enemy/ProjectilePlayModeTests.cs — 真的敵人開火：沒反彈打中玩家、反彈打中弱點（20 × 2.5）
+- AttackSlotsPlayModeTests — Tests/PlayMode/Enemy/AttackSlotsPlayModeTests.cs — 三隻一個名額不會同時出招而且輪流、背後的敵人不出手、玩家轉身後才出手
 - EnemyGuardPlayModeTests — Tests/PlayMode/Enemy/EnemyGuardPlayModeTests.cs — 真的敵人：擋正面不擋背後、擋 2 下立刻反擊、重擊破盾（硬直、×1.5）、被打後舉盾
 - HitFeedbackPlayModeTests — Tests/PlayMode/Enemy/HitFeedbackPlayModeTests.cs — HitStop 讓 AI 時鐘與 NavMesh 變慢後緩回、出招順延少走的時間、受擊依種類觸發反應、震動不留位移
 - ParryPlayModeTests — Tests/PlayMode/Enemy/ParryPlayModeTests.cs — 真的 EnemyController：招架窗內打武器 → 硬直、×1.5 傷害、結束後恢復、玩家沒被打到

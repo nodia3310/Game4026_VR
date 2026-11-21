@@ -278,6 +278,21 @@ namespace Game4026.Contracts
 
 - **招式慢動作點**（2026-11-21）：`AttackDefinition` 的 `Slow Motion At / Duration / Scale`。動畫播到指定秒數時，整隻敵人進入慢動作再緩回。阿努比斯突進斬設在跳躍最高點 1.12 s（0.6 s、0.12 倍速）。
 
+### 4.5e 攻擊名額（一打多，使用者追加 2026-11-22）
+- **問題**：一打多時好幾隻同時出招，動畫又不夠精細，看不出誰在蓄力；VR 還會被背後的敵人打到。
+- **`AttackTokens`**（全域，一個玩家）：全場同時最多 2 個攻擊名額。
+  - 敵人要拿到名額才能出招，整招結束（或被打斷）就還回去。
+  - 一般敵人佔 1 個；菁英佔更多（`EnemyData → Attack Slot Cost`，翼人是 2），所以翼人出招時別人不會一起上。
+  - 只剩一隻在打時，就算花費比上限高也照樣能出招，不會卡死。
+- **視線限制**：只有在玩家頭部朝向左右 70° 內的敵人可以拿名額，背後的不准出手。
+- **等待行為**（`ChaseState`）：
+  - 沒名額時，敵人在 `Wait Distance`（預設 3.5 m，翼人 4.5 m）附近繞著玩家走，用走路速度、面向玩家。
+  - 不在視線內的會往玩家正面繞。
+  - 剛出完招的會退回這個距離。
+  - 距離還很遠的會先追過來。
+- **被打舉盾**（`ForceAttack`）是反應動作，沒名額也照做。
+- **設定**：場景物件 `AttackCoordinator`（EnemyAI 場景已放）：開關、名額數、視線角度，Play Mode 中改了立即生效。沒放的場景就用預設值。
+
 ### 4.5d 翼人（Birdman，即 5.3 節的 Winged Goddess Isis，菁英，使用者追加）
 
 - **模型**：`Character Models/Enemy/birdman/birdman.fbx`，使用者在 Blender 做的跪姿有翼女神，Generic rig。高約 1.8 m，翼展約 2.7 m，Prefab 放大 1.1 倍。只有 3 段動畫：
@@ -588,6 +603,10 @@ Assets/_Game/
 - [x] `HoverLocomotion`、`EnemyGuard` + `AttackType.Guard`、`EnemyController.ForceAttack`、`EnemyAttack.Queue/EndGuard`
 - [x] 鏡像攻擊動畫、`AC_Birdman`、6 個招式資產、`EnemyData_Birdman`、`Enemy_Birdman` Prefab
 - [x] 測試：EditMode（慢動作曲線、Guard 步驟、提前反擊、正面範圍）、PlayMode（慢動作時鐘與 NavMesh、擋住正面、擋 2 下反擊、破盾、被打舉盾）
+
+### M2.10：攻擊名額（規格外，使用者追加）
+- [x] `AttackTokens`、`AttackCoordinator`、`EnemyData` 的 Attack Slot Cost / Wait Distance、Chase 繞圈等待
+- [x] 測試：EditMode（名額、菁英、關閉、視線；狀態機繞圈）、PlayMode（三隻一個名額不會同時出招且會輪流、背後不出手、轉身後出手）
 
 ### M3：生成與遭遇戰
 - [x] 物件池運作正常，反覆生成和回收時不產生新的 Instantiate

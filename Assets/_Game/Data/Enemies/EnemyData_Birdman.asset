@@ -27,6 +27,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 09432074f17851d4a9a6ab932e9e727f, type: 2}
   - {fileID: 11400000, guid: c8009363b51c1db40b800e8da878c024, type: 2}
   globalAttackCooldown: 0.9
+  attackSlotCost: 2
+  waitDistance: 4.5
   parryStaggerDuration: 2
   parriedDamageMultiplier: 1.5
   spawnDuration: 1.8

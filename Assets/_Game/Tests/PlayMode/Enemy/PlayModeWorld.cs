@@ -24,6 +24,10 @@ namespace Game4026.Tests.Enemy.PlayMode
             surface.BuildNavMesh();
             created.Add(floor);
 
+            // Fixtures place the player anywhere (often facing away from the enemy): no view rule unless a test sets one.
+            AttackTokens.Reset();
+            AttackTokens.ViewHalfAngle = 180f;
+
             var poolGo = new GameObject("Pool");
             Pool = poolGo.AddComponent<EnemyPoolManager>();
             created.Add(poolGo);
@@ -78,6 +82,7 @@ namespace Game4026.Tests.Enemy.PlayMode
             foreach (Object o in created)
                 if (o != null) Object.Destroy(o);
             created.Clear();
+            AttackTokens.Reset();
             if (surface != null)
                 surface.RemoveData();
         }
