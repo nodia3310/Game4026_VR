@@ -72,9 +72,12 @@ MonoBehaviour:
   sparkCount: 10
   hitSparkColor: {r: 1, g: 0.55, b: 0.25, a: 1}
   parrySparkColor: {r: 1, g: 0.9, b: 0.55, a: 1}
-  hitClips: []
-  weakPointClips: []
+  hitClips:
+  - {fileID: 8300000, guid: 8407a58c9b03d8e48b3c9d01bd91b244, type: 3}
+  weakPointClips:
+  - {fileID: 8300000, guid: c20f4470e9675ac449453e7dea9a4ea2, type: 3}
   killClips: []
-  parryClips: []
+  parryClips:
+  - {fileID: 8300000, guid: 604dc8cea77b7d74e8a5cfbfc0539cae, type: 3}
   blockedClips: []
-  volume: 0.8
+  volume: 0.625

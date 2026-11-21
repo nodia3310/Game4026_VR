@@ -44,6 +44,32 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void ParrySound_OnlyOnSuccessfulDeflects_NeverOnAMissedParry()
+        {
+            var clip = AudioClip.Create("parry", 10, 1, 44100, false);
+            try
+            {
+                var so = new UnityEditor.SerializedObject(profile);
+                SerializedPropertyHelper.SetSingle(so.FindProperty("parryClips"), clip);
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                Assert.AreEqual(clip, profile.PickClip(HitKind.Parry, 0.5f));
+                Assert.AreEqual(clip, profile.PickClip(HitKind.Reflect, 0.5f));
+                Assert.IsNull(profile.PickClip(HitKind.Blocked, 0.5f), "Blocked clips empty: silent, not the parry sound.");
+            }
+            finally { Object.DestroyImmediate(clip); }
+        }
+
+        private static class SerializedPropertyHelper
+        {
+            public static void SetSingle(UnityEditor.SerializedProperty array, Object value)
+            {
+                array.arraySize = 1;
+                array.GetArrayElementAtIndex(0).objectReferenceValue = value;
+            }
+        }
+
+        [Test]
         public void ShakeOffset_StartsAwayFromHitter_AndDecaysToZero()
         {
             Vector3 start = EnemyHitFeedback.ShakeOffset(0f, 0.1f, 0.02f, 50f, Vector3.forward, Vector3.right);
