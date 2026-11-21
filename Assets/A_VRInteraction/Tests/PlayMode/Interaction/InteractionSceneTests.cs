@@ -5,6 +5,7 @@ using System.Reflection;
 using Game4026.Bridges;
 using Game4026.Contracts;
 using Game4026.Enemy;
+using Game4026.Interaction;
 using Game4026.Interaction.Artifacts;
 using Game4026.Interaction.Grabbing;
 using Game4026.Interaction.Melee;
@@ -36,8 +37,13 @@ namespace Game4026.Tests.Interaction
         {
             previousBackground = Application.runInBackground;
             Application.runInBackground = true;
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(Path, new LoadSceneParameters(LoadSceneMode.Single));
-            loadedScene = SceneManager.GetSceneByPath(Path);
+            yield return LoadSavedRoom(Path);
+        }
+
+        private IEnumerator LoadSavedRoom(string scenePath)
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath, new LoadSceneParameters(LoadSceneMode.Single));
+            loadedScene = SceneManager.GetSceneByPath(scenePath);
             for (int i = 0; i < 5; i++) yield return null;
             desktop = Object.FindAnyObjectByType<InteractionDesktopMode>();
             Assert.That(desktop, Is.Not.Null);
@@ -76,11 +82,12 @@ namespace Game4026.Tests.Interaction
             return (T)field.GetValue(target);
         }
 
-        static void Pose(PhysicalGrabbable item, Vector3 position)
+        static void Pose(PhysicalGrabbable item, Vector3 position, Quaternion? rotation = null)
         {
-            item.transform.SetPositionAndRotation(position, Quaternion.identity);
+            var facing = rotation ?? Quaternion.identity;
+            item.transform.SetPositionAndRotation(position, facing);
             item.Body.position = position;
-            item.Body.rotation = Quaternion.identity;
+            item.Body.rotation = facing;
             item.Body.linearVelocity = Vector3.zero;
             item.Body.angularVelocity = Vector3.zero;
             Physics.SyncTransforms();
@@ -91,10 +98,11 @@ namespace Game4026.Tests.Interaction
             for (int i = 0; i < steps; i++) yield return new WaitForFixedUpdate();
         }
 
-        void Grab(DesktopTestHand hand, PhysicalGrabbable item, Vector3 position)
+        void Grab(DesktopTestHand hand, PhysicalGrabbable item, Vector3 position, Quaternion? rotation = null)
         {
-            Pose(item, position);
-            hand.transform.SetPositionAndRotation(position, Quaternion.identity);
+            var facing = rotation ?? Quaternion.identity;
+            Pose(item, position, facing);
+            hand.transform.SetPositionAndRotation(position, facing);
             Assert.That(hand.TryGrab(item.Grab), Is.True, "Actual XRI select should succeed for " + item.name);
         }
 
@@ -103,7 +111,7 @@ namespace Game4026.Tests.Interaction
         {
             yield return Settle(50);
             var items = Object.FindObjectsByType<PhysicalGrabbable>();
-            Assert.That(items.Length, Is.EqualTo(8));
+            Assert.That(items.Length, Is.EqualTo(10));
             foreach (var item in items)
             {
                 Assert.That(item.Body, Is.Not.Null);
@@ -163,12 +171,16 @@ namespace Game4026.Tests.Interaction
             var targets = Object.FindObjectsByType<MeleeHitTarget>();
             Assert.That(targets.Length, Is.EqualTo(3));
             Assert.That(targets.All(t => t.GetComponentsInChildren<Collider>().Length > 1), Is.True);
-            var artifact = Object.FindAnyObjectByType<ArtifactIdentity>();
-            Assert.That(artifact.IsValid, Is.True);
-            Assert.That(artifact.ArtifactId, Is.EqualTo("interaction-jar-01"));
-            var display = Object.FindAnyObjectByType<ArtifactDisplayTrigger>();
-            Assert.That(Field<Transform>(display, "snapPoint"), Is.Not.Null);
-            Assert.That(Field<string>(display, "expectedArtifactId"), Is.EqualTo(artifact.ArtifactId));
+            var artifacts = Object.FindObjectsByType<ArtifactIdentity>();
+            Assert.That(artifacts.Select(artifact => artifact.Type), Is.EquivalentTo(new[]
+                { ArtifactType.RosettaStone, ArtifactType.CanopicJar, ArtifactType.TutankhamunMask }));
+            var displays = Object.FindObjectsByType<ArtifactDisplayTrigger>();
+            Assert.That(displays.Length, Is.EqualTo(artifacts.Length));
+            foreach (var artifact in artifacts)
+            {
+                Assert.That(artifact.IsValid, Is.True);
+                Assert.That(Field<Transform>(DisplayFor(artifact), "snapPoint"), Is.Not.Null);
+            }
             foreach (var component in loadedScene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Component>(true)))
             {
                 Assert.That(component, Is.Not.Null, "No missing script components.");
@@ -267,9 +279,10 @@ namespace Game4026.Tests.Interaction
         [UnityTest]
         public IEnumerator Artifact_HeldInsideDoesNotRestore_ReleasedInsideLocksOnce()
         {
-            var artifact = Object.FindAnyObjectByType<RestorableArtifact>();
+            var artifact = Object.FindObjectsByType<RestorableArtifact>()
+                .Single(item => item.Identity.Type == ArtifactType.CanopicJar);
             var physical = artifact.GetComponent<PhysicalGrabbable>();
-            var display = Object.FindAnyObjectByType<ArtifactDisplayTrigger>();
+            var display = DisplayFor(artifact.Identity);
             var director = Object.FindAnyObjectByType<EncounterDirector>();
             var hall = new GameObject("Canopic Jar encounter").AddComponent<EncounterController>();
             hall.Configure(null, null, 1, null, ArtifactType.CanopicJar);
@@ -296,6 +309,99 @@ namespace Game4026.Tests.Interaction
             Assert.That(hall.WasForceCleared, Is.True);
         }
 
+        private static ArtifactDisplayTrigger DisplayFor(ArtifactIdentity identity) =>
+            Object.FindObjectsByType<ArtifactDisplayTrigger>()
+                .Single(display => Field<string>(display, "expectedArtifactId") == identity.ArtifactId);
+
+        private IEnumerator RestoreArtifact(RestorableArtifact artifact, ArtifactDisplayTrigger display)
+        {
+            var hand = desktop.RightHand;
+            var snap = Field<Transform>(display, "snapPoint");
+            Grab(hand, artifact.GetComponent<PhysicalGrabbable>(), snap.position + Vector3.up * .02f);
+            yield return Settle();
+            hand.Release();
+            yield return Settle(35);
+            Assert.That(display.IsRestored && artifact.IsRestored, Is.True, artifact.Identity.ArtifactId);
+        }
+
+        [UnityTest]
+        public IEnumerator ThreePhysicalArtifacts_ClearMatchingHalls_AndSpawnThePharaohOnce()
+        {
+            var director = Object.FindAnyObjectByType<EncounterDirector>();
+            var boss = Field<EncounterController>(director, "bossEncounter");
+            Assert.That(boss, Is.Not.Null);
+            var artifacts = Object.FindObjectsByType<RestorableArtifact>().ToDictionary(artifact => artifact.Identity.Type);
+            var types = new[] { ArtifactType.RosettaStone, ArtifactType.CanopicJar, ArtifactType.TutankhamunMask };
+            var halls = types.Select(type =>
+            {
+                var hall = new GameObject(type + " integration hall").AddComponent<EncounterController>();
+                hall.Configure(null, null, 1, null, type);
+                return hall;
+            }).ToArray();
+            director.Configure(halls, boss);
+
+            int accepted = 0;
+            int bossStarts = 0;
+            director.ArtifactAccepted += _ => accepted++;
+            director.BossEncounterStarted += () => bossStarts++;
+            for (int i = 0; i < types.Length; i++)
+            {
+                var artifact = artifacts[types[i]];
+                var display = DisplayFor(artifact.Identity);
+                yield return RestoreArtifact(artifact, display);
+                Assert.That(halls[i].WasForceCleared, Is.True);
+                Assert.That(halls.Count(hall => hall.IsCleared), Is.EqualTo(i + 1));
+                Assert.That(director.Progress.RestoredCount, Is.EqualTo(i + 1));
+                Assert.That(bossStarts, Is.EqualTo(i == types.Length - 1 ? 1 : 0));
+
+                if (i == 0)
+                {
+                    // Physically restore the same ID again; the bridge forwards it but the director deduplicates it.
+                    display.ResetRestoration();
+                    yield return RestoreArtifact(artifact, display);
+                    Assert.That(accepted, Is.EqualTo(1));
+                    Assert.That(director.Progress.RestoredCount, Is.EqualTo(1));
+                }
+            }
+
+            for (int i = 0; i < 150 && boss.SpawnedCount == 0; i++)
+                yield return new WaitForFixedUpdate();
+            Assert.That(accepted, Is.EqualTo(3));
+            Assert.That(bossStarts, Is.EqualTo(1));
+            Assert.That(boss.SpawnedCount, Is.EqualTo(1));
+            Assert.That(boss.AliveCount, Is.EqualTo(1));
+            var pharaoh = Object.FindObjectsByType<PharaohBoss>().Single();
+            Assert.That(pharaoh.GetComponent<EnemyController>().isActiveAndEnabled, Is.True);
+            Assert.That(pharaoh.GetComponent<EnemyHealth>().Data.name, Is.EqualTo("EnemyData_Pharaoh"));
+            TestContext.WriteLine("Three artifact IDs accepted, one duplicate ignored, three linked halls cleared, one Pharaoh spawned.");
+        }
+
+        [UnityTest]
+        public IEnumerator Museum_PlayModeConnectsWeaponsPlayerAndTheSavedDisplay()
+        {
+            yield return LoadSavedRoom("Assets/Scenes/Museum.unity");
+            var weapons = Object.FindObjectsByType<MeleeWeapon>();
+            Assert.That(weapons, Has.Length.EqualTo(4));
+            Assert.That(weapons.All(weapon => weapon.GetComponent<MeleeDamageBridge>()), Is.True);
+            Assert.That(Object.FindObjectsByType<DamageBridgeInstaller>(), Has.Length.EqualTo(1));
+
+            var rig = Field<GameObject>(desktop, "xrRig");
+            var target = rig.GetComponent<PlayerTarget>();
+            var health = rig.GetComponent<PlayerHealth>();
+            Assert.That(target.Head, Is.SameAs(Field<Camera>(desktop, "xrCamera").transform));
+            Assert.That(health.CurrentHealth, Is.EqualTo(100f));
+            var desktopReceiver = PlayerTarget.Current.Damageable;
+            Assert.That(desktopReceiver, Is.Not.Null);
+            desktopReceiver.ApplyPlayerDamage(10f);
+            Assert.That(health.CurrentHealth, Is.EqualTo(90f));
+
+            var artifact = Object.FindObjectsByType<RestorableArtifact>().Single();
+            yield return RestoreArtifact(artifact, DisplayFor(artifact.Identity));
+            var progress = Object.FindAnyObjectByType<EncounterDirector>().Progress;
+            Assert.That(progress.RestoredCount, Is.EqualTo(1));
+            Assert.That(progress.IsRestored(ArtifactType.CanopicJar), Is.True);
+        }
+
         [UnityTest]
         public IEnumerator Melee_ActualHeldSweepHitsCompoundTargetOnce_WithPhysicalEstimates()
         {
@@ -308,8 +414,8 @@ namespace Game4026.Tests.Interaction
                 // Sweep the tip across the target's front face. Placing the blade midpoint
                 // at the face embeds the longer head in the solid target and tests repeated rebounds.
                 Grab(desktop.RightHand, physical, new Vector3(-3.5f, 1.3f-midpoint.y, 1.91f-tip.z));
+                // Let the held weapon establish a slow-motion sample before starting the swing.
                 yield return Settle();
-                melee.ResetSampling();
                 for (int i = 0; i < 19; i++)
                 {
                     desktop.RightHand.transform.position += Vector3.right * .045f;
@@ -344,13 +450,209 @@ namespace Game4026.Tests.Interaction
             var tip = Field<Transform>(melee, "bladeTip").localPosition;
             Grab(desktop.RightHand, physical, new Vector3(2.6f, 1.7f - tip.y, 3.4f - tip.z));
             yield return Settle();
-            melee.ResetSampling();
             for (int i = 0; i < 24 && health.CurrentHealth == health.MaxHealth; i++)
             {
                 desktop.RightHand.transform.position += Vector3.right * .045f;
                 yield return new WaitForFixedUpdate();
             }
             Assert.That(health.CurrentHealth, Is.LessThan(health.MaxHealth));
+        }
+
+        private static EnemyHealth FindAnubis(out Collider body)
+        {
+            var enemy = Object.FindObjectsByType<EnemyHealth>()
+                .Single(health => health.Data && health.Data.name == "EnemyData_AnubisGuard");
+            body = enemy.transform.Find("Body").GetComponent<Collider>();
+            Assert.That(body.enabled && body.gameObject.activeInHierarchy, Is.True);
+            Assert.That(body.GetComponentInParent<IDamageable>(), Is.SameAs(enemy));
+            Assert.That(enemy.CurrentHealth, Is.EqualTo(100f));
+            return enemy;
+        }
+
+        [UnityTest]
+        public IEnumerator Anubis_AuthoredAttackDamagesTheXRPlayersHealth()
+        {
+            var enemy = FindAnubis(out _);
+            var xrRig = Field<GameObject>(desktop, "xrRig");
+            var xrTarget = xrRig.GetComponent<PlayerTarget>();
+            var playerHealth = xrRig.GetComponent<PlayerHealth>();
+            Assert.That(playerHealth.CurrentHealth, Is.EqualTo(100f));
+
+            // Disable the desktop adapter to drive the authored XR target and receiver directly.
+            desktop.enabled = false;
+            yield return null;
+            Assert.That(PlayerTarget.Current, Is.SameAs(xrTarget));
+            Assert.That(xrTarget.Damageable, Is.SameAs(playerHealth));
+            xrTarget.Head.position = enemy.transform.position + enemy.transform.forward * 1.25f + Vector3.up * 1.4f;
+            Assert.That(xrTarget.Body, Is.SameAs(xrTarget.Head));
+            var attack = enemy.GetComponent<EnemyAttack>();
+            var slash = enemy.Data.Attacks.Single(move => move.name == "Anubis_QuickSlash");
+            int confirmedHits = 0;
+            attack.AttackResolved += (_, _, hit) => confirmedHits += hit ? 1 : 0;
+            Assert.That(attack.Begin(enemy.Data, Time.time, slash), Is.True);
+            for (int i = 0; i < 120 && attack.Tick(Time.time, Time.fixedDeltaTime, xrTarget); i++)
+                yield return new WaitForFixedUpdate();
+
+            Assert.That(confirmedHits, Is.EqualTo(1));
+            Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth - slash.Damage));
+            TestContext.WriteLine($"Anubis Quick Slash reduced XR player health to {playerHealth.CurrentHealth:F0} HP.");
+        }
+
+        [UnityTest]
+        public IEnumerator Anubis_PhysicalArrowHitsTheWeakPoint_AndCooldownBlocksAnImmediateSecondHit()
+        {
+            yield return Settle();
+            var enemy = FindAnubis(out var body);
+            var weakCollider = enemy.GetComponentInChildren<WeakPoint>().GetComponent<Collider>();
+            var melee = Object.FindObjectsByType<MeleeWeapon>().Single(weapon => weapon.name == "Melee weapon - Knife");
+            EnemyDamageResult result = default;
+            int hits = 0;
+            enemy.Damaged += (_, damage) => { result = damage; hits++; };
+            Collider impact = null;
+            float expected = 0f;
+            var muzzle = weakCollider.bounds.center + new Vector3(0f, .04f, 1.95f);
+            yield return ShootArrow(muzzle, (collision, arrowBridge) =>
+            {
+                impact = collision.collider;
+                expected = arrowBridge.Damage.Evaluate(collision.relativeVelocity.magnitude) * enemy.Data.WeakPointMultiplier;
+                melee.GetComponent<MeleeDamageBridge>().ApplyHit(new MeleeHit { Collider = body, Point = body.bounds.center, Speed = 3f });
+            });
+            Assert.That(impact, Is.SameAs(weakCollider), $"The arrow struck {impact?.name ?? "nothing"}.");
+            Assert.That(hits, Is.EqualTo(1));
+            Assert.That(result.IsWeakPoint, Is.True);
+            Assert.That(enemy.Data.WeakPointMultiplier, Is.EqualTo(2.5f));
+            Assert.That(result.AppliedDamage, Is.EqualTo(expected).Within(.01f));
+            Assert.That(enemy.CurrentHealth, Is.EqualTo(enemy.MaxHealth - expected).Within(.01f));
+            TestContext.WriteLine($"Anubis weak-point arrow damage: {result.AppliedDamage:F2} HP. Immediate melee hit ignored.");
+        }
+
+        [UnityTest]
+        public IEnumerator Anubis_TakesOneHitFromAHeldKnife()
+        {
+            var enemy = FindAnubis(out var body);
+            var knife = Object.FindObjectsByType<MeleeWeapon>().Single(weapon => weapon.name == "Melee weapon - Knife");
+            Assert.That(knife.GetComponent<MeleeDamageBridge>(), Is.Not.Null);
+
+            var torso = body.bounds.center;
+            var tip = Field<Transform>(knife, "bladeTip");
+            var facing = Quaternion.LookRotation(Vector3.back);
+            desktop.DesktopCamera.transform.position = torso + new Vector3(0f, .6f, 1.3f);
+            // The desktop adapter normally syncs the XR obstruction origin in its keyboard update.
+            // Batch Mode may have no keyboard device, so sync the simulated head explicitly.
+            typeof(InteractionDesktopMode).GetMethod("SyncReferences", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(desktop, null);
+            var hand = desktop.RightHand;
+            // Approach from behind the enemy's daggers, with the knife tip leading the motion.
+            var strikeStart = torso + new Vector3(0f, .17f, .88f);
+            Grab(hand, knife.GetComponent<PhysicalGrabbable>(), strikeStart - facing * tip.localPosition, facing);
+            yield return Settle();
+
+            int hits = 0;
+            enemy.Damaged += (_, _) => hits++;
+            Collider impact = null;
+            knife.Hit += hit => impact = hit.Collider;
+            for (int i = 0; i < 24 && hits == 0; i++)
+            {
+                hand.transform.position += Vector3.back * .055f;
+                yield return new WaitForFixedUpdate();
+            }
+            yield return Settle(20);
+            Assert.That(impact, Is.SameAs(body), $"The knife struck {impact?.name ?? "nothing"}.");
+            Assert.That(hits, Is.EqualTo(1));
+            Assert.That(enemy.MaxHealth - enemy.CurrentHealth, Is.InRange(5f, 40f));
+            TestContext.WriteLine($"Anubis knife damage: {enemy.MaxHealth - enemy.CurrentHealth:F2} HP");
+        }
+
+        [UnityTest]
+        public IEnumerator Anubis_TakesOneHitFromAPhysicalArrow()
+        {
+            var enemy = FindAnubis(out var body);
+            int hits = 0;
+            Collider impact = null;
+            enemy.Damaged += (_, _) => hits++;
+            yield return ShootArrow(body.bounds.center + new Vector3(0f, .33f, 1.95f), (collision, _) => impact = collision.collider);
+            Assert.That(impact, Is.SameAs(body), $"The arrow struck {impact?.name ?? "nothing"}.");
+            Assert.That(hits, Is.EqualTo(1));
+            Assert.That(enemy.MaxHealth - enemy.CurrentHealth, Is.InRange(10f, 35f));
+            TestContext.WriteLine($"Anubis arrow damage: {enemy.MaxHealth - enemy.CurrentHealth:F2} HP");
+        }
+
+        private IEnumerator ShootArrow(Vector3 muzzlePosition, System.Action<Collision, ArrowDamageBridge> onImpact)
+        {
+            var bow = Object.FindAnyObjectByType<BowDrawAim>();
+            var item = bow.GetComponent<PhysicalGrabbable>();
+            var muzzle = Field<Transform>(bow, "arrowOrigin");
+            var facing = Quaternion.LookRotation(Vector3.back);
+            var rotation = facing * Quaternion.Inverse(Quaternion.Inverse(item.transform.rotation) * muzzle.rotation);
+            var position = muzzlePosition - rotation * item.transform.InverseTransformPoint(muzzle.position);
+            Pose(item, position, rotation);
+
+            var left = desktop.LeftHand;
+            var right = desktop.RightHand;
+            var grip = item.Grab.attachTransform;
+            left.transform.SetPositionAndRotation(grip.position, grip.rotation);
+            Assert.That(left.TryGrab(item.Grab), Is.True);
+            yield return Settle();
+            right.transform.SetPositionAndRotation(Field<Transform>(bow, "stringRest").position, facing);
+            Assert.That(right.TryGrab(Field<XRBaseInteractable>(bow, "stringInteractable")), Is.True);
+            for (int i = 0; i < 18; i++)
+            {
+                right.transform.position -= muzzle.forward * .025f;
+                yield return null;
+            }
+            Assert.That(bow.NormalizedDraw, Is.GreaterThan(.55f));
+
+            void SubscribeImpact(BowShot _)
+            {
+                var launched = Object.FindObjectsByType<ArrowProjectile>().Single();
+                var bridge = launched.GetComponent<ArrowDamageBridge>();
+                Assert.That(bridge, Is.Not.Null, "The physical arrow and its bridge exist when Shot is published.");
+                launched.Impact += collision => onImpact(collision, bridge);
+            }
+
+            bow.Shot += SubscribeImpact;
+            right.Release();
+            yield return Settle(30);
+            var arrow = Object.FindObjectsByType<ArrowProjectile>().Single();
+            bow.Shot -= SubscribeImpact;
+            Assert.That(arrow.GetComponent<Rigidbody>().isKinematic, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Anubis_TakesOneOutboundAxeHit_AndTheAxeCanBeCaught()
+        {
+            var enemy = FindAnubis(out var body);
+            var weapon = Object.FindAnyObjectByType<ReboundingWeapon>();
+            var axe = weapon.GetComponent<PhysicalGrabbable>();
+            var hand = desktop.RightHand;
+            Grab(hand, axe, body.bounds.center + new Vector3(0f, .39f, 1.35f), Quaternion.LookRotation(Vector3.back));
+            yield return Settle();
+
+            Collider impact = null;
+            bool canCatch = false;
+            bool? caught = null;
+            int hits = 0;
+            enemy.Damaged += (_, _) => hits++;
+            weapon.Rebounded += collider => impact = collider;
+            weapon.CatchWindowOpened += () => canCatch = true;
+            weapon.ReturnEnded += result => caught = result;
+            const BindingFlags privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+            var queueThrow = typeof(ReboundingWeapon).GetMethod("QueueDesktopThrow", privateInstance);
+            Assert.That(queueThrow.Invoke(weapon, new object[] { hand, hand.transform.forward * 9f }), Is.True);
+            hand.Release();
+
+            for (int i = 0; i < 110 && !canCatch && !caught.HasValue; i++)
+                yield return new WaitForFixedUpdate();
+            Assert.That(impact, Is.SameAs(body), $"First outbound collision was {impact?.name ?? "none"}.");
+            Assert.That(canCatch, Is.True);
+            typeof(InteractionDesktopMode).GetMethod("CatchOrGrab", privateInstance).Invoke(desktop, null);
+            Assert.That(caught, Is.True);
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+
+            yield return Settle(20);
+            Assert.That(hits, Is.EqualTo(1));
+            Assert.That(enemy.CurrentHealth, Is.EqualTo(80f));
+            TestContext.WriteLine($"Anubis axe damage: {enemy.MaxHealth - enemy.CurrentHealth:F2} HP. Axe caught.");
         }
 
         [UnityTest]

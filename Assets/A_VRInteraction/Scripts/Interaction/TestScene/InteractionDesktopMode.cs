@@ -81,7 +81,11 @@ namespace Game4026.Interaction.TestScene
             desktopCamera.nearClipPlane = 0.03f;
             cameraObject.tag = "MainCamera";
             if (xrRig.TryGetComponent<PlayerTarget>(out _))
+            {
+                if (xrRig.TryGetComponent<PlayerHealth>(out var health))
+                    cameraObject.AddComponent<DesktopPlayerDamageReceiver>().Health = health;
                 cameraObject.AddComponent<PlayerTarget>();
+            }
 
             var manager = FindAnyObjectByType<XRInteractionManager>();
             if (manager == null) manager = desktopRig.AddComponent<XRInteractionManager>();
@@ -235,6 +239,16 @@ namespace Game4026.Interaction.TestScene
             if (leftMaterial != null) Destroy(leftMaterial);
             if (rightMaterial != null) Destroy(rightMaterial);
             desktopRig = null;
+        }
+    }
+
+    internal sealed class DesktopPlayerDamageReceiver : MonoBehaviour, IPlayerDamageReceiver
+    {
+        public PlayerHealth Health { private get; set; }
+
+        public void ApplyPlayerDamage(float damage)
+        {
+            if (Health) Health.ApplyPlayerDamage(damage);
         }
     }
 
