@@ -86,6 +86,10 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-21（招架音效只在成功時播放）
+- 問題：沒擋成功也會響 Parry 音效。原因是 Blocked Clips 為空時，程式退回去用 Parry Clips；刀身在窗外被打到（招架失敗）就播了 Parry 音效。
+- 修正：Blocked 只用 Blocked Clips，空的就不出聲；Parry Clips 只在成功招架與反彈光彈時播放。EditMode 240/240。
+
 ### 2026-11-21（打擊感 / 卡肉）
 - 完成：
   - `EnemyController.HitStop`：只停這隻敵人。AI 時鐘扣掉停格時間，出招、硬直、冷卻都順延；NavMeshAgent 暫停寫位置；Animator speed 0；StatueLocomotion 和 EnemyAnimator 改用 `controller.DeltaTime`

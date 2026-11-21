@@ -76,6 +76,7 @@ namespace Game4026.Enemy
         [SerializeField] private AudioClip[] weakPointClips = new AudioClip[0];
         [SerializeField] private AudioClip[] killClips = new AudioClip[0];
         [SerializeField] private AudioClip[] parryClips = new AudioClip[0];
+        [Tooltip("A blade hit outside the parry window (a missed parry). Empty = silent; parry clips are never used for it.")]
         [SerializeField] private AudioClip[] blockedClips = new AudioClip[0];
         [SerializeField, Range(0f, 1f)] private float volume = 0.8f;
 
@@ -148,9 +149,10 @@ namespace Game4026.Enemy
             {
                 case HitKind.WeakPoint: clips = weakPointClips.Length > 0 ? weakPointClips : hitClips; break;
                 case HitKind.Kill: clips = killClips.Length > 0 ? killClips : hitClips; break;
-                case HitKind.Parry: clips = parryClips; break;
-                case HitKind.Blocked:
-                case HitKind.Reflect: clips = blockedClips.Length > 0 ? blockedClips : parryClips; break;
+                // Parry sounds only on a successful deflect (parry or reflect), never on a miss.
+                case HitKind.Parry:
+                case HitKind.Reflect: clips = parryClips; break;
+                case HitKind.Blocked: clips = blockedClips; break;
                 default: clips = hitClips; break;
             }
             if (clips == null || clips.Length == 0)
