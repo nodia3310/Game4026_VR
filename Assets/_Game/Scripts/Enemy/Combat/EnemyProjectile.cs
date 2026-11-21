@@ -41,7 +41,7 @@ namespace Game4026.Enemy
         private EnemyController owner;
         private Transform reflectTarget;
         private Vector3 direction;
-        private float speed, damage, age, hitStopRemaining;
+        private float speed, damage, age, hitStopRemaining, hitStopScale;
 
         /// <summary>Reflected by the player's weapon (clang, sparks, haptics).</summary>
         public event Action<EnemyProjectile> Reflected;
@@ -81,9 +81,10 @@ namespace Game4026.Enemy
                 return;
             if (hitStopRemaining > 0f)
             {
-                float frozen = Mathf.Min(hitStopRemaining, deltaTime);
-                hitStopRemaining -= frozen;
-                deltaTime -= frozen;
+                // Slow motion on reflect: the bolt hangs almost still, then flies back at full speed.
+                float slowed = Mathf.Min(hitStopRemaining, deltaTime);
+                hitStopRemaining -= slowed;
+                deltaTime -= slowed * (1f - hitStopScale);
                 if (deltaTime <= 0f)
                     return;
             }
@@ -204,6 +205,7 @@ namespace Game4026.Enemy
             HitReaction r = p.For(HitKind.Reflect);
             float stop = p.HitStopFor(HitKind.Reflect, 0f);
             hitStopRemaining = stop;
+            hitStopScale = p.HitStopTimeScale;
             Vector3 point = transform.position;
             if (r.sparks > 0f)
                 HitSparkPool.Emit(p.SparkPrefab, point, direction, p.SparkColor(HitKind.Reflect), Mathf.RoundToInt(p.SparkCount * r.sparks));

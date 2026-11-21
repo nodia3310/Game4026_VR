@@ -252,25 +252,66 @@ namespace Game4026.Contracts
 ### 4.5c 打擊感（卡肉，已完成，使用者追加）
 
 - **`EnemyHitFeedback`**（`Scripts/Enemy/Feedback/`）：所有敵人通用，掛在敵人根物件上，有沒有骨架都能用。以下事件都會觸發：每次有效受擊、招架成功、打到刀身（窗外）、擊殺。觸發時做這些事：
-  - **Hit stop（卡肉）**：`EnemyController.HitStop(秒)` 讓這隻敵人定格幾幀，期間 AI 時鐘、出招時間軸、NavMesh 移動、Animator、雕像動作全部暫停，結束後從原處繼續。攻擊時間會順延，不會因為停格突然打出來。
+  - **Hit stop（卡肉，極慢動作）**：`EnemyController.HitStop(秒, 時間倍率)` 讓這隻敵人進入極慢動作（預設 0.08 倍速），維持前 60% 的時間，之後線性回到正常速度（`HitStopCurve`）。期間 AI 時鐘、出招時間軸、NavMesh 速度、Animator、雕像與懸浮動作都跟著變慢，不會整個定住再突然彈回。攻擊時間會順延「慢動作少走的時間」。2026-11-21 使用者覺得完全定格不自然，改成慢動作。
   - **只停敵人，不動 `Time.timeScale`**：VR 玩家的手和頭必須照常動，改全域時間會讓手上武器的物理卡住，也容易暈。
-  - **受擊震動**：定格期間模型沿「玩家 → 敵人」方向抖動並衰減（第一幀往後凹）。
+  - **受擊震動**：慢動作最慢的那段（前 60%），模型沿「玩家 → 敵人」方向抖動並衰減（第一幀往後凹）。
   - **閃白**：在每個網格上疊一層加算材質 `M_HitFlash`（URP Unlit），逐漸淡出。
   - **火花**：`FX_HitSpark` 共用粒子，用 Emit 噴出；一般受擊是橘色火花，招架、擋刀和反彈是金色。
   - **音效**：每種受擊可放多個 AudioClip，隨機挑一個；目前沒有放。
   - **事件**：`HitImpacts.Played`，全域、同步觸發。
-- **強度依種類**：`HitFeedbackProfile` 資產（`Data/Enemies/HitFeedback_Default.asset`，所有敵人共用）。每一種受擊各有停格秒數、震動、閃光、手把震動、火花，可以調：
-  - 一般 0.06 s
-  - 弱點 0.09 s
-  - 打出硬直 0.10 s
-  - 擊殺 0.16 s
-  - 招架 0.14 s
-  - 擋刀 0.035 s
-  - 反彈光彈 0.07 s（停的是光彈本身）
-  - 傷害越高，停格越久（每點 +0.0015 s，上限 0.2 s）
+- **強度依種類**：`HitFeedbackProfile` 資產（`Data/Enemies/HitFeedback_Default.asset`，所有敵人共用）。每一種受擊各有慢動作秒數、震動、閃光、手把震動、火花，可以調（慢動作版本的秒數是原本定格的 2 倍）：
+  - 一般 0.12 s
+  - 弱點 0.18 s
+  - 打出硬直 0.20 s
+  - 擊殺 0.32 s
+  - 招架 0.28 s
+  - 擋刀 0.07 s
+  - 反彈光彈 0.14 s（慢的是光彈本身）
+  - 破盾 0.30 s
+  - 傷害越高，慢動作越久（每點 +0.003 s，上限 0.4 s）
+  - 慢動作倍率：`Slow motion → Hit Stop Time Scale`（0 = 完全定格，預設 0.08）
   - 想讓重型敵人手感不同，複製一份 Profile 給它就好
 - **手把震動**：`MeleeDamageBridge` 打到東西時，讀這一下觸發的反應，讓握著武器的那隻手（XRI `XRBaseInputInteractor.SendHapticImpulse`）震動。招架和擊殺震得最強。Bridges asmdef 加了 `Unity.XR.Interaction.Toolkit` 的引用；**A 的程式沒動**。
-- **時鐘**：`EnemyAttack.Now` = Time.time 減去所有停格時間。`EnemyWeapon` 判斷招架時用這個時鐘，不用 Time.time。
+- **時鐘**：`EnemyAttack.Now` = Time.time 減去所有慢動作少走的時間。`EnemyWeapon` 判斷招架時用這個時鐘，不用 Time.time。
+
+- **預警慢動作**（2026-11-21）：有 Animator 的敵人預警時不再停在舉刀姿勢，而是用 `EnemyAnimator` 的 `Telegraph Creep`（預設 0.15 倍速）慢慢舉到底，揮刀時回到正常速度，命中時間不變。設 0 = 停住。
+
+- **招式慢動作點**（2026-11-21）：`AttackDefinition` 的 `Slow Motion At / Duration / Scale`。動畫播到指定秒數時，整隻敵人進入慢動作再緩回。阿努比斯突進斬設在跳躍最高點 1.12 s（0.6 s、0.12 倍速）。
+
+### 4.5d 翼人（Birdman，即 5.3 節的 Winged Goddess Isis，菁英，使用者追加）
+
+- **模型**：`Character Models/Enemy/birdman/birdman.fbx`，使用者在 Blender 做的跪姿有翼女神，Generic rig。高約 1.8 m，翼展約 2.7 m，Prefab 放大 1.1 倍。只有 3 段動畫：
+  - Idle：翅膀輕微起伏，已改成循環
+  - Attack：右翼後收再橫掃到正前方，0.25 s 打中
+  - Block：雙翼合在身前，是靜態姿勢
+- **左翼攻擊**：Generic rig 不能用 Animator 鏡像，所以用腳本把 Attack 左右翻轉，存成 `Animations/Enemy/Birdman/Birdman_Attack_Mirror.anim`。做法：依骨頭靜止位置配對左右，每一幀把骨頭相對靜止姿勢的旋轉對 YZ 平面鏡射，再換回 local。
+- **懸浮移動**：沒有走路動畫，所以用 `HoverLocomotion`（新元件，類似 `StatueLocomotion`）。它只動 `Visual` 子物件：
+  - 離地 0.45 m 懸浮，上下輕晃
+  - 移動時往前傾，轉彎時側傾
+  - 生成時從 3 m 高降下
+  - 硬直時晃動下沉
+  - 死亡時墜地沉入地面
+- **招式（使用者選 3 招，太多會很難玩）**：
+
+| 招式 | 類型 | 動畫 | 預警 | 距離 | 傷害 | 冷卻 | 說明 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 翼斬 | Melee | Attack | 0.55 | 0–2.4 | 15 | 2.5 | 右翼橫掃，範圍 120°，可招架 |
+| 翼斬（左） | Melee（鏡像） | Attack_Mirror | 0.55 | 0–2.4 | 15 | 2.5 | 左翼版本，和右翼輪流出 |
+| 俯衝 | Lunge（7 m，弧高 1.4） | Attack ×0.35 | 0.8 | 3–7.5 | 22 | 6 | 預警時往上飛高，然後斜衝到玩家面前 1.3 m 再翼斬，可招架 |
+| 翼盾 | Combo：Guard → 反擊 | Block → Attack | — | 0–2.2 | 18（反擊） | 8 | 見下 |
+
+- **翼盾（`EnemyGuard`，對應 4.10 的 `WingShield`，依使用者 2026-11-21 確認的版本）**：
+  - 新增 `AttackType.Guard`：在時間軸上舉盾，不造成傷害，也不顯示攻擊預警光點。
+  - 盾舉起時（步驟開始 0.15 s 後），正面 220° 內的攻擊全部擋下：不扣血，播 Blocked 回饋（火花、鏗聲、手把震動）。`EnemyHealth` 每次受擊會先問 `EnemyGuard`，合約沒有改。
+  - **盾反擊**：被擋 2 下，盾就立刻結束，接一記快速翼斬（預警 0.25 s，招架窗 0.3 s）。招架成功時沿用既有的招架硬直：2 秒、受傷 ×1.5。
+  - **破盾**：單擊傷害 ≥ 30 時，這一下由盾吃掉，盾被打破，硬直 1.8 s、受傷 ×1.5，播 `HitKind.GuardBreak` 回饋。
+  - **被打就舉盾**：沒被打出硬直時，有 45% 機率立刻舉盾（冷卻 5 s）。效果是第一下打得到，後面連打會被擋。
+  - 和原規格的差別：原規格是「擋住時弱點只吃 10%、本體減半」。這裡改成完全擋住，換成可以破盾和盾反擊。
+- **碰撞**：
+  - 雙翼的肩、肘、手、翼尖各有膠囊，掛 `EnemyWeapon`。傷害穿透開著，所以平常砍翅膀也會扣血，招架窗內砍翅膀則是招架。左翼標 leftHand，給鏡像招式的光點用。
+  - Body 膠囊在 `Visual` 下，會跟著懸浮。
+  - 頭部弱點掛在頸骨 Bone_037。
+- **數值**（`EnemyData_Birdman`）：220 HP，弱點 ×2，硬直門檻 35，追擊速度 2.8，全域冷卻 0.9，招架硬直 2 s。
 
 #### `EnemyProjectile : MonoBehaviour, IDamageable`（已完成）
 - 用物件池管理（`EnemyProjectilePool`，同時上限 8 個）；直線飛行，碰到環境就消失，碰到玩家就呼叫 `ApplyPlayerDamage`（玩家判定用「身體到頭的線段」距離，VR 頭不一定有 Collider）。
@@ -340,7 +381,7 @@ namespace Game4026.Contracts
 
 | 模組 | 給誰用 | 行為 | 優先度 |
 | --- | --- | --- | --- |
-| `WingShield` | 有翼女神伊西斯 | 玩家靠近 3 公尺內或剛被打時，收起翅膀 2.5 秒：翅膀上的 `WeakPoint.IsExposed = false`，且本體受傷減半；之後展翅攻擊，這時弱點暴露 | MVP |
+| `WingShield` | 有翼女神伊西斯 | 玩家靠近 3 公尺內或剛被打時，收起翅膀 2.5 秒：翅膀上的 `WeakPoint.IsExposed = false`，且本體受傷減半；之後展翅攻擊，這時弱點暴露。**已用 `EnemyGuard` 做成另一個版本（完全擋住 + 破盾 + 盾反擊），見 4.5d** | MVP |
 | `ChargeBehavior` | 人面獅身 | 停下對準玩家 1 秒（預警）→ 高速直線衝撞（不用 NavMesh 路徑，用 Raycast 檢查前方）→ 撞到牆就暈眩 3 秒，臉上的弱點只在暈眩時暴露；沒撞牆就減速停下 | MVP |
 | `StunOnFlashlight` | 巴斯特雕像（感官敏銳） | 被手電筒照到累積 1 秒 → 暈眩 2 秒。**需要和 A 新增合約**（手電筒要通知被照到的物件），先只做暈眩邏輯與一個 `Stun(float seconds)` 方法，觸發方式待確認 | 之後 |
 | `HealAllies` | 鍍金巴斯特 | 每 4 秒替 6 公尺內血量最低的敵人回 15 血，期間項圈發光（弱點暴露加倍傷害） | 之後 |
@@ -541,6 +582,12 @@ Assets/_Game/
 - [x] 光彈被反彈時先定格再飛回；近戰橋接依反應強度震動手把
 - [x] 所有敵人 Prefab 掛上並指定共用 Profile
 - [x] 測試：EditMode（種類優先順序、傷害縮放、震動曲線、光彈定格、手把強度）、PlayMode（AI 時鐘與 NavMesh 暫停/恢復、出招順延、受擊觸發）
+
+### M2.9：翼人與慢動作打擊感（規格外，使用者追加）
+- [x] Hit stop 改成極慢動作並緩出（`HitStopCurve`、`Hit Stop Time Scale`），NavMesh 速度、Animator、光彈都跟著慢
+- [x] `HoverLocomotion`、`EnemyGuard` + `AttackType.Guard`、`EnemyController.ForceAttack`、`EnemyAttack.Queue/EndGuard`
+- [x] 鏡像攻擊動畫、`AC_Birdman`、6 個招式資產、`EnemyData_Birdman`、`Enemy_Birdman` Prefab
+- [x] 測試：EditMode（慢動作曲線、Guard 步驟、提前反擊、正面範圍）、PlayMode（慢動作時鐘與 NavMesh、擋住正面、擋 2 下反擊、破盾、被打舉盾）
 
 ### M3：生成與遭遇戰
 - [x] 物件池運作正常，反覆生成和回收時不產生新的 Instantiate

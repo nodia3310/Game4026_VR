@@ -3,6 +3,7 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
+- **翼人（M2.9，使用者追加）**：`Enemy_Birdman`（使用者的 birdman.fbx，就是規格裡的有翼女神伊西斯，菁英 220 HP），懸浮移動（`HoverLocomotion`），3 招：翼斬（左右輪流，左翼是腳本翻轉的動畫）、俯衝、翼盾（`EnemyGuard`：擋正面、擋 2 下反擊、重擊破盾、被打會舉盾）。打擊感的 hit stop 改成極慢動作並緩出（EditMode 244/244；PlayMode 26/26）
 - 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
 - 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
 - 打擊感（M2.8，使用者追加）：所有敵人通用的 `EnemyHitFeedback`，打中時只讓敵人定格（卡肉）、抖動、閃白、噴火花、手把震動；招架/擊殺最重；數值在 `HitFeedback_Default` 資產調（EditMode 239/239；PlayMode 22/22）
@@ -27,6 +28,8 @@
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
+- 2026-11-21（翼人）：使用者在 Blender 做了 birdman（跪姿有翼女神，Idle / Attack / Block 三段動畫），要做成菁英敵人，只要 3 招：翼斬、俯衝、翼盾（太多招很難玩）。左翼攻擊用腳本鏡像。翼盾照使用者確認的設計：完全擋住正面，取代原規格的 10% / 減半；換成可以破盾，也可以招架盾反擊。
+- 2026-11-21（慢動作）：使用者覺得完全定格看起來不自然，hit stop 改成極慢動作（0.08 倍速，前 60% 維持，之後緩回 1），秒數加倍。Profile 新增 `Hit Stop Time Scale`，設 0 就回到定格。
 - 2026-11-21（神諭）：`aztec_statue_sculpture.glb`（深色石雕半身像）對應圖鑑的 The Obsidian Oracle，弱點 = 額頭紋章（圖鑑：紋章是魔法焦點）。招式依使用者要求改成彈跳、撞擊、滾動、鐳射眼，加近身震地。
 - 2026-11-21（神諭）：雕像身體本身就是武器：Body 上的 `EnemyWeapon` 開 `passDamageWhenNotParrying`，招架窗內打身體 = 招架，窗外照常扣血。
 - 2026-11-21（神諭）：鐳射是一顆 0.6 m 長、7 m/s 的光彈（`EnemyProjectile`），不是整條光束；沒有招架窗，飛行中隨時可以用近戰武器打回去，飛回去打發射者的弱點（20 × 2.5 = 50）。箭不能反彈。
@@ -86,6 +89,35 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+### 2026-11-21（阿努比斯跳斬空中慢動作）
+- 分析 JumpAttack 動畫：0.7 s 蹲、0.8 s 起跳、約 1.1–1.2 s 最高點、1.5 s 落地、1.58 s 命中。原本的預警姿勢（0.2 s）還在地上，所以看起來不是空中。
+- 招式資產新增 `Slow motion`：`Slow Motion At`（動畫秒數，負數 = 關）、`Duration`、`Scale`。動畫播到那一刻時，整隻敵人進入慢動作（動畫、突進位移、出招時間軸），之後緩回。
+- `Anubis_LungeSlash`：最高點 1.12 s、0.6 s、0.12 倍速；招架窗剛好在最高點打開。
+- 紅光 indicator 依使用者偏好由使用者自己調（AttackIndicator → Flash Size）。
+- EditMode 245/245、PlayMode 27/27。
+
+### 2026-11-21（預警改成慢動作）
+- 使用者覺得 Anubis 出招「還是時停」：原本是預警時動畫停在舉刀姿勢（播放速度 0），不是打中時的慢動作。
+- 改成 `EnemyAnimator.telegraphCreep`（預設 0.15）：舉刀動作提早變慢，以約 0.15 倍速慢慢舉到底，揮刀時再回正常速度；命中時間不變。所有有 Animator 的敵人都套用，設 0 就回到停住。EditMode 245/245、PlayMode 26/26。
+
+### 2026-11-21（翼人 + 慢動作打擊感）
+- 慢動作：
+  - `EnemyController.HitStop(秒, 倍率)` 改成慢動作：`HitStopCurve` 前 60% 維持慢速，之後線性回到 1
+  - NavMeshAgent 不再暫停寫位置，改成速度乘上倍率（突進在慢動作中也不會丟失距離）
+  - `EnemyAnimator` 每幀跟著 `TimeScale`；光彈反彈改成慢動作
+  - `HitFeedback_Default` 的秒數全部加倍，上限 0.4 s
+- 翼人：
+  - 分析動畫：Attack 是右翼 0.15 s 後收、0.25 s 打中；Block 是靜態雙翼合攏；沒有走路動畫
+  - 腳本翻轉出左翼攻擊，左右骨頭依靜止位置自動配對；驗證翼尖軌跡和原版左右對稱
+  - Idle 改成循環（改了 birdman.fbx 的匯入設定）
+  - 新元件 `HoverLocomotion`、`EnemyGuard`；新攻擊類型 `AttackType.Guard`；`EnemyController.ForceAttack`、`EnemyAttack.Queue / EndGuard`、`AttackRunner.SkipToHit`；`EnemyHealth` 受擊前先問 `EnemyGuard`；新 `HitKind.GuardBreak`
+  - 資產：`AC_Birdman`、6 個 `Birdman_*` 招式、`EnemyData_Birdman`、`Enemy_Birdman`
+- 測試：EditMode 244/244、PlayMode 26/26
+- 驗證：EnemyAI 場景實際生成，先俯衝（停在 1.31 m 打中），之後左右翼斬輪流出，全部命中。翼盾用測試驗證（eval 指令往返太慢，抓不準時間）
+- 注意：
+  - 跑 EditMode 測試時 Unity 跳出「儲存場景」視窗，存進了我分析模型時留下的 `birdman(Clone)`。已把 EnemyAI.unity 還原成 git 版本並重新載入
+  - 翼人還沒放進任何波次或場景，要測就把 Prefab 拖進 EnemyAI 場景
+
 ### 2026-11-21（招架音效只在成功時播放）
 - 問題：沒擋成功也會響 Parry 音效。原因是 Blocked Clips 為空時，程式退回去用 Parry Clips；刀身在窗外被打到（招架失敗）就播了 Parry 音效。
 - 修正：Blocked 只用 Blocked Clips，空的就不出聲；Parry Clips 只在成功招架與反彈光彈時播放。EditMode 240/240。

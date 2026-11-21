@@ -15,29 +15,32 @@
 - EnemyData — Scripts/Enemy/Data/EnemyData.cs — ScriptableObject，單一敵人種類的所有數值（規格 4.1）
 - EnemyHealthModel — Scripts/Enemy/Core/EnemyHealthModel.cs — 純 C# 受擊規則：弱點倍率、受擊冷卻、硬直判定、死亡、Reset
 - EnemyDamageResult — Scripts/Enemy/Core/EnemyDamageResult.cs — 一次有效受擊的結果（實際扣血、擊中點、弱點、硬直、擊殺）
-- EnemyHealth — Scripts/Enemy/Core/EnemyHealth.cs — MonoBehaviour + IDamageable，包裝 Model，提供 Damaged/Died 事件、ResetState、IsInvulnerable
+- EnemyHealth — Scripts/Enemy/Core/EnemyHealth.cs — MonoBehaviour + IDamageable，包裝 Model，提供 Damaged/Died 事件、ResetState、IsInvulnerable；有 EnemyGuard 時先問它要不要擋
 - WeakPoint — Scripts/Enemy/Core/WeakPoint.cs — 掛在弱點 Collider 子物件上，以 isWeakPoint=true 轉發給父物件的 EnemyHealth，附 Gizmo
-- EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator；HitStop（AI 時鐘扣掉停格時間、LocalTime、DeltaTime、HitStopChanged）
+- EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator；HitStop(秒, 倍率) 慢動作（AI 時鐘扣掉少走的時間、TimeScale 同步到 NavMesh 速度與 Animator、LocalTime、DeltaTime、HitStopChanged）；ForceAttack（反應招式，例如被打舉盾）
 - EnemyAnimator — Scripts/Enemy/Core/EnemyAnimator.cs — 依 AI 狀態切換 Animator（Locomotion 混合樹／Hit／Death）；每個攻擊步驟交叉淡入招式的狀態（鏡像用 `_Mirror`），預警時起手停格（AttackSpeed=0），最後一下的收招等動畫播完（EnemyAttack.RecoveryOverride）
-- EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier
+- EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier；Queue（下一招指定）、IsGuarding / EndGuard（翼盾）
 - EnemyWeapon — Scripts/Enemy/Core/EnemyWeapon.cs — 掛在敵人武器（刀身 Collider）上的 IDamageable：招架窗內被 A 的武器打到 → EnemyAttack.TryParry；窗外只擋住、不傷本體；leftHand 標記左右手；事件 Deflected/Blocked
 - AttackIndicator — Scripts/Enemy/Core/AttackIndicator.cs — 刀尖光點提示：預警時小橘光、招架窗打開瞬間亮閃、招架成功白閃；跟著揮動那隻手的武器（鏡像招式 = 左手）
 - StatueLocomotion — Scripts/Enemy/Core/StatueLocomotion.cs — 無骨架雕像的程式動作：彈跳走路、各招（Hop/Roll/Slam/Shoot）的預警與動作、生成升起、硬直搖晃、死亡倒下沉地；只動 Model 子物件
-- EnemyHitFeedback — Scripts/Enemy/Feedback/EnemyHitFeedback.cs — 通用打擊感：受擊/招架/擋刀/擊殺時讓敵人 HitStop 定格、模型沿受擊方向抖動、疊 M_HitFlash 閃白、噴火花、播音效、發 HitImpacts
-- HitFeedbackProfile — Scripts/Enemy/Feedback/HitFeedbackProfile.cs — ScriptableObject：每種 HitKind（一般/弱點/硬直/擊殺/招架/擋刀/反彈）的停格、震動、閃光、手把震動、火花；傷害縮放；閃光材質、火花 Prefab、音效
+- HoverLocomotion — Scripts/Enemy/Core/HoverLocomotion.cs — 有翼、沒有走路動畫的敵人（翼人）：只動 Visual 子物件；懸浮上下晃、移動前傾、轉彎側傾、翼斬前後傾、俯衝（預警時升高再斜衝下來）、舉盾後仰、從天降下生成、硬直晃動、墜地沉入
+- EnemyGuard — Scripts/Enemy/Core/EnemyGuard.cs — 翼盾：Guard 步驟期間擋下正面攻擊（Blocked 事件）、擋 2 下就提前反擊、單擊 ≥ 30 破盾（硬直 + 受傷 ×1.5，Broken 事件）、被打時機率舉盾；EnemyHealth 每次受擊先問它
+- HitStopCurve — Scripts/Enemy/Feedback/HitStopCurve.cs — 慢動作曲線：前 60% 維持慢速，之後線性回到 1；算出某段真實時間內敵人時鐘走了多少（封閉解）
+- EnemyHitFeedback — Scripts/Enemy/Feedback/EnemyHitFeedback.cs — 通用打擊感：受擊/招架/擋刀/擋盾/破盾/擊殺時讓敵人 HitStop 慢動作、模型沿受擊方向抖動、疊 M_HitFlash 閃白、噴火花、播音效、發 HitImpacts
+- HitFeedbackProfile — Scripts/Enemy/Feedback/HitFeedbackProfile.cs — ScriptableObject：慢動作倍率；每種 HitKind（一般/弱點/硬直/擊殺/招架/擋刀/反彈/破盾）的慢動作秒數、震動、閃光、手把震動、火花；傷害縮放；閃光材質、火花 Prefab、音效
 - HitImpacts — Scripts/Enemy/Feedback/HitImpacts.cs — HitKind、HitImpact，全域同步事件 Played + Count/Last（橋接用來知道剛剛那一下的手感）
 - HitSparkPool — Scripts/Enemy/Feedback/HitSparkPool.cs — 每種火花 Prefab 共用一個粒子系統，Emit 噴出
 - EnemyGeometry — Scripts/Enemy/Core/EnemyGeometry.cs — 忽略高度的水平距離與扇形判定
 - AssemblyInfo — Scripts/Enemy/AssemblyInfo.cs — InternalsVisibleTo Enemy EditMode / PlayMode 與 Bridges EditMode 測試（EnemyController.Tick、AttackDefinition.Create、EnemyData.SetAttacks）
 
 ## Enemy Combat（`Assets/_Game/Scripts/Enemy/Combat/`，`Game4026.Enemy`）
-- AttackType — Scripts/Enemy/Combat/AttackType.cs — Melee / Lunge / Combo / Projectile / AreaSlam / Charge（Projectile、Charge 是 M4，不會被選到）
+- AttackType — Scripts/Enemy/Combat/AttackType.cs — Melee / Lunge / Combo / Projectile / AreaSlam / Charge（未實作，不會被選到）/ Guard（舉盾，不傷人）
 - AttackDefinition — Scripts/Enemy/Combat/AttackDefinition.cs — ScriptableObject，一招一份：動畫狀態、速度、鏡像、預警停格、擊中秒數、收招、距離、冷卻、權重、傷害、判定範圍、突進、連段步驟、砸地半徑
 - AttackSelector — Scripts/Enemy/Combat/AttackSelector.cs — 純 C#：依距離、各招冷卻、全域冷卻、權重選招；HoldRange（沒招可出時停下的距離）
 - EnemyProjectile — Scripts/Enemy/Combat/EnemyProjectile.cs — 有飛行時間的光彈：直線飛、打到玩家（身體到頭線段）或環境就結束；被近戰武器打到就反彈飛回發射者弱點（微追蹤、×1.5 速）
 - EnemyProjectilePool — Scripts/Enemy/Combat/EnemyProjectilePool.cs — 每種光彈 Prefab 一個 ObjectPool，同時上限 8 個
 - IParryTarget — Scripts/Enemy/Combat/IParryTarget.cs — 可被招架/反彈的東西（EnemyWeapon、EnemyProjectile）；箭改呼叫 TakeUnparryableHit
-- AttackRunner — Scripts/Enemy/Combat/AttackRunner.cs — 純 C# 出招時間軸（起手 → 預警停格 → 揮下 → 判定 → 收招／連段下一下）；IAttackHost、AttackStepTiming
+- AttackRunner — Scripts/Enemy/Combat/AttackRunner.cs — 純 C# 出招時間軸（起手 → 預警停格 → 揮下 → 判定 → 收招／連段下一下）；IAttackHost、AttackStepTiming；SkipToHit（翼盾提前結束）
 
 ## Enemy Boss（`Assets/_Game/Scripts/Enemy/Boss/`，`Game4026.Enemy`）
 - BossPhase — Scripts/Enemy/Boss/BossPhase.cs — 一個階段的 Inspector 設定：血量門檻、攻速倍率、無敵秒數、是否召喚小兵、要啟用的物件
@@ -80,6 +83,9 @@
 - HitFeedback_Default — Assets/_Game/Data/Enemies/HitFeedback_Default.asset — 所有敵人與光彈共用的打擊感設定
 - M_HitFlash / M_HitSpark — Assets/_Game/Prefabs/Enemies/Materials/ — 閃白疊層（URP Unlit 透明加算）/ 火花（Particles Unlit 加算）
 - FX_HitSpark — Assets/_Game/Prefabs/Enemies/FX/FX_HitSpark.prefab — 拉長的小火花粒子（不自動發射，由 HitSparkPool Emit）
+- Enemy_Birdman — Assets/_Game/Prefabs/Enemies/Enemy_Birdman.prefab — 翼人（規格的有翼女神伊西斯，菁英，1.1 倍）：Visual（HoverLocomotion 移動）/ Model（birdman.fbx + AC_Birdman）、雙翼骨頭上的 EnemyWeapon + 膠囊（傷害穿透）、頸骨上的頭部弱點、Body、Eye；EnemyGuard、EnemyAnimator、AttackIndicator、EnemyHitFeedback
+- EnemyData_Birdman / Birdman_* — Assets/_Game/Data/Enemies/ — 220 HP；翼斬（左右）、俯衝、翼盾（Birdman_WingGuard = Birdman_Guard + Birdman_GuardCounter）
+- AC_Birdman / Birdman_Attack_Mirror — Assets/_Game/Animations/Enemy/Birdman/ — Locomotion（Idle）、Attack、Attack_Mirror（腳本翻轉的左翼版）、Block、Hit、Death；攻擊與 Block 速度綁 AttackSpeed
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
@@ -103,7 +109,8 @@
 - AttackSelectorTests — Tests/EditMode/Enemy/AttackSelectorTests.cs — 距離篩選、權重、各招與全域冷卻、不支援的類型、HoldRange
 - EnemyAnimatorTests — Tests/EditMode/Enemy/EnemyAnimatorTests.cs — 移動混合、預警停格速度、收招跟動畫長度
 - EnemyGeometryTests — Tests/EditMode/Enemy/EnemyGeometryTests.cs — 水平距離與扇形
-- HitFeedbackTests — Tests/EditMode/Enemy/HitFeedbackTests.cs — 受擊種類優先順序、停格隨傷害增加與上限、震動縮放與曲線、反彈光彈先定格
+- HitFeedbackTests — Tests/EditMode/Enemy/HitFeedbackTests.cs — 受擊種類優先順序、慢動作隨傷害增加與上限、慢動作曲線、震動縮放與曲線、反彈光彈先慢動作、招架音效
+- EnemyGuardTests — Tests/EditMode/Enemy/EnemyGuardTests.cs — Guard 步驟不傷人也不顯示預警、EndGuard 提前接反擊、正面範圍
 
 ## Tests（`Assets/_Game/Tests/EditMode/Bridges/`，`Game4026.Bridges.EditModeTests`）
 - ImpactDamageCurveTests — Tests/EditMode/Bridges/ImpactDamageCurveTests.cs — 公式換算與上下限
@@ -118,6 +125,7 @@
 - BossPlayModeTests — Tests/PlayMode/Enemy/BossPlayModeTests.cs — 法老三階段、無敵、小兵、弱點、跨階段、物件池重用
 - EnemyGcTests — Tests/PlayMode/Enemy/EnemyGcTests.cs — 4 隻敵人追擊與攻擊 720 幀，敵人腳本 0 bytes GC
 - ProjectilePlayModeTests — Tests/PlayMode/Enemy/ProjectilePlayModeTests.cs — 真的敵人開火：沒反彈打中玩家、反彈打中弱點（20 × 2.5）
-- HitFeedbackPlayModeTests — Tests/PlayMode/Enemy/HitFeedbackPlayModeTests.cs — HitStop 凍結 AI 時鐘與 NavMesh 後恢復、出招順延停格時間、受擊依種類觸發反應、震動不留位移
+- EnemyGuardPlayModeTests — Tests/PlayMode/Enemy/EnemyGuardPlayModeTests.cs — 真的敵人：擋正面不擋背後、擋 2 下立刻反擊、重擊破盾（硬直、×1.5）、被打後舉盾
+- HitFeedbackPlayModeTests — Tests/PlayMode/Enemy/HitFeedbackPlayModeTests.cs — HitStop 讓 AI 時鐘與 NavMesh 變慢後緩回、出招順延少走的時間、受擊依種類觸發反應、震動不留位移
 - ParryPlayModeTests — Tests/PlayMode/Enemy/ParryPlayModeTests.cs — 真的 EnemyController：招架窗內打武器 → 硬直、×1.5 傷害、結束後恢復、玩家沒被打到
 - EncounterPlayModeTests — Tests/PlayMode/Enemy/EncounterPlayModeTests.cs — 執行中烘焙 NavMesh：遭遇戰開始到 Cleared、物件池重用、ForceClear、Boss 觸發與擊敗、生成點檢查

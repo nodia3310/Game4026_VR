@@ -30,7 +30,7 @@ namespace Game4026.Tests.Enemy
             float light = profile.HitStopFor(HitKind.Normal, 5f);
             float heavy = profile.HitStopFor(HitKind.Normal, 40f);
             Assert.Greater(heavy, light);
-            Assert.LessOrEqual(profile.HitStopFor(HitKind.Kill, 10000f), 0.2f + 1e-5f);
+            Assert.LessOrEqual(profile.HitStopFor(HitKind.Kill, 10000f), profile.MaxHitStop + 1e-5f);
             Assert.AreEqual(profile.HitStopFor(HitKind.Parry, 0f), profile.HitStopFor(HitKind.Parry, 100f), 1e-6f);
             Assert.Greater(profile.HitStopFor(HitKind.Parry, 0f), profile.HitStopFor(HitKind.Blocked, 0f));
         }
@@ -70,6 +70,27 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void HitStopCurve_HoldsTheSlowSpeed_ThenEasesBackToOne()
+        {
+            Assert.AreEqual(0.1f, HitStopCurve.ScaleAt(0f, 1f, 0.1f), 1e-6f);
+            Assert.AreEqual(0.1f, HitStopCurve.ScaleAt(0.6f, 1f, 0.1f), 1e-6f);
+            Assert.AreEqual(0.55f, HitStopCurve.ScaleAt(0.8f, 1f, 0.1f), 1e-5f);
+            Assert.AreEqual(1f, HitStopCurve.ScaleAt(1f, 1f, 0.1f));
+            Assert.AreEqual(0f, HitStopCurve.TimeLost(0.3f, 1f), 1e-6f, "Scale 1 = no hit stop.");
+            Assert.AreEqual(0.8f * 0.3f, HitStopCurve.TimeLost(0.3f, 0f), 1e-6f, "A freeze still eases out over the last 40%.");
+
+            // Frame by frame adds up to the whole, whatever the frame length.
+            float sum = 0f, t = 0f;
+            while (t < 0.25f)
+            {
+                float next = Mathf.Min(0.25f, t + 0.0137f);
+                sum += HitStopCurve.LocalTime(t, next, 0.25f, 0.08f);
+                t = next;
+            }
+            Assert.AreEqual(0.25f - HitStopCurve.TimeLost(0.25f, 0.08f), sum, 1e-5f);
+        }
+
+        [Test]
         public void ShakeOffset_StartsAwayFromHitter_AndDecaysToZero()
         {
             Vector3 start = EnemyHitFeedback.ShakeOffset(0f, 0.1f, 0.02f, 50f, Vector3.forward, Vector3.right);
@@ -93,11 +114,12 @@ namespace Game4026.Tests.Enemy
                 Assert.AreEqual(HitKind.Reflect, HitImpacts.Last.Kind);
 
                 float stop = HitImpacts.Last.HitStop;
+                float scale = HitFeedbackProfile.Default.HitStopTimeScale;
                 Assert.Greater(stop, 0f);
                 bolt.Step(stop * 0.5f);
-                Assert.AreEqual(0f, bolt.transform.position.z, 1e-5f, "Held during the hit stop.");
+                Assert.AreEqual(-stop * 0.5f * scale * bolt.Speed, bolt.transform.position.z, 1e-4f, "Hangs in slow motion.");
                 bolt.Step(stop * 0.5f + 0.1f);
-                Assert.AreEqual(-0.1f * bolt.Speed, bolt.transform.position.z, 1e-3f, "Then flies back.");
+                Assert.AreEqual(-(stop * scale + 0.1f) * bolt.Speed, bolt.transform.position.z, 1e-3f, "Then flies back.");
             }
             finally { Object.DestroyImmediate(go); }
         }

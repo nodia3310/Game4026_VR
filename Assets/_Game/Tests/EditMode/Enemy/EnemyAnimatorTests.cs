@@ -26,6 +26,23 @@ namespace Game4026.Tests.Enemy
             Assert.AreEqual(expected, EnemyAnimator.StepPlaybackAt(elapsed, 0.3f, 0.8f, 1.5f));
 
         [Test]
+        public void StepPlaybackAt_Creep_SlowsTheWindUp_AndReachesThePoseOnTime()
+        {
+            const float holdStart = 0.4f, holdEnd = 1.2f, playback = 1.5f, creep = 0.15f;
+            Assert.AreEqual(playback, EnemyAnimator.StepPlaybackAt(0.05f, holdStart, holdEnd, playback, creep), "Normal start.");
+            float slow = EnemyAnimator.StepPlaybackAt(1f, holdStart, holdEnd, playback, creep);
+            Assert.Greater(slow, 0f, "Slow motion, not a freeze.");
+            Assert.Less(slow, playback * 0.3f);
+            Assert.AreEqual(playback, EnemyAnimator.StepPlaybackAt(1.25f, holdStart, holdEnd, playback, creep), "Swing at normal speed.");
+
+            // Clip time at the hold's end equals the pose time (holdStart × playback), as with a freeze.
+            float clip = 0f;
+            for (float t = 0f; t < holdEnd - 1e-6f; t += 0.001f)
+                clip += EnemyAnimator.StepPlaybackAt(t + 0.0005f, holdStart, holdEnd, playback, creep) * 0.001f;
+            Assert.AreEqual(holdStart * playback, clip, 0.01f);
+        }
+
+        [Test]
         public void StepPlaybackAt_NoTelegraph_NeverFreezes() =>
             Assert.AreEqual(1.2f, EnemyAnimator.StepPlaybackAt(0.3f, 0.3f, 0.3f, 1.2f));
 

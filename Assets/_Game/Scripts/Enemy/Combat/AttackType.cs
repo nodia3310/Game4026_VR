@@ -9,6 +9,7 @@ namespace Game4026.Enemy
         Projectile = 3,
         AreaSlam = 4,
         Charge = 5,     // M4 ChargeBehavior, not implemented yet (never selected)
+        Guard = 6,      // raise a shield (EnemyGuard blocks hits) until the hit time; no damage. Usually step 1 of a combo.
     }
 
     /// <summary>Procedural body motion of a statue enemy for one attack step (see StatueLocomotion).</summary>
