@@ -58,7 +58,7 @@ namespace Game4026.Tests.Enemy
         public bool TrySelectAttack()
         {
             AttackSelects++;
-            return IsAttackReady && DistanceToTarget <= AttackSelectRange;
+            return !MustWaitForTurn && IsAttackReady && DistanceToTarget <= AttackSelectRange;
         }
         public void BeginAttack() { AttackBegins++; AttackElapsed = 0f; }
         public bool TickAttack(float deltaTime)
@@ -72,6 +72,10 @@ namespace Game4026.Tests.Enemy
             return false;
         }
         public void CancelAttack() => AttackCancels++;
+        public bool MustWaitForTurn { get; set; }
+        public float WaitDistance { get; set; } = 3.5f;
+        public int CircleCalls;
+        public void CircleTarget(float deltaTime) { CircleCalls++; Moving = true; }
         public void SetInvulnerable(bool value) => Invulnerable = value;
         public void OnDeath() => DeathCalls++;
         public void Despawn() => DespawnCalls++;

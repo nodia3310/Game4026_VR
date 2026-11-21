@@ -1,8 +1,9 @@
 namespace Game4026.Enemy
 {
     /// <summary>
-    /// Runs at chaseSpeed toward the player. Attacks when in range and off cooldown; gives up beyond
-    /// loseTargetRange or after LoseSightSeconds without line of sight.
+    /// Runs at chaseSpeed toward the player. Attacks when in range, off cooldown and an attack slot is free; without a
+    /// slot it waits around WaitDistance and circles. Gives up beyond loseTargetRange or after LoseSightSeconds without
+    /// line of sight.
     /// </summary>
     public sealed class ChaseState : IEnemyState
     {
@@ -25,6 +26,13 @@ namespace Game4026.Enemy
             if (context.HasTarget && context.TrySelectAttack())
             {
                 context.RequestState(EnemyStateId.Attack);
+                return;
+            }
+
+            if (context.MustWaitForTurn && context.DistanceToTarget <= context.WaitDistance + 0.75f)
+            {
+                // Someone else's turn: keep a respectful distance and circle into the player's view.
+                context.CircleTarget(deltaTime);
                 return;
             }
 
