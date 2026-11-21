@@ -141,6 +141,7 @@ CLAUDE.md
 CODE_MAP.md
 # Enemy system docs are tracked
 !/Docs/PROGRESS.md
+!/Docs/PROGRESS_ARCHIVE.md
 !/Docs/CODE_MAP.md
 !/Docs/ENEMY_SYSTEM_SPEC.md
 .cursorignore
