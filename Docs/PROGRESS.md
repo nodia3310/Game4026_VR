@@ -5,8 +5,8 @@
 ## 目前狀態
 > 2026-11-22 整理。舊的詳細條目在 `PROGRESS_ARCHIVE.md`（「2026-11-22 目前狀態快照」）。
 
-- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場等玩家拿起武器（`DemoStartOnGrab`；或離起點 5 m）→ 倒數 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（桌面 OnGUI；頭盔裡是 `DemoWorldHud` 世界空間文字，含 HP）。
-- **玩家是 A 的 XR Origin**（2026-11-22）：從 A 的 Museum_test 搬來的「West gallery play setup」與 `MuseumGuardDesk`（平移 -20.3 m 讓玩家站在 PlayerStart），加 `Weapon bench` + `Weapons/`（Knife、Axe、Shovel、Bow，A 的 Prefab）、`VR Services`（DamageBridgeInstaller）；XR Origin 實例掛 PlayerTarget、PlayerHealth、BodyCenter（PlayerBodyAnchor）；MockPlayer 停用（要用就勾回來並關掉 West gallery play setup）。沒戴頭盔時 A 的 `InteractionDesktopMode` 自動接手：WASD、右鍵轉視角、Tab 換手、方向鍵/R/F 移手、Q 抓、E 使用、Shift 快速揮。
+- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場（地板確認後）等玩家拿起武器（`DemoStartOnGrab`；或離起點 5 m）→ 倒數 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（桌面 OnGUI；頭盔裡是 `DemoWorldHud` 世界空間文字，含 HP）。
+- **玩家是 A 的 VR 玩家**（2026-11-22 第二版，使用者決定以我們的 Museum_Demo 為正式 demo；A 的 `Museum_Demo_VR` 只當 A 的測試場景）：從 Museum_Demo_VR 整組搬來 `Museum VR Setup`（VR Player = PlayerTarget + A 的 `TrackedPlayerHurtbox` 追蹤閃避、XR Origin、Player Health、背包、`InteractionDesktopMode` + `PlayerDamageVignette` 受傷紅框）、`MuseumGuardDesk`、`Museum Floor Confirmation`（黃圈 + 右手 A 確認地板）、`Guard Desk Weapon Stand`（斧、弓）、`BossRealm/Boss Realm Weapon Stand`；DemoFlow 物件加 A 的 `MuseumDemoRun`（地板確認後才啟用 DemoFlow/DemoDebugKeys、傳送時手上裝備跟著走、重來時裝備歸位）。DemoFlow、DemoDebugKeys 在場景裡預設關閉（由 MuseumDemoRun 打開）。我第一版的 West gallery play setup、Weapon bench、刀鏟已移除。`VR Services`（DamageBridgeInstaller + DemoStartOnGrab）保留。桌面測試：A 的桌面模式會自動通過地板確認。
 - **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。（舊的 MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。）
 - **法老 Boss**（`Enemy_Pharaoh`，450 HP，不動）：本體是大廳中間的人面獅身像（`Model/Sphinx`，sphinx_of_hatshepsut_new.glb，王座前，Body 改 BoxCollider 貼合雕像，已移除阿努比斯模型與 EnemyAnimator）；背後替身的身體是圖坦卡門金面具（`Stand/Body/Mask`，Meshy 模型 + `M_TutankhamunMask`；舊佔位形狀停用留著）用**左右兩隻大手**出招，閒置的手回休息位：
   - 掌拍（拍完卡地，打手 ×1.5 傳給法老）、連拍（第 2 階段起，左右輪流）、橫掃（往前後一步或蹲下）、頭部橫斬（只能蹲下）、擲武器（掌中召喚匕首，可打回去 35）、**雙手合擊**（前後一步可躲，合掌後兩手都能打）
@@ -16,8 +16,8 @@
 - **VR 操作備忘（A 的 MeleeWeapon）**：沒有按鈕，抓著武器真的揮；刀刃 ≥ 1.2 m/s 算一次揮擊、最長 0.6 秒、慢到 0.45 m/s 才能再揮；同一揮擊對同一目標只算一次；刀刃判定半徑 3.5 cm → 飛行物 Collider 做大（0.35–0.6 m），大招一波一波來。
 - **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth`；A 的 `PlayerHealth` 沒有 `ResetHealth()` → 用反射呼叫 private setter 補滿（已在 NOTES_FOR_A 請 A 加）；桌面模式的 `DesktopPlayerDamageReceiver` 從它的 `Health` 屬性讀；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
 - **音效**（2026-11-22）：`EnemySfx` 敵人生成播召喚聲（阿努比斯、神諭、翼人；法老沒掛）、神諭的石頭聲（升起、滾動起步、跳砸落地、頭槌、倒地；走路跳步沒有）；結界擺錘鐮刀每次擺過最低點前 0.3 秒播揮砍聲（`PharaohArena` 的 Sound 欄位）。三個音檔已設 Force To Mono。
-- **測試**：EditMode 286/286、PlayMode 39/39（含 A 的 10 個）。
-- **Git**：feature/enemy-ai 已快轉到 main（338a6ee，含 A 的 PR #10）。音效 + VR 整合尚未 commit。A 的分支還有 1 個 main 沒有的 commit（795aa02 換弓箭模型），由使用者 merge。
+- **測試**：EditMode 286/286、PlayMode 62/64（A 的 2 個抓取測試失敗，見紀錄）。
+- **Git**：feature/enemy-ai 8aaa7ce 已 push（音效、VR 玩家、法老換模型、拿武器開始）；使用者要開 PR 到 main。A 的 feature/vr-interaction 比 main 多 4 個 commit（只動 A_VRInteraction，和我們不重疊；含 `PlayerHealth.ResetHealth`、`TrackedPlayerHurtbox` 追蹤閃避、`MuseumDemoRun`），由 A 開 PR、使用者 merge。兩邊都進 main 後：把 main 合進 feature/enemy-ai，Museum_Demo 的 XR Origin 接 TrackedPlayerHurtbox（我們的是舊版 Museum_test 複製來的，不會自動更新），確認 MuseumDemoRun 和 DemoFlow 不重複。
 - 下一步：
   1. 使用者在 Museum_Demo 實玩法老戰並調數值（`Enemy_Pharaoh` → `PharaohStand` / `PharaohArena` 的 Settings、`PharaohHand` 的 Damage Multiplier）。合擊的「前後一步可躲」只有單元測試，Play Mode 沒驗到。
   2. 使用者放法老替身模型：換 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；手是 `Hand/Model`、`HandL/Model`（XR Hands 範例的手）。
@@ -74,6 +74,13 @@
 
 ## 紀錄
 > 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-22（合 main、改用 A 的 VR 玩家）
+- `git merge --ff-only origin/main`（2a07924，PR #12 我們、#13 A）。
+- 使用者選：正式 demo = 我們的 Museum_Demo。用 MoveGameObjectToScene 從 A 的 Museum_Demo_VR 搬物件（A 的場景沒存檔），MuseumDemoRun 用 CopySerialized 複製到我們的 DemoFlow 物件再改接 flow/debugKeys/hallStart/realmArrival。守衛桌與武器架加 NavMeshObstacle（carve）。
+- `DemoStartOnGrab.Update`：等待中若已有武器被握著也算準備好（防止地板確認前就拿著）。
+- 桌面 Play 實測：地板確認 → 「Pick up a weapon」→ 抓斧 → 開打；敵人經 TrackedPlayerHurtbox 扣血（100→62）。TrackedPlayerHurtbox 沒有 MaxHealth → HUD 只顯示 HP 數字。
+- 測試：EditMode 286/286；PlayMode 62/64，失敗的 2 個是 A 的 `MuseumBackpackCarouselTests.ShoulderStow…`、`MuseumFloorPickupTests.PhysicalCrouch…`（載入 A 的場景，模擬手把 Grip 抓手電筒失敗；A 的檔案我沒改，疑似 Quest Link 連著時真手把干擾模擬輸入，待確認）。
 
 ### 2026-11-22（拿起武器才開始）
 - 使用者回報：開場來不及看清楚資訊和道具，怪物就來了。

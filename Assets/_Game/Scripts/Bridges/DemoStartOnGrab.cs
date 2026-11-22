@@ -11,7 +11,7 @@ namespace Game4026.Bridges
     /// <summary>
     /// Starts the demo's first wave when the player first picks up a weapon: listens to every grabbable carrying A's
     /// <see cref="MeleeWeapon"/> or <see cref="BowDrawAim"/> (XR hands and A's desktop hands both raise selectEntered)
-    /// and calls <see cref="DemoFlow.MarkPlayerReady"/>. Weapons created later need <see cref="Refresh"/>.
+    /// and calls <see cref="DemoFlow.MarkPlayerReady"/> (also when one is already held while the flow waits). Weapons created later need <see cref="Refresh"/>.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DemoStartOnGrab : MonoBehaviour
@@ -47,6 +47,21 @@ namespace Game4026.Bridges
                     continue;
                 interactable.selectEntered.AddListener(HandleGrabbed);
                 watched.Add(interactable);
+            }
+        }
+
+        /// <summary>A weapon already in hand when the flow starts waiting (grabbed before the flow was enabled) also counts.</summary>
+        private void Update()
+        {
+            if (flow == null || !flow.IsWaitingForPlayer)
+                return;
+            for (int i = 0; i < watched.Count; i++)
+            {
+                if (watched[i] != null && watched[i].isSelected)
+                {
+                    flow.MarkPlayerReady();
+                    return;
+                }
             }
         }
 
