@@ -65,6 +65,13 @@ namespace Game4026.Bridges
             return applied;
         }
 
+        /// <summary>Rumbles the holding controller for a reaction raised outside <see cref="ApplyHit"/> (e.g. <see cref="ParryAssist"/>).</summary>
+        public void Rumble(HitImpact impact)
+        {
+            LastHapticAmplitude = impact.HapticAmplitude * hapticScale;
+            Rumble(LastHapticAmplitude, impact.HapticDuration);
+        }
+
         private void Rumble(float amplitude, float duration)
         {
             if (grab == null || amplitude <= 0f || duration <= 0f)
