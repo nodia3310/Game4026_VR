@@ -36938,6 +36938,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1621965820}
   - component: {fileID: 1621965819}
+  - component: {fileID: 1621965821}
   m_Layer: 0
   m_Name: DemoFlow
   m_TagString: Untagged
@@ -36968,6 +36969,7 @@ MonoBehaviour:
   fadeSeconds: 0.6
   returnDelay: 5
   showHud: 1
+  startAtBoss: 0
 --- !u!4 &1621965820
 Transform:
   m_ObjectHideFlags: 0
@@ -36983,6 +36985,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1621965821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621965818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f1e499149cedba4b84017bd98d82c70, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy.DebugTools::Game4026.Enemy.DebugTools.DemoDebugKeys
+  flow: {fileID: 1621965819}
+  skipToBossKey: 16
+  showHint: 1
 --- !u!1 &1622812119
 GameObject:
   m_ObjectHideFlags: 0

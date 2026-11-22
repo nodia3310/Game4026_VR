@@ -77,6 +77,31 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void SkipToBoss_FromIntroOrHall_GoesToBossIntro()
+        {
+            var m = Started();
+            Assert.IsTrue(m.SkipToBoss(1f));
+            Assert.AreEqual(DemoPhase.BossIntro, m.Phase);
+            Assert.AreEqual(DemoAction.StartBoss, m.Tick(5f, true, false, false));
+
+            var hall = Started();
+            hall.Tick(3f, false, false, false);
+            Assert.IsTrue(hall.SkipToBoss(4f));
+            Assert.AreEqual(DemoPhase.BossIntro, hall.Phase);
+        }
+
+        [Test]
+        public void SkipToBoss_IgnoredDuringBossOrAfter()
+        {
+            var m = Started();
+            m.SkipToBoss(0f);
+            m.Tick(4f, true, false, false);
+            Assert.AreEqual(DemoPhase.Boss, m.Phase);
+            Assert.IsFalse(m.SkipToBoss(5f));
+            Assert.AreEqual(DemoPhase.Boss, m.Phase);
+        }
+
+        [Test]
         public void PhaseChanged_Raised()
         {
             var m = new DemoFlowModel(0f, 0f, 0f);

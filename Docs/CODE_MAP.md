@@ -46,7 +46,7 @@
 
 ## Enemy Flow（`Assets/_Game/Scripts/Enemy/Flow/`，`Game4026.Enemy`）
 - DemoFlowModel — Scripts/Enemy/Flow/DemoFlowModel.cs — 純 C# demo 流程：Intro → Hall → BossIntro → Boss → Victory；玩家倒下 → Defeat → Restart；DemoPhase / DemoAction
-- DemoFlow — Scripts/Enemy/Flow/DemoFlow.cs — 場景元件：開展廳遭遇戰、清完開 Boss、倒下時清場並原地重來（重設遭遇戰、補血、移回 PlayerStart）；Boss 前淡出傳送到異空間（realmArrival），勝利後傳回；傳送保留頭盔偏移；OnGUI 提示文字
+- DemoFlow — Scripts/Enemy/Flow/DemoFlow.cs — 場景元件：開展廳遭遇戰、清完開 Boss、倒下時清場並原地重來（重設遭遇戰、補血、移回 PlayerStart）；Boss 前淡出傳送到異空間（realmArrival），勝利後傳回；SkipToBoss / Start At Boss 測試捷徑；傳送保留頭盔偏移；OnGUI 提示文字
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
 - PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`、呼叫 `ResetHealth()`（合約還沒有血量 API）
 
@@ -78,6 +78,7 @@
 - MockPlayer — Scripts/Enemy/Debug/MockPlayer.cs — 桌面假玩家：WASD、右鍵轉視角，實作 IPlayerDamageReceiver，顯示 HP；Teleport() 給 CLI 測試用
 - MockWeapon — Scripts/Enemy/Debug/MockWeapon.cs — 左鍵從滑鼠位置 Raycast，對 IDamageable 呼叫 TakeDamage（同 A 的呼叫方式）
 - EnemyDebugLabel — Scripts/Enemy/Debug/EnemyDebugLabel.cs — 只在 Editor 顯示：敵人頭上的狀態、正在出的招式（連段第幾下）與血量
+- DemoDebugKeys — Scripts/Enemy/Debug/DemoDebugKeys.cs — Demo 測試捷徑：B 跳到法老（呼叫 DemoFlow.SkipToBoss）
 - DebugArtifactButton — Scripts/Enemy/Debug/DebugArtifactButton.cs — 按 1/2/3 模擬 Rosetta/Canopic/Mask 歸位，左上角顯示進度
 
 ## 資產與場景

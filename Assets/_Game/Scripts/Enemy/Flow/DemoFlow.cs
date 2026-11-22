@@ -28,6 +28,8 @@ namespace Game4026.Enemy
         [Tooltip("Seconds after the victory before the player is brought back to the hall.")]
         [SerializeField, Min(0f)] private float returnDelay = 5f;
         [SerializeField] private bool showHud = true;
+        [Tooltip("Testing: skip the hall waves and go straight to the boss (also after a restart).")]
+        [SerializeField] private bool startAtBoss;
 
         private DemoFlowModel model;
         private PlayerTarget player;
@@ -69,6 +71,19 @@ namespace Game4026.Enemy
             }
             EnsureModel();
             model.Begin(Time.time);
+            if (startAtBoss)
+                SkipToBoss();
+        }
+
+        /// <summary>Test shortcut: clears the hall (no kills counted) and starts the boss intro / teleport.</summary>
+        public void SkipToBoss()
+        {
+            EnsureModel();
+            if (model.Phase != DemoPhase.Intro && model.Phase != DemoPhase.Hall)
+                return;
+            if (hallEncounter != null)
+                hallEncounter.ForceClear();
+            model.SkipToBoss(Time.time);
         }
 
         private void EnsureModel()
@@ -181,6 +196,8 @@ namespace Game4026.Enemy
                 MovePlayer(player, startPosition, startRotation);
             EnsureModel();
             model.Begin(Time.time);
+            if (startAtBoss)
+                SkipToBoss();
         }
 
         /// <summary>
@@ -228,19 +245,19 @@ namespace Game4026.Enemy
             switch (model.Phase)
             {
                 case DemoPhase.Intro:
-                    return "展廳甦醒中…";
+                    return "The exhibits are waking up...";
                 case DemoPhase.Hall:
                     return hallEncounter != null
-                        ? $"擊敗守衛  {hallEncounter.KillCount} / {hallEncounter.TotalEnemies}"
+                        ? $"Defeat the guardians  {hallEncounter.KillCount} / {hallEncounter.TotalEnemies}"
                         : string.Empty;
                 case DemoPhase.BossIntro:
-                    return "法老醒了";
+                    return "The Pharaoh awakens";
                 case DemoPhase.Boss:
-                    return "擊敗法老";
+                    return "Defeat the Pharaoh";
                 case DemoPhase.Victory:
-                    return "勝利！";
+                    return "Victory!";
                 case DemoPhase.Defeat:
-                    return "你倒下了…馬上重來";
+                    return "You fell... restarting";
             }
             return string.Empty;
         }

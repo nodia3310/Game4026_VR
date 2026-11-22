@@ -35,6 +35,15 @@ namespace Game4026.Enemy
         /// <summary>Starts (or restarts) the run.</summary>
         public void Begin(float now) => Set(DemoPhase.Intro, now);
 
+        /// <summary>Test shortcut: jump from the intro / hall straight to the boss intro. False in any other phase.</summary>
+        public bool SkipToBoss(float now)
+        {
+            if (Phase != DemoPhase.Intro && Phase != DemoPhase.Hall)
+                return false;
+            Set(DemoPhase.BossIntro, now);
+            return true;
+        }
+
         public DemoAction Tick(float now, bool hallCleared, bool bossCleared, bool playerDead)
         {
             float elapsed = now - phaseStart;

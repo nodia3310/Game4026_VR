@@ -3,6 +3,7 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
+- **測試捷徑 + 英文 UI（2026-11-22）**：Play 時按 **B** 直接跳到法老（`DemoDebugKeys`，掛在場景的 DemoFlow 物件上）；或勾 DemoFlow 的 `Start At Boss`，每次開場（含重來）都直接進 Boss。Demo 的提示文字全部改英文。A 的 PR 由使用者自己 merge（遠端還沒有 A 的 PR）（EditMode 268/268）
 - **Playable demo（2026-11-22 開始）**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。流程 `DemoFlow`：開場 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯，同時最多 3 隻）→ 4 秒 → 法老 → 勝利；玩家倒下 → 4 秒後原地重來。遭遇戰生成的敵人一出場就追玩家（`Alert`）。桌面用 MockPlayer 測過整個流程（EditMode 259/259）。
 - **法老替身 + 異空間（2026-11-22）**：展廳清完 → 淡出 → 傳送到 `BossRealm`（同場景 y=-200 的博物館建築複製品，沒有展示櫃，紫色局部 Volume、即時光、王座在 x≈24）。法老坐著不動（EnemyData_Pharaoh 移動速度 0、450 HP），背後的半透明金色替身（`PharaohStand`，暫用基本形狀 + XR Hands 的手放大 10 倍）出招：掌拍（手掌先立起面向玩家、地上紅圈預警 → 翻平拍下，拍完卡地 1.8 秒，打手 = 傷害 ×1.5 傳給法老）、橫掃（胸口高度掃過，往前/後一步或蹲下躲）、連拍（第 2 階段起，3 下）。打贏 5 秒後傳回展廳。桌面測過：傳送、出招、打手扣血、倒下重來（EditMode 266/266；PlayMode 29/29）
 - **攻擊名額（M2.10，使用者追加）**：一打多時同時最多 2 個名額（翼人佔 2），只有玩家視線前方 ±70° 的敵人能出招，其他在 3.5 m 外繞圈等；設定在場景的 `AttackCoordinator`（EditMode 251/251；PlayMode 29/29）
@@ -72,6 +73,10 @@
 
 ## 紀錄
 > 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-22（測試捷徑 + 英文 UI）
+- `DemoFlowModel.SkipToBoss`、`DemoFlow.SkipToBoss` / `startAtBoss`（清掉展廳但不算擊殺，直接 BossIntro → 傳送）；新增 `DemoDebugKeys`（Debug/，B 鍵，左下角提示）；DemoFlow 的 HUD 文字改英文。
+- EditMode 268/268（新增 SkipToBoss 2 個）。
 
 ### 2026-11-22（法老替身 + 異空間）
 - 新增 `StandMoves.cs`（StandMove、StandMoveSelector、StandGeometry）、`PharaohHand`、`PharaohStand`（Scripts/Enemy/Boss/）；`ScreenFader`（Scripts/Enemy/Flow/）；`DemoFlow` 加異空間傳送（realmArrival、淡出淡入、勝利後傳回）、重來時淡黑；`MockPlayer` 加 C 蹲下。`PharaohBoss.OnPhaseEntered` 的 TODO 改成說明招式在 PharaohStand。
