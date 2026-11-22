@@ -54,7 +54,7 @@
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
 - PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`/`MaxHealth`、`ResetHealth()` 或 private setter 補滿；轉接元件（A 的桌面模式）讀它持有的 receiver
 - DemoWorldHud — Scripts/Enemy/Flow/DemoWorldHud.cs — 頭盔 HUD：DemoFlow 目標 + HP 的世界空間 TextMesh，浮在頭前、轉頭時慢慢跟上、穿牆可見；只在 XR 裝置啟用時顯示
-- PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body）
+- PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body；Museum_Demo 改用 A 的 TrackedPlayerHurtbox 後目前沒用到）
 
 ## Enemy Boss（`Assets/_Game/Scripts/Enemy/Boss/`，`Game4026.Enemy`）
 - BossPhase — Scripts/Enemy/Boss/BossPhase.cs — 一個階段的 Inspector 設定：血量門檻、攻速倍率、無敵秒數、是否召喚小兵、要啟用的物件
@@ -116,7 +116,7 @@
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
-- Museum_Demo — Assets/_Game/Scenes/Demo/Museum_Demo.unity — playable demo 場景（複製自 Museum_New）：建築與展示櫃加了 MeshCollider、NavMesh（Museum_Demo/NavMesh-Navigation.asset）、XR 玩家（West gallery play setup：A 的 XR Origin + PlayerTarget/PlayerHealth/BodyCenter、背包、桌面模式）、MuseumGuardDesk、Weapon bench + Weapons（A 的 Knife/Axe/Shovel/Bow）、VR Services（DamageBridgeInstaller）、MockPlayer（停用）、EnemyPool、SpawnPoints_Hall、SP_Throne、Encounter_Hall / Encounter_Boss、DemoFlow、AttackCoordinator；`BossRealm`（y=-200 的建築複製品、王座、即時光、RealmVolume、RealmArrival、SP_Throne）
+- Museum_Demo — Assets/_Game/Scenes/Demo/Museum_Demo.unity — playable demo 場景（複製自 Museum_New）：建築與展示櫃加了 MeshCollider、NavMesh（Museum_Demo/NavMesh-Navigation.asset）、A 的 VR 玩家（Museum VR Setup：VR Player + TrackedPlayerHurtbox、背包、桌面模式、受傷紅框）、MuseumGuardDesk、Museum Floor Confirmation、Guard Desk Weapon Stand（斧、弓）、DemoFlow 上的 MuseumDemoRun、VR Services（DamageBridgeInstaller + DemoStartOnGrab）、MockPlayer（停用）、EnemyPool、SpawnPoints_Hall、SP_Throne、Encounter_Hall / Encounter_Boss、DemoFlow、AttackCoordinator；`BossRealm`（y=-200 的建築複製品、王座、即時光、RealmVolume、RealmArrival、SP_Throne）
 - M_ScreenFade / M_Throne / RealmVolume — Assets/_Game/Scenes/Demo/Museum_Demo/ — 淡出材質、王座材質、異空間的局部後處理（紫色、暗角）
 - M_SpectralGold / M_StandTelegraph — Assets/_Game/Prefabs/Enemies/Materials/ — 替身的神聖半透明金色（SpectralGlow shader）/ 預警紅光
 - SpectralGlow — Assets/_Game/Prefabs/Enemies/Materials/Shaders/SpectralGlow.shader — URP 無光照 shader：深度預寫 + 半透明身體 + 菲涅耳邊光 + 光紋（不需要 HDR/Bloom，支援 VR single-pass instanced）
@@ -167,4 +167,4 @@
 - ParryPlayModeTests — Tests/PlayMode/Enemy/ParryPlayModeTests.cs — 真的 EnemyController：招架窗內打武器 → 硬直、×1.5 傷害、結束後恢復、玩家沒被打到
 - EncounterPlayModeTests — Tests/PlayMode/Enemy/EncounterPlayModeTests.cs — 執行中烘焙 NavMesh：遭遇戰開始到 Cleared、物件池重用、ForceClear、Boss 觸發與擊敗、生成點檢查
 - M_TutankhamunMask — Assets/_Game/Character Models/Enemy/Meshy_AI_Mask_of_Tutankhamun_20260717_texture_fbx/ — 面具 URP Lit（底色、法線、合成的 _metallicSmoothness.png）；fbx 材質槽已 remap 到它
-- DemoStartOnGrab — Scripts/Bridges/DemoStartOnGrab.cs — 玩家第一次抓起武器（MeleeWeapon/BowDrawAim 的 XRBaseInteractable）→ DemoFlow.MarkPlayerReady；Refresh 給之後生成的武器
+- DemoStartOnGrab — Scripts/Bridges/DemoStartOnGrab.cs — 玩家第一次抓起武器（MeleeWeapon/BowDrawAim 的 XRBaseInteractable）→ DemoFlow.MarkPlayerReady；等待中已握著武器也算；Refresh 給之後生成的武器

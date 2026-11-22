@@ -65,6 +65,13 @@ A: ArrowProjectile.Impact(Collision) ──┤→ B: Bridges（MeleeDamageBridge
   - `InteractionDesktopMode` 的桌面相機掛 `PlayerTarget` + `DesktopPlayerDamageReceiver`（把傷害轉給 XR Rig 的 `PlayerHealth`）。B 的 DemoFlow 會改綁 `PlayerTarget.Current`，並從轉接元件的 `Health` 讀血量。
   - `PlayerHealth.CurrentHealth` / `MaxHealth`。因為沒有 `ResetHealth()`，B 重來時暫時用反射呼叫 `CurrentHealth` 的 private setter 補血。
 
+## 4d. 正式 demo 場景（2026-11-22）
+
+- 和組長確認：**正式 demo 是 `Assets/_Game/Scenes/Demo/Museum_Demo.unity`**。A 的 `Museum_Demo_VR` 當 A 的測試場景（場景檔沒辦法合併，兩邊各改一份會越差越遠）。
+- B 已把 Museum_Demo_VR 的 `Museum VR Setup`、`MuseumGuardDesk`、`Museum Floor Confirmation`、`Guard Desk Weapon Stand`、`Boss Realm Weapon Stand` 和 DemoFlow 上的 `MuseumDemoRun` 搬進 Museum_Demo（A 的場景檔沒改）。A 之後的玩家/道具改動請盡量做在 Prefab 或程式裡，場景層的接線改動請告訴 B，由 B 改 Museum_Demo。
+- DemoFlow 新增 **Wait For Player Ready**（預設開）：第一次開場等玩家拿起武器（B 的 `Bridges/DemoStartOnGrab`）或離起點 5 m 才倒數。Museum_Demo_VR 沒有 DemoStartOnGrab，所以那裡會等到玩家走開 5 m；要舊行為可取消勾選。
+- 兩個 A 的 PlayMode 測試（`MuseumBackpackCarouselTests.ShoulderStow…`、`MuseumFloorPickupTests.PhysicalCrouch…`）在 B 的電腦失敗（模擬 Grip 抓不起手電筒），B 當時連著 Quest Link，可能是真手把干擾，請 A 在自己電腦確認。
+
 ## 5. 要問 A 的問題
 
 1. 文物歸位事件：B 目前接的是 `ArtifactDisplayTrigger.OnArtifactRestored`。這是正式的來源嗎？還是應該用 `ArtifactRestorationTracker.OnArtifactRestored`？（Tracker 不是場景元件，由誰建立、要怎麼拿到它？）
