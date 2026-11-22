@@ -10,7 +10,7 @@ namespace Game4026.Enemy
     /// </summary>
     public static class EnemyProjectilePool
     {
-        public const int MaxActive = 8;
+        public const int MaxActive = 24; // the pharaoh's barrage alone holds 12
 
         private static readonly Dictionary<EnemyProjectile, ObjectPool<EnemyProjectile>> pools =
             new Dictionary<EnemyProjectile, ObjectPool<EnemyProjectile>>();

@@ -200,28 +200,8 @@ namespace Game4026.Enemy
                 SkipToBoss();
         }
 
-        /// <summary>
-        /// Moves the player rig so the head ends up above <paramref name="position"/> looking along <paramref name="rotation"/>'s yaw
-        /// (works for a mock player and for an XR rig whose head is offset from its root). Feet go to position.y.
-        /// </summary>
-        private static void MovePlayer(PlayerTarget target, Vector3 position, Quaternion rotation)
-        {
-            Transform root = target.transform;
-            Transform head = target.Head;
-            CharacterController controller = root.GetComponent<CharacterController>();
-            bool wasEnabled = controller != null && controller.enabled;
-            if (wasEnabled)
-                controller.enabled = false;
-
-            float yaw = rotation.eulerAngles.y - head.eulerAngles.y;
-            root.RotateAround(head.position, Vector3.up, yaw);
-            Vector3 offset = head.position - root.position;
-            root.position = new Vector3(position.x - offset.x, position.y, position.z - offset.z);
-
-            if (wasEnabled)
-                controller.enabled = true;
-            Physics.SyncTransforms();
-        }
+        private static void MovePlayer(PlayerTarget target, Vector3 position, Quaternion rotation) =>
+            PlayerRig.MoveTo(target, position, rotation);
 
         private void OnGUI()
         {
@@ -253,7 +233,9 @@ namespace Game4026.Enemy
                 case DemoPhase.BossIntro:
                     return "The Pharaoh awakens";
                 case DemoPhase.Boss:
-                    return "Defeat the Pharaoh";
+                    return PharaohArena.Current != null && PharaohArena.Current.IsOpen
+                        ? "The barrier is down! Strike the Pharaoh!"
+                        : "Defeat the Pharaoh";
                 case DemoPhase.Victory:
                     return "Victory!";
                 case DemoPhase.Defeat:

@@ -55,6 +55,7 @@ namespace Game4026.Enemy
         public float Speed => speed;
 
         internal ObjectPool<EnemyProjectile> Pool { get; set; }
+        private Collider[] colliders;
 
         public void Launch(EnemyController shooter, Vector3 position, Vector3 flyDirection, float flySpeed, float playerDamage)
         {
@@ -70,6 +71,36 @@ namespace Game4026.Enemy
             transform.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
             gameObject.SetActive(true);
             Tint(flyingColor);
+            IgnorePlayerBody();
+        }
+
+        /// <summary>Shows a pooled projectile before it is thrown (held by the pharaoh's hands), in its normal colour.</summary>
+        public void ShowHeld()
+        {
+            IsFlying = false;
+            IsReflected = false;
+            gameObject.SetActive(true);
+            Tint(flyingColor);
+        }
+
+        /// <summary>
+        /// The projectile's collider exists only so the player's weapon can hit it. It must never shove the player's
+        /// CharacterController (big thrown weapons pushed the player around); damage is checked separately in <see cref="Step"/>.
+        /// </summary>
+        private void IgnorePlayerBody()
+        {
+            PlayerTarget player = PlayerTarget.Current;
+            if (player == null)
+                return;
+            CharacterController body = player.GetComponentInParent<CharacterController>();
+            if (body == null)
+                body = player.GetComponentInChildren<CharacterController>();
+            if (body == null)
+                return;
+            if (colliders == null)
+                colliders = GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                Physics.IgnoreCollision(colliders[i], body, true);
         }
 
         private void Update() => Step(Time.deltaTime);
@@ -164,11 +195,10 @@ namespace Game4026.Enemy
             EnemyHealth health = collider.GetComponentInParent<EnemyHealth>();
             if (health == null)
                 return false;
-            WeakPoint weakPoint = collider.GetComponent<WeakPoint>();
-            if (weakPoint != null)
-                weakPoint.TakeDamage(reflectedDamage, point, false); // becomes a weak-point hit
-            else
-                health.TakeDamage(reflectedDamage, point, false);    // straight to health, never a parry
+            // Straight to health (never a parry); weak point → weak-point hit. No hit cooldown: a volley of reflected
+            // weapons lands together and every one of them should count.
+            bool weak = collider.GetComponent<WeakPoint>() != null;
+            health.TakeProjectileDamage(reflectedDamage, point, weak);
             return true;
         }
 
@@ -226,13 +256,33 @@ namespace Game4026.Enemy
             transform.rotation = Quaternion.LookRotation(direction);
         }
 
-        /// <summary>The shooter's active weak point, else its eye.</summary>
+        /// <summary>
+        /// The shooter's active weak point, else the centre of its biggest enabled solid collider (the body: the eye sits at
+        /// the top of it, so a bolt aimed there can graze over), else its eye.
+        /// </summary>
         private static Transform FindReflectTarget(EnemyController shooter)
         {
             if (shooter == null || !shooter.isActiveAndEnabled)
                 return null;
             WeakPoint weakPoint = shooter.GetComponentInChildren<WeakPoint>(); // once per reflect
-            return weakPoint != null ? weakPoint.transform : shooter.Eye;
+            if (weakPoint != null)
+                return weakPoint.transform;
+
+            Collider body = null;
+            float biggest = 0f;
+            foreach (Collider c in shooter.GetComponentsInChildren<Collider>())
+            {
+                if (!c.enabled || c.isTrigger || c.GetComponent<ArenaBarrier>() != null)
+                    continue; // aim at the body, not at a barrier / corridor wall around it
+                Vector3 s = c.bounds.size;
+                float volume = s.x * s.y * s.z;
+                if (volume > biggest)
+                {
+                    biggest = volume;
+                    body = c;
+                }
+            }
+            return body != null ? body.transform : shooter.Eye;
         }
 
         private void End(bool struck)

@@ -15,6 +15,9 @@ namespace Game4026.Enemy
         private MaterialPropertyBlock block;
         private float alpha, from, to, time, length;
 
+        /// <summary>The fader on the player's head (created by the demo flow); other systems use it to blink.</summary>
+        public static ScreenFader Current { get; private set; }
+
         public float Alpha => alpha;
         public bool IsFading => time < length;
 
@@ -34,7 +37,14 @@ namespace Game4026.Enemy
             fader.quad.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             fader.quad.receiveShadows = false;
             fader.Apply(0f);
+            Current = fader;
             return fader;
+        }
+
+        private void OnDestroy()
+        {
+            if (Current == this)
+                Current = null;
         }
 
         public void FadeTo(float target, float seconds)

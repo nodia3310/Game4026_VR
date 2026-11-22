@@ -85,11 +85,18 @@ namespace Game4026.Enemy
         }
 
         /// <summary>Same as <see cref="TakeDamage"/> with an explicit timestamp (used by tests).</summary>
-        public bool ApplyDamage(float damage, Vector3 hitPoint, bool isWeakPoint, float time)
+        public bool ApplyDamage(float damage, Vector3 hitPoint, bool isWeakPoint, float time) =>
+            ApplyDamage(damage, hitPoint, isWeakPoint, time, false);
+
+        /// <summary>A reflected projectile: separate objects landing together each count (no hit cooldown).</summary>
+        public bool TakeProjectileDamage(float damage, Vector3 hitPoint, bool isWeakPoint) =>
+            ApplyDamage(damage, hitPoint, isWeakPoint, Time.time, true);
+
+        private bool ApplyDamage(float damage, Vector3 hitPoint, bool isWeakPoint, float time, bool ignoreHitCooldown)
         {
             if (!Model.IsDead && !Model.IsInvulnerable && Guard != null && Guard.TryBlock(damage, hitPoint))
                 return false; // the shield took it
-            if (!Model.TryApplyDamage(damage, hitPoint, isWeakPoint, time, out EnemyDamageResult result))
+            if (!Model.TryApplyDamage(damage, hitPoint, isWeakPoint, time, out EnemyDamageResult result, ignoreHitCooldown))
                 return false;
 
             Damaged?.Invoke(this, result);

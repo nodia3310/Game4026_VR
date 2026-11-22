@@ -221,3 +221,41 @@
 - 問題：
   - Unity 在建立 asmdef 的同時匯入新腳本，有 3 個 .cs 沒有被加進組件的編譯清單（明明已匯入卻出現 CS0246）。Refresh、ForceUpdate 都沒用，用 `AssetDatabase.RenameAsset` 改名再改回才恢復。之後新增腳本時，建議先建 asmdef 並等編譯完，再加 .cs。
   - 測試的冷卻邊界不要用剛好等於的時間點（`1f + 0.3f` 會有浮點誤差）。
+
+## 2026-11-22 目前狀態快照（從 PROGRESS.md 搬來）
+
+- **雙手替身 + 走廊去板 + 手消失修正（2026-11-22）**：左手（`HandL`）也會攻擊：掌拍/連拍左右輪流、橫掃/頭部橫斬用起點那側的手、擲武器左右手交替；新招**雙手合擊**（兩手在玩家前方左右等待、掌心相對、地上紅色帶狀預警 1.4 秒 → 斜向合掌，玩家前後 0.8 m 內受 22 傷害，往前/後一步可躲；合掌後兩手卡 1.4 秒都能打）。鐮刀走廊的兩片半透明板拿掉。手移動時短暫消失：原因是替身身體的深度預寫擋住身後的手 → 繪製順序改成手/武器 3000 → 身體（新材質 M_SpectralBody）3010 → 結界 3020。合擊的「後退一步可躲」只有單元測試，Play Mode 沒驗到（使用者說先跳過）（EditMode 281/281；PlayMode 29/29）
+- **實體擺錘 + 自然的神之手（2026-11-22）**：擺錘鐮刀改成實體（青銅臂 + 原始材質的 4.5 m 大 Kopesh），生成時往上打射線找天花板、從天花板（17–19 m）吊下來，刀刃最低點離地 1.2 m，±35°、週期 3.2 秒，刀面朝走廊（玩家看得到整把彎刀）。神之手：新增 `HandPose` 讓手指真的握起來；萬兵齊發的每隻手有自己的傾斜、大小、漂浮節奏、依序出現（先張開手、武器成形後握住刀柄，刀刃朝上）、出手前後拉蓄力、丟出後跟進並張開手淡出；主手也會依招式變手勢（掌拍張平、手刀伸直、拿匕首握拳、放大招時半握）（EditMode 279/279；PlayMode 29/29）
+- **法老結界 + 鐮刀走廊 + 萬兵齊發（2026-11-22）**：法老周圍半徑 5 m 的金色結界（實心，打到只播擋住；VR 走進去 0.6 秒後被推出）。換階段（60%、25%）時：大招「萬兵齊發」— 背後扇形浮現 12 隻手各拿一把半透明武器（劍、Kopesh、斧、彎刀、單手斧、匕首，來自 `egyptian_weapons.glb`），每 0.75 秒一波 3 把飛向玩家（6 傷害），每把都能打回去（12 傷害，不受受擊冷卻限制），打回 60% 以上法老硬直 3 秒 → 結界打開 12 秒：出現 6 m 寬走廊 + 3 把擺錘 Kopesh（12 傷害、不擊退），本體受傷 ×2，替身暫停出招 → 結束時衝擊波：結界附近的玩家淡黑閃現到 12 m 外（8 傷害）。桌面測試：B 跳 Boss、U 立刻放大招。小兵召喚先關掉（在 PharaohBoss → Phases 的 Start Minions 可開回）。全部用 CLI 驗證過（EditMode 279/279；PlayMode 29/29）
+- **VR 操作備忘（讀 A 的 MeleeWeapon）**：沒有按鈕招架/反彈，抓著武器真的揮；刀刃速度 ≥ 1.2 m/s 才算一次揮擊，一次揮擊最長 0.6 秒、要慢到 0.45 m/s 才能再揮，同一揮擊對同一目標只算一次（不同飛刀算不同目標）→ 大招用一波一波的節奏；刀刃判定半徑 3.5 cm，所以飛行物 Collider 做大（0.35–0.6 m）
+- **法老擲武器（2026-11-22）**：新招 WeaponThrow：手飛到法老前方側上方、掌中召喚半透明大匕首（1.1 秒變大）→ 後拉 → 翻轉飛向玩家胸口（9 m/s，15 傷害）；第 1/2/3 階段連丟 1/2/3 把、左右交替。用近戰武器打中 → 變藍彈回法老（35 傷害）。手放大到 13 倍。`EnemyProjectile` 反彈時若沒有啟用中的弱點，改瞄最大的身體 Collider（之前瞄 Eye 會從頭頂擦過）。驗證過：打中玩家、兩次反彈各扣 35（EditMode 274/274；PlayMode 29/29）
+- **法老頭部橫斬 + 替身材質（2026-11-22）**：新招 HeadSlash：手刀在頭的高度橫斬，路線寬 4 m（跨一步躲不掉），要蹲下（頭低於 1.3 m）；預警是一條頭高的紅色光條。橫掃和橫斬的路線往法老那側斜 50°，手從玩家前方斜側出現（之前從正側面來，玩家看不到）。替身材質改用自寫的 `Game4026/SpectralGlow` shader（實心半透明 + 邊緣菲涅耳亮光 + 往上流動的光紋），原本的漸變是因為複製來的材質帶著 Default-Particle 圓形貼圖。驗證過：站著被斬 18、蹲下沒事（EditMode 270/270；PlayMode 29/29）
+- **測試捷徑 + 英文 UI（2026-11-22）**：Play 時按 **B** 直接跳到法老（`DemoDebugKeys`，掛在場景的 DemoFlow 物件上）；或勾 DemoFlow 的 `Start At Boss`，每次開場（含重來）都直接進 Boss。Demo 的提示文字全部改英文。A 的 PR 由使用者自己 merge（遠端還沒有 A 的 PR）（EditMode 268/268）
+- **Playable demo（2026-11-22 開始）**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。流程 `DemoFlow`：開場 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯，同時最多 3 隻）→ 4 秒 → 法老 → 勝利；玩家倒下 → 4 秒後原地重來。遭遇戰生成的敵人一出場就追玩家（`Alert`）。桌面用 MockPlayer 測過整個流程（EditMode 259/259）。
+- **法老替身 + 異空間（2026-11-22）**：展廳清完 → 淡出 → 傳送到 `BossRealm`（同場景 y=-200 的博物館建築複製品，沒有展示櫃，紫色局部 Volume、即時光、王座在 x≈24）。法老坐著不動（EnemyData_Pharaoh 移動速度 0、450 HP），背後的半透明金色替身（`PharaohStand`，暫用基本形狀 + XR Hands 的手放大 10 倍）出招：掌拍（手掌先立起面向玩家、地上紅圈預警 → 翻平拍下，拍完卡地 1.8 秒，打手 = 傷害 ×1.5 傳給法老）、橫掃（胸口高度掃過，往前/後一步或蹲下躲）、連拍（第 2 階段起，3 下）。打贏 5 秒後傳回展廳。桌面測過：傳送、出招、打手扣血、倒下重來（EditMode 266/266；PlayMode 29/29）
+- **攻擊名額（M2.10，使用者追加）**：一打多時同時最多 2 個名額（翼人佔 2），只有玩家視線前方 ±70° 的敵人能出招，其他在 3.5 m 外繞圈等；設定在場景的 `AttackCoordinator`（EditMode 251/251；PlayMode 29/29）
+- **翼人（M2.9，使用者追加）**：`Enemy_Birdman`（使用者的 birdman.fbx，就是規格裡的有翼女神伊西斯，菁英 220 HP），懸浮移動（`HoverLocomotion`），3 招：翼斬（左右輪流，左翼是腳本翻轉的動畫）、俯衝、翼盾（`EnemyGuard`：擋正面、擋 2 下反擊、重擊破盾、被打會舉盾）。打擊感的 hit stop 改成極慢動作並緩出（EditMode 244/244；PlayMode 26/26）
+- 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
+- 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
+- 打擊感（M2.8，使用者追加）：所有敵人通用的 `EnemyHitFeedback`，打中時只讓敵人定格（卡肉）、抖動、閃白、噴火花、手把震動；招架/擊殺最重；數值在 `HitFeedback_Default` 資產調（EditMode 239/239；PlayMode 22/22）
+- 黑曜石神諭（M2.7，使用者追加）：`Enemy_ObsidianOracle`（頭像雕像，無骨架彈跳），5 招：震地、頭槌、滾動、跳砸、鐳射眼；全部可反彈（EditMode 233/233；PlayMode 19/19）
+- 招架（M2.6，使用者追加）：阿努比斯雙手持匕首，所有招式都能在擊中前 0.35 秒內用武器招架 → 整招取消、硬直 1.5 秒、受傷 ×1.5；刀尖光點提示招架時機（EditMode 214/214；PlayMode 17/17）
+- 阿努比斯（`Enemy_AnubisGuard`）有 5 招：快速揮擊、反手揮擊（鏡像）、重擊（起手停格 0.8 秒）、突進斬（Jump Attack 動畫）、三連斬；其他敵人各一招，時間沿用舊數值
+- 傷害橋接完成，含場景安裝器（Bridges）
+- 模型與動畫：所有敵人（基底 Enemy_Placeholder 與四個 Variant、場景的巡邏示範）都用 Anubis 模型 + AC_Anubis + EnemyAnimator；各自弱點掛在骨頭上（衛兵/基底：頭，木乃伊/法老：胸口，塞克邁特：背後）。各種敵人目前外觀相同，只有大小不同。
+- Git（2026-11-22）：攻擊名額已 commit 並 push 到 feature/enemy-ai，PR 頁面已開，**使用者還要按 Create pull request**
+- 下一步：
+  0. 使用者在 Museum_Demo 實際玩法老戰，調 `Enemy_Pharaoh` 上 `PharaohStand` 的 Settings（預警秒數、範圍、傷害、卡地秒數）與 `PharaohHand` 的 Damage Multiplier；VR 閃避方式使用者還要再想
+  0c. 使用者會放法老替身模型進來：換掉 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；攻擊的手是 `Enemy_Pharaoh/Hand/Model`
+  0d. **文物流程（使用者 2026-11-22 定的，等 A 合併後做）**：每波一隻精英，死掉時原地留下它的文物（A 的 RestorableArtifact），玩家放回展台（ArtifactDisplayTrigger → ArtifactEventBridge）後下一波才開始；三件都歸位 → 法老。生成點改成從對應展品出現（阿努比斯像 x=-24、Case_wMummy x=23、SphinxPharaoh x=11.5）。A 的 `MuseumEncounterPlan.zh-TW.md`（在 A 的分支）也是同樣的「三件文物各對應一隻被詛咒展品」
+  0a. Demo 收尾：HUD 是 OnGUI（只有桌面看得到），VR 要改成世界空間文字；等 A 合併 `feature/vr-interaction` 後在 Museum_Demo 換成 VR 玩家（PlayerTarget、DamageBridgeInstaller），A 的 `PlayerHealth` 沒有 ResetHealth，重來時不會補血（要跟 A 談一個玩家血量合約）
+  00. 使用者在 EnemyAI 場景放 3 隻阿努比斯看繞圈/輪流出招（繞圈還沒親眼確認過）
+  00b. 一打多後續：錯開出場 + 出場後一段時間不攻擊、蓄力音效（使用者找素材）、波次重排
+  0. 使用者在 EnemyAI 場景實際看阿努比斯 5 招的手感，調招式資產數值（冷卻、權重、預警、傷害）
+  0b. 新規格 M4：StatueLocomotion / StatuePart、EnemyProjectile（反彈）、WingShield、卡雕像與伊西斯（需要模型）
+  1. 確認 PR #3 建立並合併
+  2. 各種敵人換成自己的模型（木乃伊、塞克邁特、法老）；人形 Mixamo 模型可沿用 AC_Anubis 與 EnemyAnimator，只要在 Variant 裡換掉 Model
+  3. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測；確認 A 的武器 targetMask 包含敵人 Collider 的 Layer
+  4. 法老招式細節（PharaohBoss.OnPhaseEntered 的 TODO）、數值平衡（冷卻、前搖、血量）
+  5. 可選：身體 Collider 改成掛在骨頭上（現在是固定膠囊，不會跟著彎腰或倒地）；生成/死亡特效、音效
+- 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`

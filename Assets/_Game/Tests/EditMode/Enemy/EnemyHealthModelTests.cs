@@ -172,5 +172,16 @@ namespace Game4026.Tests.Enemy
             m.DamageMultiplier = -3f;
             Assert.AreEqual(0f, m.DamageMultiplier);
         }
+
+        [Test]
+        public void IgnoreHitCooldown_AcceptsHitsLandingTogether()
+        {
+            var m = new EnemyHealthModel(100f, 2f, 0.3f, 50f);
+            Assert.IsTrue(m.TryApplyDamage(10f, Vector3.zero, false, 1f, out _));
+            Assert.IsFalse(m.TryApplyDamage(10f, Vector3.zero, false, 1.1f, out _), "normal hits keep the cooldown");
+            Assert.IsTrue(m.TryApplyDamage(10f, Vector3.zero, false, 1.1f, out _, ignoreHitCooldown: true));
+            Assert.IsTrue(m.TryApplyDamage(10f, Vector3.zero, false, 1.1f, out _, ignoreHitCooldown: true));
+            Assert.AreEqual(70f, m.CurrentHealth, 1e-4f);
+        }
     }
 }

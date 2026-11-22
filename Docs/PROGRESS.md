@@ -3,40 +3,39 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
-- **測試捷徑 + 英文 UI（2026-11-22）**：Play 時按 **B** 直接跳到法老（`DemoDebugKeys`，掛在場景的 DemoFlow 物件上）；或勾 DemoFlow 的 `Start At Boss`，每次開場（含重來）都直接進 Boss。Demo 的提示文字全部改英文。A 的 PR 由使用者自己 merge（遠端還沒有 A 的 PR）（EditMode 268/268）
-- **Playable demo（2026-11-22 開始）**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。流程 `DemoFlow`：開場 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯，同時最多 3 隻）→ 4 秒 → 法老 → 勝利；玩家倒下 → 4 秒後原地重來。遭遇戰生成的敵人一出場就追玩家（`Alert`）。桌面用 MockPlayer 測過整個流程（EditMode 259/259）。
-- **法老替身 + 異空間（2026-11-22）**：展廳清完 → 淡出 → 傳送到 `BossRealm`（同場景 y=-200 的博物館建築複製品，沒有展示櫃，紫色局部 Volume、即時光、王座在 x≈24）。法老坐著不動（EnemyData_Pharaoh 移動速度 0、450 HP），背後的半透明金色替身（`PharaohStand`，暫用基本形狀 + XR Hands 的手放大 10 倍）出招：掌拍（手掌先立起面向玩家、地上紅圈預警 → 翻平拍下，拍完卡地 1.8 秒，打手 = 傷害 ×1.5 傳給法老）、橫掃（胸口高度掃過，往前/後一步或蹲下躲）、連拍（第 2 階段起，3 下）。打贏 5 秒後傳回展廳。桌面測過：傳送、出招、打手扣血、倒下重來（EditMode 266/266；PlayMode 29/29）
-- **攻擊名額（M2.10，使用者追加）**：一打多時同時最多 2 個名額（翼人佔 2），只有玩家視線前方 ±70° 的敵人能出招，其他在 3.5 m 外繞圈等；設定在場景的 `AttackCoordinator`（EditMode 251/251；PlayMode 29/29）
-- **翼人（M2.9，使用者追加）**：`Enemy_Birdman`（使用者的 birdman.fbx，就是規格裡的有翼女神伊西斯，菁英 220 HP），懸浮移動（`HoverLocomotion`），3 招：翼斬（左右輪流，左翼是腳本翻轉的動畫）、俯衝、翼盾（`EnemyGuard`：擋正面、擋 2 下反擊、重擊破盾、被打會舉盾）。打擊感的 hit stop 改成極慢動作並緩出（EditMode 244/244；PlayMode 26/26）
-- 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
-- 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
-- 打擊感（M2.8，使用者追加）：所有敵人通用的 `EnemyHitFeedback`，打中時只讓敵人定格（卡肉）、抖動、閃白、噴火花、手把震動；招架/擊殺最重；數值在 `HitFeedback_Default` 資產調（EditMode 239/239；PlayMode 22/22）
-- 黑曜石神諭（M2.7，使用者追加）：`Enemy_ObsidianOracle`（頭像雕像，無骨架彈跳），5 招：震地、頭槌、滾動、跳砸、鐳射眼；全部可反彈（EditMode 233/233；PlayMode 19/19）
-- 招架（M2.6，使用者追加）：阿努比斯雙手持匕首，所有招式都能在擊中前 0.35 秒內用武器招架 → 整招取消、硬直 1.5 秒、受傷 ×1.5；刀尖光點提示招架時機（EditMode 214/214；PlayMode 17/17）
-- 阿努比斯（`Enemy_AnubisGuard`）有 5 招：快速揮擊、反手揮擊（鏡像）、重擊（起手停格 0.8 秒）、突進斬（Jump Attack 動畫）、三連斬；其他敵人各一招，時間沿用舊數值
-- 傷害橋接完成，含場景安裝器（Bridges）
-- 模型與動畫：所有敵人（基底 Enemy_Placeholder 與四個 Variant、場景的巡邏示範）都用 Anubis 模型 + AC_Anubis + EnemyAnimator；各自弱點掛在骨頭上（衛兵/基底：頭，木乃伊/法老：胸口，塞克邁特：背後）。各種敵人目前外觀相同，只有大小不同。
-- Git（2026-11-22）：攻擊名額已 commit 並 push 到 feature/enemy-ai，PR 頁面已開，**使用者還要按 Create pull request**
+> 2026-11-22 整理。舊的詳細條目在 `PROGRESS_ARCHIVE.md`（「2026-11-22 目前狀態快照」）。
+
+- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（OnGUI，只有桌面看得到）。
+- **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。
+- **法老 Boss**（`Enemy_Pharaoh`，450 HP，坐在王座不動）：背後半透明金色替身（`PharaohStand`，身體是佔位形狀）用**左右兩隻大手**出招，閒置的手回休息位：
+  - 掌拍（拍完卡地，打手 ×1.5 傳給法老）、連拍（第 2 階段起，左右輪流）、橫掃（往前後一步或蹲下）、頭部橫斬（只能蹲下）、擲武器（掌中召喚匕首，可打回去 35）、**雙手合擊**（前後一步可躲，合掌後兩手都能打）
+  - 換階段（60%、25%）大招**萬兵齊發**：12 隻手各握一把武器（`egyptian_weapons.glb`）每 0.75 秒丟 3 把，每把都能打回去（12），打回 60% 法老硬直 → **結界**（半徑 5 m，平常進不去）打開 12 秒：天花板吊下的**實體擺錘大鐮刀**（3 把）、本體受傷 ×2 → 結束時衝擊波把附近玩家淡黑閃現推回 12 m。小兵召喚關閉中。
+  - 材質：自寫 shader `Game4026/SpectralGlow`；繪製順序 手/武器 3000 → 替身身體 3010 → 結界 3020（避免手在身體後面消失）。
+- **其他敵人**：阿努比斯（5 招、雙持匕首可招架）、黑曜石神諭（5 招、鐳射可反彈）、翼人菁英（翼斬/俯衝/翼盾）；打擊感（慢動作 hit stop）、攻擊名額（一打多最多 2 個、只有視線內能出手）、遭遇戰敵人生成就追玩家（`Alert`）。
+- **VR 操作備忘（A 的 MeleeWeapon）**：沒有按鈕，抓著武器真的揮；刀刃 ≥ 1.2 m/s 算一次揮擊、最長 0.6 秒、慢到 0.45 m/s 才能再揮；同一揮擊對同一目標只算一次；刀刃判定半徑 3.5 cm → 飛行物 Collider 做大（0.35–0.6 m），大招一波一波來。
+- **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth` / 呼叫 `ResetHealth()`（合約沒有血量 API）；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
+- **測試**：EditMode 281/281、PlayMode 29/29。
+- **Git**：feature/enemy-ai，demo 與法老相關改動已 commit + push（2026-11-22），PR 頁面已開，**使用者要按 Create pull request**；A 的 `feature/vr-interaction` 由使用者自己 merge。
 - 下一步：
-  0. 使用者在 Museum_Demo 實際玩法老戰，調 `Enemy_Pharaoh` 上 `PharaohStand` 的 Settings（預警秒數、範圍、傷害、卡地秒數）與 `PharaohHand` 的 Damage Multiplier；VR 閃避方式使用者還要再想
-  0c. 使用者會放法老替身模型進來：換掉 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；攻擊的手是 `Enemy_Pharaoh/Hand/Model`
-  0d. **文物流程（使用者 2026-11-22 定的，等 A 合併後做）**：每波一隻精英，死掉時原地留下它的文物（A 的 RestorableArtifact），玩家放回展台（ArtifactDisplayTrigger → ArtifactEventBridge）後下一波才開始；三件都歸位 → 法老。生成點改成從對應展品出現（阿努比斯像 x=-24、Case_wMummy x=23、SphinxPharaoh x=11.5）。A 的 `MuseumEncounterPlan.zh-TW.md`（在 A 的分支）也是同樣的「三件文物各對應一隻被詛咒展品」
-  0a. Demo 收尾：HUD 是 OnGUI（只有桌面看得到），VR 要改成世界空間文字；等 A 合併 `feature/vr-interaction` 後在 Museum_Demo 換成 VR 玩家（PlayerTarget、DamageBridgeInstaller），A 的 `PlayerHealth` 沒有 ResetHealth，重來時不會補血（要跟 A 談一個玩家血量合約）
-  00. 使用者在 EnemyAI 場景放 3 隻阿努比斯看繞圈/輪流出招（繞圈還沒親眼確認過）
-  00b. 一打多後續：錯開出場 + 出場後一段時間不攻擊、蓄力音效（使用者找素材）、波次重排
-  0. 使用者在 EnemyAI 場景實際看阿努比斯 5 招的手感，調招式資產數值（冷卻、權重、預警、傷害）
-  0b. 新規格 M4：StatueLocomotion / StatuePart、EnemyProjectile（反彈）、WingShield、卡雕像與伊西斯（需要模型）
-  1. 確認 PR #3 建立並合併
-  2. 各種敵人換成自己的模型（木乃伊、塞克邁特、法老）；人形 Mixamo 模型可沿用 AC_Anubis 與 EnemyAnimator，只要在 Variant 裡換掉 Model
-  3. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測；確認 A 的武器 targetMask 包含敵人 Collider 的 Layer
-  4. 法老招式細節（PharaohBoss.OnPhaseEntered 的 TODO）、數值平衡（冷卻、前搖、血量）
-  5. 可選：身體 Collider 改成掛在骨頭上（現在是固定膠囊，不會跟著彎腰或倒地）；生成/死亡特效、音效
+  1. 使用者在 Museum_Demo 實玩法老戰並調數值（`Enemy_Pharaoh` → `PharaohStand` / `PharaohArena` 的 Settings、`PharaohHand` 的 Damage Multiplier）。合擊的「前後一步可躲」只有單元測試，Play Mode 沒驗到。
+  2. 使用者放法老替身模型：換 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；手是 `Hand/Model`、`HandL/Model`（XR Hands 範例的手）。
+  3. A 合併後接 VR：Museum_Demo 換成 A 的 XR 玩家（PlayerTarget 指定 head、DamageBridgeInstaller）；A 的武器 targetMask 要包含 Default（飛刀、結界的 Layer）；實測淡黑傳送/閃現推回；A 的 `PlayerHealth` 沒有 ResetHealth → 重來不會補血，要和 A 定玩家血量合約；HUD 改世界空間文字。
+  4. 文物流程（使用者定的，等 A 合併後做）：每波一隻精英，死掉時原地留下它的文物（A 的 RestorableArtifact），放回展台（ArtifactDisplayTrigger → ArtifactEventBridge）後才開下一波；三件都歸位 → 法老。生成點改成從對應展品出現（阿努比斯像 x=-24、Case_wMummy x=23、SphinxPharaoh x=11.5）。A 的 `MuseumEncounterPlan.zh-TW.md` 也是這個方向。
+  5. 打磨：替身招式/合擊/擺錘/結界音效、異空間燈光（現在紫燈讓地板看起來紫黑）、Bloom 要跟組員討論 Quest 效能。
+  6. 舊項目：一打多錯開出場與蓄力音效、阿努比斯 5 招手感調整、規格 M4（StatuePart、WingShield、卡雕像）、其他敵人換模型、身體 Collider 掛骨頭。
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
 > 2026-11-18（M1–M4）的決定在 `PROGRESS_ARCHIVE.md`。
 - 2026-11-22（法老）：使用者覺得展廳太擠，Boss 很難發揮 → 傳送到異空間（同一個博物館，但展示櫃全部消失）。我評估後用同場景遠處（y=-200）的建築複製品，不另開場景（不用改 Build Settings），傳送用淡黑避免暈。
 - 2026-11-22（法老）：法老本體不動，靠背後的半透明替身攻擊（使用者的想法，像替身那樣）；使用者選「拍地後卡住時打手」當主要輸出方式，招式選掌拍、橫掃、連拍。VR 舒適：預警範圍小（掌拍半徑 1.1 m、橫掃寬 1.6 m），一步或蹲下就能躲；預警時手掌立起面向玩家，不用抬頭也看得到。
+- 2026-11-22（法老）：使用者說第二隻手沒用 → 兩手都攻擊（StandMove.Clap 新增，同招不連續兩次）；使用者說走廊的半透明板不要。
+- 2026-11-22（法老）：使用者要擺錘是實體、更大、掛在天花板甩 → 吊點在執行時往上找天花板（博物館模型改了也會跟著），刀刃最低點固定 1.2 m（胸口高，要抓時機，不是蹲下）。
+- 2026-11-22（法老）：使用者覺得神之手拿武器動作一樣很僵硬 → 手指骨架握拳（XR Hands 骨架，關節繞本地 X 彎曲）、每隻手隨機化、依序出現、蓄力與跟進動作。武器握柄位置記在各飛刀 prefab 的 `WeaponGrip`（劍/Kopesh/彎刀的柄在 +Z，斧/單手斧/匕首在 −Z）。
+- 2026-11-22（法老）：使用者希望玩家不要太容易接近本體 → 結界 + 換階段才打開；推開用淡黑閃現（使用者選，避免暈）；擺錘鐮刀走廊只在換階段出現；換階段大招「萬兵齊發」可反彈（使用者想要「超爽反彈」）。武器模型用 `Assets/Models/Weapons/egyptian_weapons.glb`（使用者同意用武器資產；這個檔案 A 的分支沒搬動，引用安全）。
+- 2026-11-22（法老）：飛行物 Launch 時對玩家的 CharacterController IgnoreCollision（大武器的 Collider 會把玩家推走）；反彈命中走 `EnemyHealth.TakeProjectileDamage`（不受 0.3 秒受擊冷卻，一波 3 把都算）；反彈目標：弱點 → 最大的身體 Collider（排除結界/走廊牆）→ Eye。
+- 2026-11-22（法老）：Boss 房間地板的紫黑格子不是材質錯誤，是博物館的黑白磁磚被紫色燈照的（白燈下就是黑白格）。
+- 2026-11-22（法老）：使用者要「真的半透明、亮亮的、神聖」→ 自寫 URP shader（深度預寫讓身體像一個實心半透明體、菲涅耳邊光、光紋）。專案的 URP 資產（Performance URP Config）HDR 關、相機沒開後處理，所以沒有 Bloom，RealmVolume 其實也沒生效；這是共用設定，沒改。
 - 2026-11-22（法老）：手的 Collider 只在卡地時打開，並對玩家的 CharacterController IgnoreCollision（之前會把玩家頂高）；A 的近戰武器忽略 Trigger，所以用一般 Collider。
 - 2026-11-22（demo）：場景用 `Museum_New` 的複製品 `Museum_Demo`，避免和環境組衝突；只有一個展廳，分波次出怪，最後法老。玩家端先用 MockPlayer，等 A 合併後再接 VR。
 - 2026-11-22（demo）：博物館模型本身沒有 Collider，在 Museum_Demo 裡幫建築與展示櫃加 MeshCollider（玻璃碎片沒加），NavMesh 用 Physics Colliders 烘焙。可用展廳約 x∈[-31,31]、z∈[-12,12]，兩端 x≈±32 以外是牆和封閉壁龕。
@@ -73,6 +72,33 @@
 
 ## 紀錄
 > 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-22（雙手替身 + 合擊）
+- `PharaohStand` 改成「目前出招的手」（SetActiveHand / UseHand、FollowIdleHand、UsesBothHands）、左手欄位 leftHand / leftHandRest / leftHeldWeapon、合擊 ClapTelegraph/Strike/Stuck 與 Clap 設定（含 clapForward 讓兩手在玩家前方等待）、LeftHand / ActiveHand 屬性；`StandMoveSelector` 權重加 Clap；`StandGeometry.ClapHits`。
+- 資產：`Enemy_Pharaoh/HandL`（LeftHand.fbx ×13、HandPose、PharaohHand、BoxCollider、HeldWeapon）、`Stand/HandRestL`；移除 Stand/Body/LeftHand 裝飾手與 Arena/Corridor；新增 `M_SpectralBody`（queue 3010），M_SpectralBarrier queue 3020。
+- EditMode 281/281（新增合擊 2 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（實體擺錘 + 神之手動作）
+- 新增 `HandPose`（Boss/）、`WeaponGrip`（Combat/）；`PharaohArena.HangPendulums`（找天花板、算臂長）、擺錘設定改成 bladeBottomHeight / ceilingMargin / fallbackArm、命中沿刀刃擺動方向；`PharaohStand`：PoseBarrageSlot（隨機化、出現順序、握持、蓄力 WindUpFor、丟出後跟進淡出）、MainHandCurl、新設定 barrageWindUp / barrageHandSize。
+- 資產：`M_PendulumBronze`；Pendulum_0~2 重建（Mount、Arm、Blade/Hub/Orient + 實體 Kopesh 4.5 m）；HandPose 加到 Hand/Model、Stand/Body/LeftHand、Stand/BarrageHand；6 個 Projectile_Barrage* 加 WeaponGrip。
+- EditMode 279/279、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（結界 + 鐮刀走廊 + 萬兵齊發）
+- 新增 `PharaohArena`（結界、Open/Close、走廊與擺錘、衝擊波閃現推回）、`ArenaBarrier`（吸收打在結界/走廊牆的攻擊）、`BossMechanics.cs`（PendulumMath、BarragePlan）、`PlayerRig`（MoveTo / Blink，DemoFlow 也改用它）；`ScreenFader.Current`。
+- `PharaohStand`：Barrage 步驟（BarrageSummon/Waves/After）、換階段排入大招、結界打開時暫停出招、`QueueUltimate()`；`EnemyProjectile`：`ShowHeld()`、Launch 忽略玩家碰撞、反彈目標排除 ArenaBarrier；`EnemyHealth.TakeProjectileDamage`、`EnemyHealthModel.TryApplyDamage(..., ignoreHitCooldown)`；`EnemyProjectilePool.MaxActive` 8 → 24；`ProjectileSpin` 只在飛行中旋轉；`SpectralGlow` 加 Solid Look（深度預寫）開關；`DemoDebugKeys` 加 U；DemoFlow 結界打開時提示 "The barrier is down! Strike the Pharaoh!"。
+- 資產：`Projectile_Barrage{Sword,Khopesh,Axe,Sabre,HandAxe,Dagger}`、`M_SpectralBarrier`；`Enemy_Pharaoh` 加 Barrier、Arena（Corridor、Pendulum_0~2、ShockRing）、Stand/BarrageHand 樣板、PharaohArena；Phases 的 StartMinions 全關。
+- EditMode 279/279（新增 BossMechanics 4 個、受擊冷卻 1 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（擲武器）
+- `StandMove.WeaponThrow`、`StandMoveSelector.ThrowCount`；權重改成 Slam/Sweep/HeadSlash/WeaponThrow/Combo；`PharaohStand` 加 Summon/WindUp 步驟、Weapon throw 設定、`heldWeapon` / `weaponPrefab`。
+- 新增 `ProjectileSpin`（Combat/）、`Projectile_SpectralDagger` prefab（dagger_low_poly.glb ×0.45、M_SpectralGold、膠囊 Collider 讓武器打得到）；`Enemy_Pharaoh/Hand/HeldWeapon`；手與左手 ×13。
+- `EnemyProjectile.FindReflectTarget`：弱點 → 最大的啟用中實心 Collider → Eye。
+- EditMode 274/274（新增 4 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（頭部橫斬 + SpectralGlow）
+- `StandMove.HeadSlash`、`StandGeometry.LaneHits`、`SweepLane` 加 `angleTowardBoss`；選招權重改成 Slam/Sweep/HeadSlash/Combo，同一種側面攻擊不連續兩次；`PharaohStand` Settings 加 Head slash 區塊與 `sideLaneAngle`（50°）。
+- 新增 `Prefabs/Enemies/Materials/Shaders/SpectralGlow.shader`（支援 single-pass instanced），`M_SpectralGold` 改用它。
+- EditMode 270/270（新增 2 個）、PlayMode 29/29。尚未 commit。
 
 ### 2026-11-22（測試捷徑 + 英文 UI）
 - `DemoFlowModel.SkipToBoss`、`DemoFlow.SkipToBoss` / `startAtBoss`（清掉展廳但不算擊殺，直接 BossIntro → 傳送）；新增 `DemoDebugKeys`（Debug/，B 鍵，左下角提示）；DemoFlow 的 HUD 文字改英文。
