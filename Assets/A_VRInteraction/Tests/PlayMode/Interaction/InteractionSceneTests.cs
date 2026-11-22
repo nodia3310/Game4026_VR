@@ -11,6 +11,7 @@ using Game4026.Interaction.Grabbing;
 using Game4026.Interaction.Melee;
 using Game4026.Interaction.Ranged;
 using Game4026.Interaction.TestScene;
+using Game4026.PlayerCombat;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -122,7 +123,7 @@ namespace Game4026.Tests.Interaction
             }
             var bow = Object.FindAnyObjectByType<BowDrawAim>();
             var xrRig = Field<GameObject>(desktop, "xrRig");
-            Assert.That(xrRig.GetComponent<PlayerTarget>().Head, Is.SameAs(Field<Camera>(desktop, "xrCamera").transform));
+            Assert.That(xrRig.GetComponentInChildren<TrackedPlayerHurtbox>(true), Is.Not.Null);
             Assert.That(PlayerTarget.Current.Head, Is.SameAs(desktop.DesktopCamera.transform));
             var nearCasters = xrRig.GetComponentsInChildren<Component>(true)
                 .Where(c => c && c.GetType().Name == "SphereInteractionCaster").ToArray();
@@ -491,35 +492,6 @@ namespace Game4026.Tests.Interaction
         }
 
         [UnityTest]
-        public IEnumerator Anubis_AuthoredAttackDamagesTheXRPlayersHealth()
-        {
-            var enemy = FindAnubis(out _);
-            var xrRig = Field<GameObject>(desktop, "xrRig");
-            var xrTarget = xrRig.GetComponent<PlayerTarget>();
-            var playerHealth = xrRig.GetComponent<PlayerHealth>();
-            Assert.That(playerHealth.CurrentHealth, Is.EqualTo(100f));
-
-            // Disable the desktop adapter to drive the authored XR target and receiver directly.
-            desktop.enabled = false;
-            yield return null;
-            Assert.That(PlayerTarget.Current, Is.SameAs(xrTarget));
-            Assert.That(xrTarget.Damageable, Is.SameAs(playerHealth));
-            xrTarget.Head.position = enemy.transform.position + enemy.transform.forward * 1.25f + Vector3.up * 1.4f;
-            Assert.That(xrTarget.Body, Is.SameAs(xrTarget.Head));
-            var attack = enemy.GetComponent<EnemyAttack>();
-            var slash = enemy.Data.Attacks.Single(move => move.name == "Anubis_QuickSlash");
-            int confirmedHits = 0;
-            attack.AttackResolved += (_, _, hit) => confirmedHits += hit ? 1 : 0;
-            Assert.That(attack.Begin(enemy.Data, Time.time, slash), Is.True);
-            for (int i = 0; i < 120 && attack.Tick(Time.time, Time.fixedDeltaTime, xrTarget); i++)
-                yield return new WaitForFixedUpdate();
-
-            Assert.That(confirmedHits, Is.EqualTo(1));
-            Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth - slash.Damage));
-            TestContext.WriteLine($"Anubis Quick Slash reduced XR player health to {playerHealth.CurrentHealth:F0} HP.");
-        }
-
-        [UnityTest]
         public IEnumerator Anubis_PhysicalArrowHitsTheWeakPoint_AndCooldownBlocksAnImmediateSecondHit()
         {
             yield return Settle();
@@ -690,10 +662,136 @@ namespace Game4026.Tests.Interaction
         }
 
         [UnityTest]
-        public IEnumerator Axe_PhysicalThrowReboundsToMovingHand_RequiresNewGripPress()
+        public IEnumerator Axe_PhysicalThrowAutoCatchesAndCanBeThrownAgain()
         {
             var weapon = Object.FindAnyObjectByType<ReboundingWeapon>();
             var axe = weapon.GetComponent<PhysicalGrabbable>();
+            var hand = CreateAxeThrowHand();
+
+            var start = new Vector3(0f, 1.65f, 3.5f);
+            yield return GrabAxeWithGrip(hand, axe, start);
+
+            Collider hit = null;
+            bool? caught = null;
+            weapon.Rebounded += collider => hit = collider;
+            weapon.ReturnEnded += result => caught = result;
+            yield return SwingAndReleaseAxe(hand);
+            for (int i = 0; i < 55 && hit == null; i++) yield return new WaitForFixedUpdate();
+            Assert.That(hit, Is.Not.Null, "XRI release velocity should send the axe into a solid collider.");
+            Assert.That(hit.GetComponentInParent<MeleeHitTarget>()?.name, Is.EqualTo("Range compound target"));
+
+            Assert.That(hand.interactionManager.IsSelectPossible(desktop.LeftHand, axe.Grab), Is.False);
+            hand.transform.position += Vector3.right * .35f;
+            float impactHeight = axe.Body.position.y;
+            float apex = impactHeight;
+            for (int i = 0; i < 65 && !caught.HasValue; i++)
+            {
+                yield return new WaitForFixedUpdate();
+                apex = Mathf.Max(apex, axe.Body.position.y);
+            }
+            Assert.That(apex - impactHeight, Is.GreaterThan(.4f));
+            Assert.That(caught, Is.True);
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+            Assert.That(axe.Body.detectCollisions, Is.True);
+            Assert.That(axe.Body.isKinematic, Is.False);
+            yield return Settle();
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True, "A catch stays held while the physical Grip remains up.");
+            Assert.That(Vector3.Distance(axe.Grab.attachTransform.position, hand.transform.position), Is.LessThan(.1f));
+            Assert.That(hand.interactionManager.IsSelectPossible(desktop.LeftHand, axe.Grab), Is.False);
+
+            hand.transform.position = start;
+            yield return Settle(20);
+            hand.selectInput.QueueManualState(true, 1f);
+            yield return Settle(3);
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True, "Taking over with Grip keeps the same selection.");
+
+            hit = null;
+            caught = null;
+            yield return SwingAndReleaseAxe(hand);
+            for (int i = 0; i < 55 && hit == null; i++) yield return new WaitForFixedUpdate();
+            Assert.That(hit, Is.Not.Null, "The same hand should be able to throw and rebound the axe again.");
+            Assert.That(hit.GetComponentInParent<MeleeHitTarget>()?.name, Is.EqualTo("Range compound target"));
+
+            for (int i = 0; i < 65 && !caught.HasValue; i++) yield return new WaitForFixedUpdate();
+            Assert.That(caught, Is.True);
+            yield return Settle();
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+
+            // The scene can reset a held axe through XRI cancellation without leaving Grip overridden.
+            hand.interactionManager.SelectCancel((IXRSelectInteractor)hand, axe.Grab);
+            Assert.That(hand.selectInput.bypass, Is.Null);
+            Assert.That(hand.hasSelection, Is.False);
+            Assert.That(weapon.IsInFlight, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Axe_GripHeldBeforeReturnCanReleaseTheCaughtAxe()
+        {
+            var weapon = Object.FindAnyObjectByType<ReboundingWeapon>();
+            var axe = weapon.GetComponent<PhysicalGrabbable>();
+            var hand = CreateAxeThrowHand();
+            yield return GrabAxeWithGrip(hand, axe, new Vector3(0f, 1.65f, 3.5f));
+
+            bool rebounded = false;
+            bool? caught = null;
+            weapon.Rebounded += _ => rebounded = true;
+            weapon.ReturnEnded += result => caught = result;
+            yield return SwingAndReleaseAxe(hand);
+            for (int i = 0; i < 55 && !rebounded; i++) yield return new WaitForFixedUpdate();
+            Assert.That(rebounded, Is.True);
+            hand.selectInput.QueueManualState(true, 1f);
+
+            for (int i = 0; i < 80 && !caught.HasValue; i++) yield return new WaitForFixedUpdate();
+            Assert.That(caught, Is.True);
+            yield return Settle(15);
+            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+            Assert.That(hand.selectInput.bypass, Is.Null);
+
+            hand.selectInput.QueueManualState(false, 0f);
+            yield return Settle(5);
+            Assert.That(axe.IsHeld, Is.False);
+            Assert.That(weapon.IsInFlight, Is.False, "A stationary release is a drop.");
+        }
+
+        [UnityTest]
+        public IEnumerator Axe_ReturnDropsWhenTheThrowingHandIsHoldingAnotherItem()
+        {
+            var weapon = Object.FindAnyObjectByType<ReboundingWeapon>();
+            var axe = weapon.GetComponent<PhysicalGrabbable>();
+            var hand = CreateAxeThrowHand();
+            yield return GrabAxeWithGrip(hand, axe, new Vector3(0f, 1.65f, 3.5f));
+
+            bool rebounded = false;
+            bool? caught = null;
+            var releasedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
+            weapon.Rebounded += _ => rebounded = true;
+            weapon.ReturnEnded += result => caught = result;
+            yield return SwingAndReleaseAxe(hand);
+            for (int i = 0; i < 55 && !rebounded; i++) yield return new WaitForFixedUpdate();
+            Assert.That(rebounded, Is.True);
+
+            var other = new GameObject("Another grabbable");
+            other.transform.position = hand.transform.position;
+            other.AddComponent<SphereCollider>().isTrigger = true;
+            var selection = other.AddComponent<XRSimpleInteractable>();
+            hand.selectInput.QueueManualState(true, 1f);
+            yield return null;
+            hand.interactionManager.SelectEnter((IXRSelectInteractor)hand, selection);
+            Assert.That(hand.IsSelecting(selection), Is.True);
+
+            for (int i = 0; i < 80 && !caught.HasValue; i++) yield return new WaitForFixedUpdate();
+            Assert.That(caught, Is.False);
+            Assert.That(hand.IsSelecting(selection), Is.True);
+            Assert.That(axe.IsHeld, Is.False);
+            Assert.That(axe.Body.isKinematic, Is.False);
+            Assert.That(axe.Body.detectCollisions, Is.True);
+            Assert.That(axe.Body.collisionDetectionMode, Is.EqualTo(releasedCollisionMode));
+            Assert.That(hand.selectInput.bypass, Is.Null);
+            Assert.That(weapon.IsInFlight, Is.False);
+        }
+
+        private static XRDirectInteractor CreateAxeThrowHand()
+        {
             var handObject = new GameObject("Simulated XR controller");
             var volume = handObject.AddComponent<SphereCollider>();
             volume.isTrigger = true;
@@ -701,53 +799,27 @@ namespace Game4026.Tests.Interaction
             var hand = handObject.AddComponent<XRDirectInteractor>();
             hand.handedness = InteractorHandedness.Right;
             hand.selectInput.inputSourceMode = XRInputButtonReader.InputSourceMode.ManualValue;
+            return hand;
+        }
 
-            var start = new Vector3(0f, 1.65f, 3.5f);
-            Pose(axe, start);
-            hand.transform.position = start;
+        private static IEnumerator GrabAxeWithGrip(XRDirectInteractor hand, PhysicalGrabbable axe, Vector3 position)
+        {
+            Pose(axe, position);
+            hand.transform.position = position;
             hand.selectInput.QueueManualState(true, 1f);
             hand.interactionManager.SelectEnter((IXRSelectInteractor)hand, axe.Grab);
             yield return Settle();
             Assert.That(hand.IsSelecting(axe.Grab), Is.True);
+        }
 
-            Collider hit = null;
-            bool canCatch = false;
-            weapon.Rebounded += collider => hit = collider;
-            weapon.CatchWindowOpened += () => canCatch = true;
+        private static IEnumerator SwingAndReleaseAxe(XRDirectInteractor hand)
+        {
             for (int i = 0; i < 10; i++)
             {
                 hand.transform.position += Vector3.forward * .14f;
                 yield return new WaitForFixedUpdate();
             }
             hand.selectInput.QueueManualState(false, 0f);
-            for (int i = 0; i < 55 && hit == null; i++) yield return new WaitForFixedUpdate();
-            Assert.That(hit, Is.Not.Null, "XRI release velocity should send the axe into a solid collider.");
-            Assert.That(hit.GetComponentInParent<MeleeHitTarget>()?.name, Is.EqualTo("Range compound target"));
-
-            Assert.That(desktop.LeftHand.TryGrab(axe.Grab), Is.False);
-            hand.transform.position += Vector3.right * .35f;
-            hand.selectInput.QueueManualState(true, 1f);
-            float impactHeight = axe.Body.position.y;
-            float apex = impactHeight;
-            for (int i = 0; i < 45 && !canCatch; i++)
-            {
-                yield return new WaitForFixedUpdate();
-                apex = Mathf.Max(apex, axe.Body.position.y);
-            }
-            Assert.That(apex - impactHeight, Is.GreaterThan(.4f));
-            Assert.That(canCatch, Is.True);
-            Assert.That(axe.IsHeld, Is.False, "Holding Grip from an early press cannot catch the axe.");
-
-            hand.selectInput.QueueManualState(false, 0f);
-            yield return null;
-            hand.selectInput.QueueManualState(true, 1f);
-            yield return null;
-            yield return null;
-            Assert.That(hand.IsSelecting(axe.Grab), Is.True);
-            Assert.That(axe.Body.detectCollisions, Is.True);
-            Assert.That(axe.Body.isKinematic, Is.False);
-            yield return Settle();
-            Assert.That(Vector3.Distance(axe.Grab.attachTransform.position, hand.transform.position), Is.LessThan(.1f));
         }
 
         [UnityTest]
