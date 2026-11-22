@@ -15,6 +15,8 @@ namespace Game4026.Enemy
         float TimeSinceTargetSeen { get; }
         /// <summary>Chase gives up after this long without line of sight (spec: 5 s).</summary>
         float LoseSightSeconds { get; }
+        /// <summary>Encounter enemies know where the player is: they chase at any distance and never lose the target.</summary>
+        bool IsAlerted { get; }
 
         // Movement
         bool HasPatrolPoints { get; }

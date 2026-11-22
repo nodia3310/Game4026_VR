@@ -22,6 +22,8 @@ namespace Game4026.Enemy
         [Tooltip("Optional patrol route given to every spawned enemy.")]
         [SerializeField] private Transform[] patrolPoints = new Transform[0];
         [SerializeField] private EnemyPoolManager pool;
+        [Tooltip("Spawned enemies chase the player right away, at any distance, and never lose them.")]
+        [SerializeField] private bool alertOnSpawn = true;
 
         private readonly List<EnemyController> alive = new List<EnemyController>(8);
         private readonly List<EnemyController> tracked = new List<EnemyController>(8);
@@ -39,6 +41,19 @@ namespace Game4026.Enemy
         public int KillCount { get; private set; }
         public int SpawnedCount { get; private set; }
         public int MaxAlive => maxAlive;
+
+        /// <summary>Enemies across every wave (for progress HUDs).</summary>
+        public int TotalEnemies
+        {
+            get
+            {
+                int total = 0;
+                for (int i = 0; i < waves.Length; i++)
+                    if (waves[i] != null)
+                        total += waves[i].TotalCount;
+                return total;
+            }
+        }
 
         private void Awake()
         {
@@ -128,6 +143,8 @@ namespace Game4026.Enemy
                 else if (TryPickSpawn(out Vector3 position, out Quaternion rotation))
                 {
                     EnemyController enemy = pool.Spawn(prefab, position, rotation);
+                    if (enemy != null && alertOnSpawn)
+                        enemy.Alert();
                     Track(enemy);
                     schedule.Consume(now);
                 }

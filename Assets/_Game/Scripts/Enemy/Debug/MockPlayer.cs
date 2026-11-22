@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Game4026.Enemy.DebugTools
 {
     /// <summary>
-    /// Desktop stand-in for the VR player (spec 4.8). WASD to move, hold right mouse to look.
+    /// Desktop stand-in for the VR player (spec 4.8). WASD to move, hold right mouse to look, hold C to crouch.
     /// Receives enemy attacks through <see cref="IPlayerDamageReceiver"/> and shows remaining health.
     /// </summary>
     [DisallowMultipleComponent]
@@ -19,9 +19,12 @@ namespace Game4026.Enemy.DebugTools
         [SerializeField, Min(0f)] private float lookSensitivity = 0.15f;
         [SerializeField, Min(1f)] private float maxHealth = 100f;
         [SerializeField] private bool showHud = true;
+        [Tooltip("Head drops this much while C is held (ducking under the pharaoh's sweep).")]
+        [SerializeField, Min(0f)] private float crouchDrop = 0.6f;
 
         private CharacterController controller;
         private float pitch;
+        private float standingHeadY = float.NaN;
         private string hudText;
 
         public float MaxHealth => maxHealth;
@@ -48,6 +51,16 @@ namespace Game4026.Enemy.DebugTools
                 if (move.sqrMagnitude > 1f)
                     move.Normalize();
                 controller.SimpleMove(move * moveSpeed);
+
+                if (head != null)
+                {
+                    if (float.IsNaN(standingHeadY))
+                        standingHeadY = head.localPosition.y;
+                    Vector3 local = head.localPosition;
+                    float wanted = standingHeadY - (keyboard.cKey.isPressed ? crouchDrop : 0f);
+                    local.y = Mathf.MoveTowards(local.y, wanted, Time.deltaTime * 4f);
+                    head.localPosition = local;
+                }
             }
 
             Mouse mouse = Mouse.current;
@@ -93,7 +106,7 @@ namespace Game4026.Enemy.DebugTools
         }
 
         private void UpdateHud() =>
-            hudText = $"MockPlayer HP {CurrentHealth:0}/{maxHealth:0}   hits {HitsTaken}\nWASD move · hold RMB look · LMB attack";
+            hudText = $"MockPlayer HP {CurrentHealth:0}/{maxHealth:0}   hits {HitsTaken}\nWASD move · hold RMB look · LMB attack · F parry · C crouch";
 
         private void OnGUI()
         {

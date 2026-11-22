@@ -195,6 +195,34 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void Alerted_Idle_ChasesFarPlayerWithoutLineOfSight()
+        {
+            ctx.IsAlerted = true;
+            ctx.HasTarget = true;
+            ctx.CanSeeTarget = false;
+            ctx.DistanceToTarget = 30f;
+            StartIn(EnemyStateId.Idle);
+            ctx.Run(0.02f);
+            Assert.AreEqual(EnemyStateId.Chase, ctx.State);
+        }
+
+        [Test]
+        public void Alerted_Chase_NeverLosesTarget()
+        {
+            ctx.IsAlerted = true;
+            SeePlayerAt(30f);
+            ctx.CanSeeTarget = false;
+            ctx.TimeSinceTargetSeen = 20f;
+            StartIn(EnemyStateId.Chase);
+            ctx.Run(0.5f);
+            Assert.AreEqual(EnemyStateId.Chase, ctx.State);
+
+            ctx.HasTarget = false;
+            ctx.Run(0.02f);
+            Assert.AreEqual(EnemyStateId.Idle, ctx.State);
+        }
+
+        [Test]
         public void Chase_NoSightForMoreThanFiveSeconds_ReturnsToPatrol()
         {
             ctx.HasPatrolPoints = true;

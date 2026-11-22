@@ -3,35 +3,44 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
-- **攻擊名額（M2.10，使用者追加）**：一打多時同時最多 2 個名額（翼人佔 2），只有玩家視線前方 ±70° 的敵人能出招，其他在 3.5 m 外繞圈等；設定在場景的 `AttackCoordinator`（EditMode 251/251；PlayMode 29/29）
-- **翼人（M2.9，使用者追加）**：`Enemy_Birdman`（使用者的 birdman.fbx，就是規格裡的有翼女神伊西斯，菁英 220 HP），懸浮移動（`HoverLocomotion`），3 招：翼斬（左右輪流，左翼是腳本翻轉的動畫）、俯衝、翼盾（`EnemyGuard`：擋正面、擋 2 下反擊、重擊破盾、被打會舉盾）。打擊感的 hit stop 改成極慢動作並緩出（EditMode 244/244；PlayMode 26/26）
-- 規格：2026-11-21 起以合併後的 `Docs/ENEMY_SYSTEM_SPEC.md` 為準（來自使用者的 `ENEMY_SYSTEM_SPEC_Edited.md`，名稱與合約改回現行的 `_Game` / `Game4026.*`）
-- 里程碑：M1–M3、**M2.5（阿努比斯多招式）完成**；新規格的 M4（雕像移動、投射物反彈、WingShield、新敵人名單）還沒做（EditMode 201/201；PlayMode 16/16）
-- 打擊感（M2.8，使用者追加）：所有敵人通用的 `EnemyHitFeedback`，打中時只讓敵人定格（卡肉）、抖動、閃白、噴火花、手把震動；招架/擊殺最重；數值在 `HitFeedback_Default` 資產調（EditMode 239/239；PlayMode 22/22）
-- 黑曜石神諭（M2.7，使用者追加）：`Enemy_ObsidianOracle`（頭像雕像，無骨架彈跳），5 招：震地、頭槌、滾動、跳砸、鐳射眼；全部可反彈（EditMode 233/233；PlayMode 19/19）
-- 招架（M2.6，使用者追加）：阿努比斯雙手持匕首，所有招式都能在擊中前 0.35 秒內用武器招架 → 整招取消、硬直 1.5 秒、受傷 ×1.5；刀尖光點提示招架時機（EditMode 214/214；PlayMode 17/17）
-- 阿努比斯（`Enemy_AnubisGuard`）有 5 招：快速揮擊、反手揮擊（鏡像）、重擊（起手停格 0.8 秒）、突進斬（Jump Attack 動畫）、三連斬；其他敵人各一招，時間沿用舊數值
-- 傷害橋接完成，含場景安裝器（Bridges）
-- 模型與動畫：所有敵人（基底 Enemy_Placeholder 與四個 Variant、場景的巡邏示範）都用 Anubis 模型 + AC_Anubis + EnemyAnimator；各自弱點掛在骨頭上（衛兵/基底：頭，木乃伊/法老：胸口，塞克邁特：背後）。各種敵人目前外觀相同，只有大小不同。
-- Git（2026-11-18 收工時）：
-  - PR #2（M1–M4）**已合進 main**（`29246a2`）
-  - 模型與動畫已 commit 並 push（`6111b70`，模型/貼圖走 Git LFS）。PR #3 頁面已在瀏覽器開好（main ← feature/enemy-ai，不刪任何檔案），**使用者還要按 Create pull request**；下次先確認 PR #3 是否建立/合併
-  - 沒有 gh CLI：開 PR 用預先填好的 GitHub compare 網址；查 PR 狀態可用 `https://api.github.com/repos/nodia3310/Game4026_VR/pulls?head=nodia3310:feature/enemy-ai&state=all`
-  - `ProfilerCaptures/` 是 M4 的 Profiler 錄檔，沒進 git，可以刪
-- Git（2026-11-22）：攻擊名額已 commit 並 push 到 feature/enemy-ai，PR 頁面已開，**使用者還要按 Create pull request**
+> 2026-11-22 整理。舊的詳細條目在 `PROGRESS_ARCHIVE.md`（「2026-11-22 目前狀態快照」）。
+
+- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（OnGUI，只有桌面看得到）。
+- **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。
+- **法老 Boss**（`Enemy_Pharaoh`，450 HP，坐在王座不動）：背後半透明金色替身（`PharaohStand`，身體是佔位形狀）用**左右兩隻大手**出招，閒置的手回休息位：
+  - 掌拍（拍完卡地，打手 ×1.5 傳給法老）、連拍（第 2 階段起，左右輪流）、橫掃（往前後一步或蹲下）、頭部橫斬（只能蹲下）、擲武器（掌中召喚匕首，可打回去 35）、**雙手合擊**（前後一步可躲，合掌後兩手都能打）
+  - 換階段（60%、25%）大招**萬兵齊發**：12 隻手各握一把武器（`egyptian_weapons.glb`）每 0.75 秒丟 3 把，每把都能打回去（12），打回 60% 法老硬直 → **結界**（半徑 5 m，平常進不去）打開 12 秒：天花板吊下的**實體擺錘大鐮刀**（3 把）、本體受傷 ×2 → 結束時衝擊波把附近玩家淡黑閃現推回 12 m。小兵召喚關閉中。
+  - 材質：自寫 shader `Game4026/SpectralGlow`；繪製順序 手/武器 3000 → 替身身體 3010 → 結界 3020（避免手在身體後面消失）。
+- **其他敵人**：阿努比斯（5 招、雙持匕首可招架）、黑曜石神諭（5 招、鐳射可反彈）、翼人菁英（翼斬/俯衝/翼盾）；打擊感（慢動作 hit stop）、攻擊名額（一打多最多 2 個、只有視線內能出手）、遭遇戰敵人生成就追玩家（`Alert`）。
+- **VR 操作備忘（A 的 MeleeWeapon）**：沒有按鈕，抓著武器真的揮；刀刃 ≥ 1.2 m/s 算一次揮擊、最長 0.6 秒、慢到 0.45 m/s 才能再揮；同一揮擊對同一目標只算一次；刀刃判定半徑 3.5 cm → 飛行物 Collider 做大（0.35–0.6 m），大招一波一波來。
+- **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth` / 呼叫 `ResetHealth()`（合約沒有血量 API）；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
+- **測試**：EditMode 281/281、PlayMode 29/29。
+- **Git**：feature/enemy-ai，demo 與法老相關改動已 commit + push（2026-11-22），PR 頁面已開，**使用者要按 Create pull request**；A 的 `feature/vr-interaction` 由使用者自己 merge。
 - 下一步：
-  00. 使用者在 EnemyAI 場景放 3 隻阿努比斯看繞圈/輪流出招（繞圈還沒親眼確認過）
-  00b. 一打多後續：錯開出場 + 出場後一段時間不攻擊、蓄力音效（使用者找素材）、波次重排
-  0. 使用者在 EnemyAI 場景實際看阿努比斯 5 招的手感，調招式資產數值（冷卻、權重、預警、傷害）
-  0b. 新規格 M4：StatueLocomotion / StatuePart、EnemyProjectile（反彈）、WingShield、卡雕像與伊西斯（需要模型）
-  1. 確認 PR #3 建立並合併
-  2. 各種敵人換成自己的模型（木乃伊、塞克邁特、法老）；人形 Mixamo 模型可沿用 AC_Anubis 與 EnemyAnimator，只要在 Variant 裡換掉 Model
-  3. 和 A 整合：在 A 的場景放 PlayerTarget（務必指定 head）、DamageBridgeInstaller、EncounterDirector + ArtifactEventBridge，戴頭盔實測；確認 A 的武器 targetMask 包含敵人 Collider 的 Layer
-  4. 法老招式細節（PharaohBoss.OnPhaseEntered 的 TODO）、數值平衡（冷卻、前搖、血量）
-  5. 可選：身體 Collider 改成掛在骨頭上（現在是固定膠囊，不會跟著彎腰或倒地）；生成/死亡特效、音效
+  1. 使用者在 Museum_Demo 實玩法老戰並調數值（`Enemy_Pharaoh` → `PharaohStand` / `PharaohArena` 的 Settings、`PharaohHand` 的 Damage Multiplier）。合擊的「前後一步可躲」只有單元測試，Play Mode 沒驗到。
+  2. 使用者放法老替身模型：換 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；手是 `Hand/Model`、`HandL/Model`（XR Hands 範例的手）。
+  3. A 合併後接 VR：Museum_Demo 換成 A 的 XR 玩家（PlayerTarget 指定 head、DamageBridgeInstaller）；A 的武器 targetMask 要包含 Default（飛刀、結界的 Layer）；實測淡黑傳送/閃現推回；A 的 `PlayerHealth` 沒有 ResetHealth → 重來不會補血，要和 A 定玩家血量合約；HUD 改世界空間文字。
+  4. 文物流程（使用者定的，等 A 合併後做）：每波一隻精英，死掉時原地留下它的文物（A 的 RestorableArtifact），放回展台（ArtifactDisplayTrigger → ArtifactEventBridge）後才開下一波；三件都歸位 → 法老。生成點改成從對應展品出現（阿努比斯像 x=-24、Case_wMummy x=23、SphinxPharaoh x=11.5）。A 的 `MuseumEncounterPlan.zh-TW.md` 也是這個方向。
+  5. 打磨：替身招式/合擊/擺錘/結界音效、異空間燈光（現在紫燈讓地板看起來紫黑）、Bloom 要跟組員討論 Quest 效能。
+  6. 舊項目：一打多錯開出場與蓄力音效、阿努比斯 5 招手感調整、規格 M4（StatuePart、WingShield、卡雕像）、其他敵人換模型、身體 Collider 掛骨頭。
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
+> 2026-11-18（M1–M4）的決定在 `PROGRESS_ARCHIVE.md`。
+- 2026-11-22（法老）：使用者覺得展廳太擠，Boss 很難發揮 → 傳送到異空間（同一個博物館，但展示櫃全部消失）。我評估後用同場景遠處（y=-200）的建築複製品，不另開場景（不用改 Build Settings），傳送用淡黑避免暈。
+- 2026-11-22（法老）：法老本體不動，靠背後的半透明替身攻擊（使用者的想法，像替身那樣）；使用者選「拍地後卡住時打手」當主要輸出方式，招式選掌拍、橫掃、連拍。VR 舒適：預警範圍小（掌拍半徑 1.1 m、橫掃寬 1.6 m），一步或蹲下就能躲；預警時手掌立起面向玩家，不用抬頭也看得到。
+- 2026-11-22（法老）：使用者說第二隻手沒用 → 兩手都攻擊（StandMove.Clap 新增，同招不連續兩次）；使用者說走廊的半透明板不要。
+- 2026-11-22（法老）：使用者要擺錘是實體、更大、掛在天花板甩 → 吊點在執行時往上找天花板（博物館模型改了也會跟著），刀刃最低點固定 1.2 m（胸口高，要抓時機，不是蹲下）。
+- 2026-11-22（法老）：使用者覺得神之手拿武器動作一樣很僵硬 → 手指骨架握拳（XR Hands 骨架，關節繞本地 X 彎曲）、每隻手隨機化、依序出現、蓄力與跟進動作。武器握柄位置記在各飛刀 prefab 的 `WeaponGrip`（劍/Kopesh/彎刀的柄在 +Z，斧/單手斧/匕首在 −Z）。
+- 2026-11-22（法老）：使用者希望玩家不要太容易接近本體 → 結界 + 換階段才打開；推開用淡黑閃現（使用者選，避免暈）；擺錘鐮刀走廊只在換階段出現；換階段大招「萬兵齊發」可反彈（使用者想要「超爽反彈」）。武器模型用 `Assets/Models/Weapons/egyptian_weapons.glb`（使用者同意用武器資產；這個檔案 A 的分支沒搬動，引用安全）。
+- 2026-11-22（法老）：飛行物 Launch 時對玩家的 CharacterController IgnoreCollision（大武器的 Collider 會把玩家推走）；反彈命中走 `EnemyHealth.TakeProjectileDamage`（不受 0.3 秒受擊冷卻，一波 3 把都算）；反彈目標：弱點 → 最大的身體 Collider（排除結界/走廊牆）→ Eye。
+- 2026-11-22（法老）：Boss 房間地板的紫黑格子不是材質錯誤，是博物館的黑白磁磚被紫色燈照的（白燈下就是黑白格）。
+- 2026-11-22（法老）：使用者要「真的半透明、亮亮的、神聖」→ 自寫 URP shader（深度預寫讓身體像一個實心半透明體、菲涅耳邊光、光紋）。專案的 URP 資產（Performance URP Config）HDR 關、相機沒開後處理，所以沒有 Bloom，RealmVolume 其實也沒生效；這是共用設定，沒改。
+- 2026-11-22（法老）：手的 Collider 只在卡地時打開，並對玩家的 CharacterController IgnoreCollision（之前會把玩家頂高）；A 的近戰武器忽略 Trigger，所以用一般 Collider。
+- 2026-11-22（demo）：場景用 `Museum_New` 的複製品 `Museum_Demo`，避免和環境組衝突；只有一個展廳，分波次出怪，最後法老。玩家端先用 MockPlayer，等 A 合併後再接 VR。
+- 2026-11-22（demo）：博物館模型本身沒有 Collider，在 Museum_Demo 裡幫建築與展示櫃加 MeshCollider（玻璃碎片沒加），NavMesh 用 Physics Colliders 烘焙。可用展廳約 x∈[-31,31]、z∈[-12,12]，兩端 x≈±32 以外是牆和封閉壁龕。
+- 2026-11-22（demo）：玩家血量讀取：合約沒有血量 API，`PlayerVitals` 暫時用反射讀 `CurrentHealth`、呼叫 `ResetHealth()`（MockPlayer 都有，A 的 PlayerHealth 只有前者）。之後要和 A 定合約。
+- 2026-11-22（demo）：`EncounterController.alertOnSpawn`（預設開）：生成的敵人任何距離都追、不會丟失目標，因為生成點常在偵測距離 12 m 外。
 - 2026-11-22（一打多）：使用者覺得一打多很亂（同時出招、動畫看不出蓄力）。討論後先做攻擊名額 + 背後不准出手；錯開出場、蓄力音效（使用者之後找）、波次重排之後再做。
 - 2026-11-21（翼人）：使用者在 Blender 做了 birdman（跪姿有翼女神，Idle / Attack / Block 三段動畫），要做成菁英敵人，只要 3 招：翼斬、俯衝、翼盾（太多招很難玩）。左翼攻擊用腳本鏡像。翼盾照使用者確認的設計：完全擋住正面，取代原規格的 10% / 減半；換成可以破盾，也可以招架盾反擊。
 - 2026-11-21（慢動作）：使用者覺得完全定格看起來不自然，hit stop 改成極慢動作（0.08 倍速，前 60% 維持，之後緩回 1），秒數加倍。Profile 新增 `Hit Stop Time Scale`，設 0 就回到定格。
@@ -55,38 +64,6 @@
 - 2026-11-21（M2.5）：沒招可出時，在「近身招式的最大距離」內停下面向玩家，否則繼續追（突進斬冷卻中會走近改用近戰）。
 - 2026-11-21（M2.5）：突進斬停在玩家前 0.9 公尺（`EnemyAttack.lungeStopDistance`），方向在預警結束時鎖定。
 - 2026-11-21（M2.5）：EnemyData 移除舊的 attackRange/Windup/Damage/Cooldown/Angle，改成 `attacks[]` + `globalAttackCooldown`；`attacks` 空的時候用一招預設近戰（舊預設值）。
-- 2026-11-18：棄用 `Assets/_Project/`、`Anubis.*`，改用現有的 `Assets/_Game/`、`Game4026.*`（Enemy 程式在 `Game4026.Enemy`）。
-- 2026-11-18：共用合約沿用 `Game4026.Contracts` 的既有簽名（`TakeDamage(float, Vector3, bool)`、`ApplyPlayerDamage(float)`、`ArtifactRestoredEvent`）；規格原本的 `DamageInfo`、`PlayerTarget`、`GameEvents`、`WeaponType` 列為提案，尚未採用。
-- 2026-11-18：規格以 `Docs/ENEMY_SYSTEM_SPEC.md` 為準，`設計文檔.md` 不參考。
-- 2026-11-18：測試場景是 `Assets/_Game/Scenes/Test/EnemyAI.unity`。AI Navigation 2.0.16 已安裝。
-- 2026-11-18：`hitCooldown` 暫時當作**全域**短暫無敵（合約沒有 Source 參數，且 A 會先過濾同一次揮擊的重複接觸）。使用者已確認，不需要擴充合約。
-- 2026-11-18：硬直判定用套用弱點倍率**之後**的傷害；致命一擊不觸發硬直；傷害 ≤0、NaN、Infinity 一律忽略，也不消耗冷卻。（使用者已確認）
-- 2026-11-18：M2 的 `PlayerTarget` 放在 `Game4026.Contracts`（新增檔案，不改既有簽名）；A 負責把它掛在 XR Rig 上。
-- 2026-11-18：不改 A 的程式；武器 → 敵人的傷害換算放在 B 的 `Game4026.Bridges`（引用 Interaction）。公式：近戰為速度 ×8，限制在 5–40；箭為相對速度 ×1，限制在 10–35。
-- 2026-11-18：武器不改 Prefab，改用場景裡的 `DamageBridgeInstaller` 在執行時自動掛上橋接（A 的 Prefab 和場景都不動）。
-- 2026-11-18（M4）：敵人數值暫定（木乃伊 60HP、衛兵 100HP 攻擊距離 2.4、女神像 250HP 硬直門檻 60 弱點 ×3、法老 600HP），都在 EnemyData 資產裡，Inspector 可調。
-- 2026-11-18（M4）：四種敵人都做成 Enemy_Placeholder 的 Prefab Variant，基底改了會全部套用。
-- 2026-11-18（模型）：Anubis 模型、AC_Anubis、EnemyAnimator 放在基底 prefab，各種敵人先共用；之後換專屬模型時在 Variant 裡替換 Model。動畫用 Humanoid，收招時間跟著攻擊動畫長度。
-- 2026-11-18（M4）：Boss 階段做成 Inspector 列表（BossPhase），加階段不用改程式；一擊跨過多個門檻時，經過的每個階段效果都會執行（例如沒經過召喚階段也會召喚）。
-- 2026-11-18（M4）：Boss 小兵用 Boss prefab 子物件上的 EncounterController（規格：「透過 Boss 自己的 EncounterController」），Boss 死亡時強制清除，重新生成時重置。
-- 2026-11-18（M4）：EnemyAttack.SpeedMultiplier 同時縮短前搖與冷卻；ResetState 會回到 1。
-- 2026-11-18（M4）：EnemyController.Update 改成呼叫 `internal Tick(now, dt)`，時間都從參數讀，PlayMode 測試可以直接驅動幀來量 GC。
-- 2026-11-18（M4）：Docs 的三份敵人文件改成進 git（.gitignore 加例外）。
-- 2026-11-18（M3）：下一波要等上一波**全滅**後再等 startDelay 才開始（規格沒寫）；波內每 spawnInterval 生一隻，在場數達 maxAlive 就暫停。
-- 2026-11-18（M3）：「三件文物都歸位」= RosettaStone、CanopicJar、TutankhamunMask 三種各收到一次，以 ArtifactId 去重。
-- 2026-11-18（M3）：文物事件先接 A 的 `ArtifactDisplayTrigger.OnArtifactRestored`（`ArtifactEventBridge`）；`ArtifactRestorationTracker` 不是場景元件，等 A 回覆再接。
-- 2026-11-18（M3）：ForceClear 也會觸發 `Cleared`（`WasForceCleared = true`），被清除的敵人不算擊殺；遭遇戰在開始前就被清除的話，之後不會再開始。
-- 2026-11-18（M3）：Boss 遭遇戰正常打完（不是被清除）才觸發 `BossDefeated`；Boss 本體是 M4，目前用 1 隻佔位敵人。
-- 2026-11-18（M3）：物件池把實例放在停用中的容器底下 Instantiate，Awake/OnEnable 會等到真正生成時才跑；生成時先放好位置再啟用，NavMeshAgent 才會落在正確位置。
-- 2026-11-18（M3）：Bridges 多引用 Enemy（Enemy 不引用 Bridges，沒有循環）。
-- 2026-11-18（M2）：狀態用 class + `IEnemyContext` 介面，狀態本身不碰 NavMesh/物理，EditMode 就能測轉換表。
-- 2026-11-18（M2）：距離與攻擊扇形都用水平距離（忽略高度），避免 VR 玩家站著時身高讓敵人打不到。
-- 2026-11-18（M2）：攻擊冷卻從「判定」時開始算；收招時間 0.5 秒（`EnemyAttack.recoveryDuration`，規格沒寫，先用預設值）。
-- 2026-11-18（M2）：在攻擊範圍內但還在冷卻時，敵人停下並面向玩家，不會一直往玩家身上擠。
-- 2026-11-18（M2）：視線檢查用 `RaycastNonAlloc`，忽略自己和玩家的 Collider；遮擋 Layer 先用 Default（使用者已確認）。
-- 2026-11-18（M2）：測試工具放在獨立組件 `Game4026.Enemy.DebugTools`，敵人本體不依賴 Input System。
-- 2026-11-18（M2）：死亡後 `despawnDuration` 秒觸發 `Despawned` 並停用物件；M3 的物件池會接手回收。
-- 2026-11-18：受擊規則抽成純 C# 的 `EnemyHealthModel`（時間由外部傳入），測試不需要 VR 或 Play Mode。
 
 ## 待確認問題
 - 文物事件以哪個為準（A 回覆前先接 `ArtifactDisplayTrigger`）；`ArtifactRestorationTracker` 由誰建立、要不要也接。
@@ -94,6 +71,53 @@
 - `IPlayerDamageReceiver` 目前沒有實作（玩家血量還沒指派）；M2 測試用 MockPlayer。
 
 ## 紀錄
+> 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-22（雙手替身 + 合擊）
+- `PharaohStand` 改成「目前出招的手」（SetActiveHand / UseHand、FollowIdleHand、UsesBothHands）、左手欄位 leftHand / leftHandRest / leftHeldWeapon、合擊 ClapTelegraph/Strike/Stuck 與 Clap 設定（含 clapForward 讓兩手在玩家前方等待）、LeftHand / ActiveHand 屬性；`StandMoveSelector` 權重加 Clap；`StandGeometry.ClapHits`。
+- 資產：`Enemy_Pharaoh/HandL`（LeftHand.fbx ×13、HandPose、PharaohHand、BoxCollider、HeldWeapon）、`Stand/HandRestL`；移除 Stand/Body/LeftHand 裝飾手與 Arena/Corridor；新增 `M_SpectralBody`（queue 3010），M_SpectralBarrier queue 3020。
+- EditMode 281/281（新增合擊 2 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（實體擺錘 + 神之手動作）
+- 新增 `HandPose`（Boss/）、`WeaponGrip`（Combat/）；`PharaohArena.HangPendulums`（找天花板、算臂長）、擺錘設定改成 bladeBottomHeight / ceilingMargin / fallbackArm、命中沿刀刃擺動方向；`PharaohStand`：PoseBarrageSlot（隨機化、出現順序、握持、蓄力 WindUpFor、丟出後跟進淡出）、MainHandCurl、新設定 barrageWindUp / barrageHandSize。
+- 資產：`M_PendulumBronze`；Pendulum_0~2 重建（Mount、Arm、Blade/Hub/Orient + 實體 Kopesh 4.5 m）；HandPose 加到 Hand/Model、Stand/Body/LeftHand、Stand/BarrageHand；6 個 Projectile_Barrage* 加 WeaponGrip。
+- EditMode 279/279、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（結界 + 鐮刀走廊 + 萬兵齊發）
+- 新增 `PharaohArena`（結界、Open/Close、走廊與擺錘、衝擊波閃現推回）、`ArenaBarrier`（吸收打在結界/走廊牆的攻擊）、`BossMechanics.cs`（PendulumMath、BarragePlan）、`PlayerRig`（MoveTo / Blink，DemoFlow 也改用它）；`ScreenFader.Current`。
+- `PharaohStand`：Barrage 步驟（BarrageSummon/Waves/After）、換階段排入大招、結界打開時暫停出招、`QueueUltimate()`；`EnemyProjectile`：`ShowHeld()`、Launch 忽略玩家碰撞、反彈目標排除 ArenaBarrier；`EnemyHealth.TakeProjectileDamage`、`EnemyHealthModel.TryApplyDamage(..., ignoreHitCooldown)`；`EnemyProjectilePool.MaxActive` 8 → 24；`ProjectileSpin` 只在飛行中旋轉；`SpectralGlow` 加 Solid Look（深度預寫）開關；`DemoDebugKeys` 加 U；DemoFlow 結界打開時提示 "The barrier is down! Strike the Pharaoh!"。
+- 資產：`Projectile_Barrage{Sword,Khopesh,Axe,Sabre,HandAxe,Dagger}`、`M_SpectralBarrier`；`Enemy_Pharaoh` 加 Barrier、Arena（Corridor、Pendulum_0~2、ShockRing）、Stand/BarrageHand 樣板、PharaohArena；Phases 的 StartMinions 全關。
+- EditMode 279/279（新增 BossMechanics 4 個、受擊冷卻 1 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（擲武器）
+- `StandMove.WeaponThrow`、`StandMoveSelector.ThrowCount`；權重改成 Slam/Sweep/HeadSlash/WeaponThrow/Combo；`PharaohStand` 加 Summon/WindUp 步驟、Weapon throw 設定、`heldWeapon` / `weaponPrefab`。
+- 新增 `ProjectileSpin`（Combat/）、`Projectile_SpectralDagger` prefab（dagger_low_poly.glb ×0.45、M_SpectralGold、膠囊 Collider 讓武器打得到）；`Enemy_Pharaoh/Hand/HeldWeapon`；手與左手 ×13。
+- `EnemyProjectile.FindReflectTarget`：弱點 → 最大的啟用中實心 Collider → Eye。
+- EditMode 274/274（新增 4 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（頭部橫斬 + SpectralGlow）
+- `StandMove.HeadSlash`、`StandGeometry.LaneHits`、`SweepLane` 加 `angleTowardBoss`；選招權重改成 Slam/Sweep/HeadSlash/Combo，同一種側面攻擊不連續兩次；`PharaohStand` Settings 加 Head slash 區塊與 `sideLaneAngle`（50°）。
+- 新增 `Prefabs/Enemies/Materials/Shaders/SpectralGlow.shader`（支援 single-pass instanced），`M_SpectralGold` 改用它。
+- EditMode 270/270（新增 2 個）、PlayMode 29/29。尚未 commit。
+
+### 2026-11-22（測試捷徑 + 英文 UI）
+- `DemoFlowModel.SkipToBoss`、`DemoFlow.SkipToBoss` / `startAtBoss`（清掉展廳但不算擊殺，直接 BossIntro → 傳送）；新增 `DemoDebugKeys`（Debug/，B 鍵，左下角提示）；DemoFlow 的 HUD 文字改英文。
+- EditMode 268/268（新增 SkipToBoss 2 個）。
+
+### 2026-11-22（法老替身 + 異空間）
+- 新增 `StandMoves.cs`（StandMove、StandMoveSelector、StandGeometry）、`PharaohHand`、`PharaohStand`（Scripts/Enemy/Boss/）；`ScreenFader`（Scripts/Enemy/Flow/）；`DemoFlow` 加異空間傳送（realmArrival、淡出淡入、勝利後傳回）、重來時淡黑；`MockPlayer` 加 C 蹲下。`PharaohBoss.OnPhaseEntered` 的 TODO 改成說明招式在 PharaohStand。
+- `Enemy_Pharaoh` 加 Stand（Body 佔位形狀、LeftHand、HandRest）、Hand（RightHand.fbx ×10 + BoxCollider + PharaohHand）、SlamMarker、SweepMarker、PharaohStand；`EnemyData_Pharaoh` 移動 0、血量 450。
+- 材質：`M_SpectralGold`、`M_StandTelegraph`（Prefabs/Enemies/Materials/，複製自 M_HitFlash 的加算材質）；`M_ScreenFade`、`M_Throne`、`RealmVolume`（Scenes/Demo/Museum_Demo/）。
+- Museum_Demo：`BossRealm`（建築複製品、王座、3 盞即時光、RealmVolume、RealmArrival x=12、SP_Throne 移進來 x=24.4），NavMesh 重新烘焙（兩區一起）。
+- EditMode 266/266（新增 PharaohStandTests 7 個）、PlayMode 29/29。
+
+### 2026-11-22（playable demo 第一步）
+- main 合進 feature/enemy-ai（本地 merge commit，未 push），拿到 `Museum_New`。
+- 新增 `DemoFlowModel`、`DemoFlow`、`PlayerVitals`（Scripts/Enemy/Flow/）；`EncounterController.TotalEnemies`、`alertOnSpawn`；`EnemyController.Alert/IsAlerted`、`IEnemyContext.IsAlerted`，`EnemyStateRules` 對 alerted 敵人不看距離/視線。
+- 資產：`Data/Enemies/Demo/Wave_Demo_1~3`、`Wave_Demo_Boss`；`Scenes/Demo/Museum_Demo/NavMesh-Navigation.asset`。
+- 場景物件：MockPlayer（x=-28）、PlayerStart、AttackCoordinator、EnemyPool（預熱阿努比斯 3、神諭 1、翼人 1）、SpawnPoints_Hall（6 個）、SP_Throne、Encounter_Hall、Encounter_Boss、DemoFlow、Navigation；原本的 Main Camera 關掉。
+- 用 CLI 驗證：3 波 → 法老 → 勝利、玩家倒下 → 補血回起點重來。EditMode 259/259（新增 DemoFlowModel 6 個、alerted 2 個）；PlayMode 29/29。
+
 ### 2026-11-22（攻擊名額）
 - 新增 `AttackTokens`、`AttackCoordinator`；`EnemyData` 加 `Attack Slot Cost`、`Wait Distance`；`IEnemyContext` 加 `MustWaitForTurn`、`WaitDistance`、`CircleTarget`。
 - `ChaseState`：沒名額又在等待距離內時，繞著玩家走而不是出招。
@@ -101,181 +125,3 @@
 - 翼人：佔 2 個名額，等待距離 4.5 m。EnemyAI 場景新增 `AttackCoordinator` 物件。
 - 測試 fixture（`PlayModeWorld`）把視線角度設成 180°，因為既有測試常把玩家擺成背對敵人。
 - EditMode 251/251、PlayMode 29/29。實際場景的繞圈樣子還沒親眼看過。
-
-### 2026-11-21（阿努比斯跳斬空中慢動作）
-- 分析 JumpAttack 動畫：0.7 s 蹲、0.8 s 起跳、約 1.1–1.2 s 最高點、1.5 s 落地、1.58 s 命中。原本的預警姿勢（0.2 s）還在地上，所以看起來不是空中。
-- 招式資產新增 `Slow motion`：`Slow Motion At`（動畫秒數，負數 = 關）、`Duration`、`Scale`。動畫播到那一刻時，整隻敵人進入慢動作（動畫、突進位移、出招時間軸），之後緩回。
-- `Anubis_LungeSlash`：最高點 1.12 s、0.6 s、0.12 倍速；招架窗剛好在最高點打開。
-- 紅光 indicator 依使用者偏好由使用者自己調（AttackIndicator → Flash Size）。
-- EditMode 245/245、PlayMode 27/27。
-
-### 2026-11-21（預警改成慢動作）
-- 使用者覺得 Anubis 出招「還是時停」：原本是預警時動畫停在舉刀姿勢（播放速度 0），不是打中時的慢動作。
-- 改成 `EnemyAnimator.telegraphCreep`（預設 0.15）：舉刀動作提早變慢，以約 0.15 倍速慢慢舉到底，揮刀時再回正常速度；命中時間不變。所有有 Animator 的敵人都套用，設 0 就回到停住。EditMode 245/245、PlayMode 26/26。
-
-### 2026-11-21（翼人 + 慢動作打擊感）
-- 慢動作：
-  - `EnemyController.HitStop(秒, 倍率)` 改成慢動作：`HitStopCurve` 前 60% 維持慢速，之後線性回到 1
-  - NavMeshAgent 不再暫停寫位置，改成速度乘上倍率（突進在慢動作中也不會丟失距離）
-  - `EnemyAnimator` 每幀跟著 `TimeScale`；光彈反彈改成慢動作
-  - `HitFeedback_Default` 的秒數全部加倍，上限 0.4 s
-- 翼人：
-  - 分析動畫：Attack 是右翼 0.15 s 後收、0.25 s 打中；Block 是靜態雙翼合攏；沒有走路動畫
-  - 腳本翻轉出左翼攻擊，左右骨頭依靜止位置自動配對；驗證翼尖軌跡和原版左右對稱
-  - Idle 改成循環（改了 birdman.fbx 的匯入設定）
-  - 新元件 `HoverLocomotion`、`EnemyGuard`；新攻擊類型 `AttackType.Guard`；`EnemyController.ForceAttack`、`EnemyAttack.Queue / EndGuard`、`AttackRunner.SkipToHit`；`EnemyHealth` 受擊前先問 `EnemyGuard`；新 `HitKind.GuardBreak`
-  - 資產：`AC_Birdman`、6 個 `Birdman_*` 招式、`EnemyData_Birdman`、`Enemy_Birdman`
-- 測試：EditMode 244/244、PlayMode 26/26
-- 驗證：EnemyAI 場景實際生成，先俯衝（停在 1.31 m 打中），之後左右翼斬輪流出，全部命中。翼盾用測試驗證（eval 指令往返太慢，抓不準時間）
-- 注意：
-  - 跑 EditMode 測試時 Unity 跳出「儲存場景」視窗，存進了我分析模型時留下的 `birdman(Clone)`。已把 EnemyAI.unity 還原成 git 版本並重新載入
-  - 翼人還沒放進任何波次或場景，要測就把 Prefab 拖進 EnemyAI 場景
-
-### 2026-11-21（招架音效只在成功時播放）
-- 問題：沒擋成功也會響 Parry 音效。原因是 Blocked Clips 為空時，程式退回去用 Parry Clips；刀身在窗外被打到（招架失敗）就播了 Parry 音效。
-- 修正：Blocked 只用 Blocked Clips，空的就不出聲；Parry Clips 只在成功招架與反彈光彈時播放。EditMode 240/240。
-
-### 2026-11-21（打擊感 / 卡肉）
-- 完成：
-  - `EnemyController.HitStop`：只停這隻敵人。AI 時鐘扣掉停格時間，出招、硬直、冷卻都順延；NavMeshAgent 暫停寫位置；Animator speed 0；StatueLocomotion 和 EnemyAnimator 改用 `controller.DeltaTime`
-  - `EnemyHitFeedback`、`HitFeedbackProfile`、`HitImpacts`、`HitSparkPool`
-  - 光彈被反彈時先定格 0.07 秒
-  - `MeleeDamageBridge` 依反應強度震動手把
-  - `EnemyWeapon` 和 `MockWeapon` 的招架改用 `EnemyAttack.Now`
-- 資產：
-  - `HitFeedback_Default.asset`
-  - `M_HitFlash`、`M_HitSpark`
-  - `FX/FX_HitSpark.prefab`
-  - 6 個敵人 Prefab 都掛上了 EnemyHitFeedback，光彈 Prefab 也指定了 Profile
-- 決定：
-  - 不改 `Time.timeScale`。VR 改全域時間會讓玩家手上的物理武器卡住，而且容易暈，所以只停敵人；玩家那一側用手把震動補。
-  - 音效欄位先留空，等有音檔再放進 Profile。
-- 實測（EnemyAI 場景）：
-  - 打神諭和巡邏阿努比斯，兩隻都觸發了停格、閃白、抖動，停格 0.083 秒（15 傷害）
-  - 用 A/B 截圖確認閃白有顯示
-- 問題：
-  - 閃白材質原本複製自 M_AttackGlint（Particles Unlit），結果完全看不到：Particles shader 會乘頂點色，而模型沒有頂點色，乘出來是 0。改成 URP Unlit 透明加算後正常。
-  - 透明度原本也乘進亮度，強度被平方變得太淡；改成 alpha 固定為 1，Profile 的 flash 數值就是線性亮度。
-- 測試：EditMode 239/239、PlayMode 22/22
-- 需要在 Editor 手動做：無。手感數值在 `Assets/_Game/Data/Enemies/HitFeedback_Default.asset`。
-
-### 2026-11-21（黑曜石神諭）
-- 完成：StatueLocomotion、EnemyProjectile + Pool、IParryTarget、EnemyWeapon 傷害穿透、EnemyAttack 發射（muzzle）與每招停止距離、AttackRunner 支援跳躍 AreaSlam；MockWeapon 按 F 也會反彈最近的光彈；Enemy_ObsidianOracle、5 招資產、光彈 Prefab、2 個材質
-- 模型：face 在 glb 的 +X，Prefab 裡轉 -90° 朝 +Z、放大 1.25 倍（1.5 m）；額頭/眼睛位置用網格輪廓取樣決定（眼 y 1.0、額頭 y 1.12）
-- 實測（EnemyAI 場景）：9 m 外出滾動、滾到 1.0 m 命中；近身震地；5 m 跳砸（截圖確認在空中）；震地被 F 招架 → 硬直；鐳射光彈飛行（截圖），F 反彈 → 命中額頭 50 傷害、硬直
-- 測試：EditMode 233/233、PlayMode 19/19
-- 問題：
-  - 第一次測鐳射，光彈 0.16 秒就消失：是 MockPlayer 被我傳送到地板外掉下去，光彈朝下打到地板，不是程式問題。
-  - 鐳射測試時我在 Play Mode 暫時把 EnemyData 的招式改成只剩鐳射（資產不會被 Play Mode 還原），測完已改回 5 招。
-  - 近身只會一直震地 → 頭槌最小距離 1.5 改 0.9。
-- 需要在 Editor 手動做：無。要在場景測試，把 `Enemy_ObsidianOracle` 拖進 EnemyAI 場景，或加到波次資產。
-
-### 2026-11-21（招架、攻擊提示、阿努比斯拿匕首）
-- 完成：
-  - `AttackDefinition.parryWindow`；`AttackRunner` 招架窗（`IsParryWindowOpen`、`OnParryWindowOpened`）；`EnemyAttack.TryParry` + 事件 `ParryWindowOpened`/`Parried`
-  - `EnemyData.parryStaggerDuration`/`parriedDamageMultiplier`；`EnemyHealth(Model).DamageMultiplier`；`IEnemyContext.CurrentStaggerDuration`，HitState 改用它；`EnemyController.Stagger(seconds)`、`Parried` 事件
-  - 新增 `EnemyWeapon`、`AttackIndicator`、材質 `M_AttackGlint`；`DamageDispatch` allowParry，箭傳 false
-  - `Enemy_AnubisGuard` 雙手加 `Weapon_Dagger`（長 0.45 公尺，刀身膠囊碰撞）；根物件加 AttackIndicator
-  - `MockWeapon` 按 F 招架最近的敵人武器
-  - 測試：EnemyAttackTests +7、EnemyHealthModelTests +2、EnemyStateMachineTests +1、EnemyWeaponBridgeTests 3、ParryPlayModeTests 1
-- 握法：用手的骨頭算方向（只有食指與拇指骨頭）。刀身從拳頭拇指側伸出，揮砍時看起來像舉刀往下刺。
-- 實測（EnemyAI 場景，截圖確認）：右手揮時匕首與光點在右手刀尖；鏡像招式（三連斬第二下）在左手；招架窗在擊中前 0.35/0.4/0.3 秒打開。腳本測試：預警時按 F → 失敗、玩家被打；窗內按 F → 招架成功、硬直 1.5 秒、打身體 10 → 扣 15、硬直結束倍率回到 1。
-- 問題：第一次實測，硬直開始的同一刻打到只扣 10，因為倍率在進 Hit 之後才設；改成先設倍率再進硬直，並加 PlayMode 測試防止回歸。
-- 測試：EditMode 214/214、PlayMode 17/17（GC 測試仍 0 bytes）
-- 需要在 Editor 手動做：無。和 A 整合時確認 A 武器的 `targetMask` 包含匕首 Collider 的 Layer（目前是 Default）。
-
-### 2026-11-21（M2.5：資料驅動攻擊、阿努比斯 5 招）
-- 完成：
-  - 新增 `Combat/`：AttackType、AttackDefinition、AttackSelector、AttackRunner；EnemyAttack 改寫成選招 + 出招元件；IEnemyContext 攻擊介面改成 TrySelectAttack / AttackHoldRange / BeginAttack / TickAttack / CancelAttack；AttackState、ChaseState 跟著改；EnemyAnimator 改成依每個步驟播動畫並在預警時停格；EnemyDebugLabel 顯示招式
-  - AC_Anubis 加 `Attack_Mirror`、`JumpAttack` 狀態；`anubis_2@Standing Melee Run Jump Attack.fbx` 的動畫改名 JumpAttack，旋轉與高度烘進姿勢（原地播放，前衝交給 NavMeshAgent）
-  - 招式資產 13 個（`Data/Enemies/Attacks/`），掛到 5 份 EnemyData
-  - 測試：EnemyAttackTests 重寫（20 個）、新增 AttackSelectorTests（9 個），狀態機與 EnemyAnimator 測試更新
-- 擊中格：用 Editor 取樣右手軌跡找出 QuickerAttack 起手姿勢 0.55 秒、擊中 0.77 秒；Jump Attack 起跳 0.75 秒、擊中 1.58 秒、根部前進約 4.6 公尺
-- 實測（EnemyAI 場景，單獨一隻阿努比斯）：5 招都會出；近身隨機出快速揮擊／反手／重擊／三連斬，玩家退到 4 公尺會出突進斬（4.7 → 0.9 公尺命中）；每招判定時動畫都在擊中格（normalized 0.48 = 0.77/1.6；突進斬 0.46–0.48）；重擊停格 0.8 秒；三連斬第三下玩家已離開 → 揮空
-- 測試：EditMode 201/201、PlayMode 16/16（GC 測試仍 0 bytes）
-- 問題：我取樣動畫的 eval 腳本第一次丟例外，在 EnemyAI 場景留下 3 個 `anubis_2@T-Pose WithSKin(Clone)`，進 Play Mode 時場景被自動存檔。已刪掉並重存，場景與 git 版本一致。之後 eval 裡 Instantiate 要用 try/finally 清掉。
-- 需要在 Editor 手動做：無
-- 備註：`ENEMY_SYSTEM_SPEC_Edited.md` 沒動；內容已併進 `ENEMY_SYSTEM_SPEC.md`，使用者確認後可刪
-
-### 2026-11-19（GLB 的 PARSING JSON Failed）
-- 原因：`Assets/Models` 底下 44 個 `.glb` 在工作目錄裡是 Git LFS 指標文字，glTFast 把指標當 JSON 解析。本體已在本地 LFS 物件庫，沒有重新下載。
-- 完成：`git lfs pull --include="*.glb"` 把本體 checkout 出來，並在開啟中的 Editor 重新匯入。44 個都匯成 GameObject。Git 狀態沒有新增修改。
-- 還在：`egyptian_styled_trim_set.glb` 的 JSON 正常、mesh 有匯入，但法線貼圖用第三組 UV（`TEXCOORD_2`）。glTFast 在 URP 只支援前兩組，Console 仍有一筆 `Failed to import`（`UVMulti`）。外觀上法線可能不對。要修得改模型 UV，這次沒改檔案。
-
-### 2026-11-18（所有敵人換成 Anubis 模型）
-- 完成：模型、Animator、EnemyAnimator、頭部骨頭弱點 `HeadBone_WeakPoint` 從衛兵 Variant 移到基底 `Enemy_Placeholder`，所有 Variant 和場景的 `Enemy_PatrolDemo` 都繼承；衛兵 Variant 的舊覆寫還原
-  - 木乃伊、塞克邁特、法老：停用頭部弱點；原本的胸口/背後弱點改掛到 `mixamorig:Spine2` / `Spine1`，跟著動畫移動（法老的胸口弱點仍是第三階段才啟用）
-  - 所有 EnemyData 的 `despawnDuration` 改 2.5 秒（死亡動畫 2.4 秒）
-- 問題：骨頭在綁定姿勢和動畫中的朝向不同（綁定姿勢轉了 180°），第一次用綁定姿勢算的頭部弱點跑到後腦。改成在 Play Mode 量動畫中的骨頭座標再寫回 prefab。
-- 實測：四種敵人一起生成，都正常追擊；弱點位置在臉前/胸前/背後正確
-- 測試：EditMode 177/177、PlayMode 16/16
-- 備註：木乃伊、法老胸口與塞克邁特背後的弱點方塊仍然看得見（當作弱點標記）；不想看到的話，關掉該物件的 MeshRenderer 即可
-
-### 2026-11-18（攻擊動畫換成 QuickerAttack、修正攻擊動畫被切斷）
-- 原因：攻擊判定後的收招固定 0.5 秒（`EnemyAttack.recoveryDuration`），之後就切回追擊，Animator 跟著切回移動動畫，所以攻擊動畫一定會被切掉；玩家走遠時敵人馬上開始跑，所以特別明顯。跟距離判定無關（攻擊中途不檢查距離，只有硬直或死亡會中斷）。
-- 修正：
-  - `EnemyAttack.RecoveryOverride`：執行時可覆寫收招時間（負數 = 用 Inspector 的值）
-  - `EnemyAnimator`：新增 `attackClip`、`recoveryFollowsClip`。每次出手時把收招時間設成「擊中點到動畫結束的剩餘時間 ÷ 播放速度 − 交叉淡出時間」，攻擊動畫會播完才去追擊
-  - `anubis_2@QuickerAttack.fbx`（1.6 秒，單次右手揮擊）改 Humanoid、原地播放，取代 AC_Anubis 的 Attack；擊中點 0.77 秒
-- 實測：前搖 0.7 秒時播放速度 1.10，攻擊狀態共約 1.3 秒；判定後玩家退開 3 公尺，動畫照樣播到結尾才淡回跑步
-- 測試：EditMode 177/177、PlayMode 16/16
-- 舊的 `anubis_2@Attack.fbx`（三連擊）留著沒用到
-
-### 2026-11-18（阿努比斯衛兵換上模型與動畫）
-- 完成：
-  - `anubis_2@T-Pose WithSKin.fbx`（有網格）設為 Humanoid、沿用 T-Pose 的 Avatar、材質改用 M_Anubis
-  - `Enemy_AnubisGuard`：隱藏膠囊外觀，身體 Collider 縮到脖子以下（0–1.38 m），舊的頭部弱點停用；新增 `Model` 子物件（Animator：AC_Anubis、不套用 Root Motion、看不到時不更新骨頭），新的 `Head_WeakPoint` 掛在 `mixamorig:Head` 底下，跟著動畫移動；根物件加 `EnemyAnimator`；Eye 改到 1.6 m
-  - `EnemyData_AnubisGuard.despawnDuration` 1.5 → 2.5（死亡動畫 2.4 秒，避免倒到一半就消失）
-- 實測（EnemyAI 場景 Play Mode）：生成 → 追擊（跑步動畫）→ 攻擊（AttackSpeed 0.86，擊中點對齊前搖 0.7 秒），玩家扣血 → 打頭部弱點 20 傷害扣 50 HP（×2.5）且播 Hit 動畫 → 擊殺播 Death 動畫、身體往後倒、2.5 秒後回物件池
-- 測試：EditMode 全過；PlayMode 16/16
-- 已知限制：身體 Collider 是固定膠囊，不會跟著動畫彎腰或倒地；之後若需要更準的命中，可以改成掛在骨頭上的多個 Collider
-- 需要在 Editor 手動做：無
-
-### 2026-11-18（阿努比斯模型與動畫，前置）
-- 完成：
-  - `anubis.fbx` 材質：新增 `materials/M_Anubis.mat`（URP Lit，Tiling Y = -1 修正 glTF 轉檔造成的 UV 顛倒），金屬度/粗糙度合成 `textures/anubis_MetallicSmoothness.png`，法線貼圖改成 Normal Map，不匯入 FBX 內的相機/燈光
-  - 動畫：`anubis_2@T-Pose.fbx` 建立 Humanoid Avatar，6 個動畫改 Humanoid 並共用這個 Avatar；Idle/Walk/Run 循環；Walk/Run/Attack 原地播放（往前的位移不套用，移動交給 NavMesh），Death/Hit 保留身體位移
-  - `Animations/Enemy/Anubis/AC_Anubis.controller`：Locomotion 混合樹（0 待機、1 走、2 跑）、Attack（播放速度由 `AttackSpeed` 參數控制）、Hit、Death
-  - `EnemyAnimator`：依 AI 狀態切換動畫；攻擊動畫的擊中點（約 0.6 秒，第一下揮擊）對齊前搖結束；受擊重複時從頭播
-  - EditMode 測試 `EnemyAnimatorTests`（全部通過）
-- 當時卡住：`anubis.fbx` 是沒綁骨的靜態模型，`anubis_2@T-Pose.fbx` 和動畫檔只有骨架；使用者之後補上 With Skin 的模型
-- 決定：用 Humanoid（之後木乃伊、法老可以共用動畫）；動畫由獨立元件 `EnemyAnimator` 驅動，`EnemyController` 的 Animator 欄位留空
-
-### 2026-11-18（M4：敵人種類與 Boss 架構）
-- 完成：BossPhase、BossPhaseTracker、PharaohBoss；EnemyAttack.SpeedMultiplier、IEnemyContext.AttackWindup、EncounterController.ResetEncounter、EnemyData.OnValidate、EnemyDebugLabel 顯示 Boss 階段；4 份 EnemyData、4 個 Prefab Variant、2 個新波次；EnemyAI 場景改用新敵人；14 個 EditMode + 4 個 PlayMode 測試
-- 實測（EnemyAI 場景）：按 1/2/3 → 法老出場 → 50% 進入召喚階段（無敵 2 秒、2 隻木乃伊）→ 8% 進入狂暴階段（胸口弱點出現、攻速 ×1.5）→ 擊殺 → 小兵被清除、BossDefeated、敵人全部回到物件池（Instantiate 只有預熱的 8 次）
-- 0 GC：PlayMode 測試 4 隻敵人 720 幀 = 0 bytes；Profiler 錄 300 幀（巡邏示範 + 3 隻木乃伊同時追擊/攻擊），第 10 幀之後 `EnemyController.Update` 1160 次呼叫 = 0 bytes（第 3 幀有一次性的 522 bytes 首次配置）。只有 Editor 專用的除錯 IMGUI（EnemyDebugLabel / MockPlayer / DebugArtifactButton 的 OnGUI）每幀有配置，它們不會進正式遊戲。
-- 需要在 Editor 手動做：無
-- 問題：GC 測試第一次沒過，因為測試裡 PlayerTarget 沒指定 head，head 落在地面高度，視線被地板擋住。已在測試修正，也寫進給 A 的說明（head 一定要指定）。Profiler capture 存在專案根目錄的 `ProfilerCaptures/`（沒進 git，可以刪）。
-
-### 2026-11-18（M3：生成與遭遇戰）
-- 完成：WaveDefinition、EncounterSchedule、SpawnPoint、EnemyPoolManager、EncounterController、EncounterDirector、ArtifactProgress、ArtifactEventBridge、DebugArtifactButton；EnemyController 加上 ForceClear / Killed / SetPatrolPoints；Enemy_Placeholder prefab、3 個波次資產；EnemyAI 場景加上遭遇戰；18 個 EditMode + 4 個 PlayMode 測試
-- 實測（EnemyAI 場景）：玩家走進觸發區 → 遭遇戰開始，從預熱的物件池生 2 隻 → 按 1 → 清場（不算擊殺），敵人回到物件池 → 重複按 1 被忽略 → 按 2、3 → Boss 遭遇戰開始 → 打倒 → BossDefeated。從頭到尾 Instantiate 只有預熱的 4 次。Console 0 錯誤。
-- 需要在 Editor 手動做：無
-- 問題：`unity command script eval --file` 的檔案必須是 .cs 副檔名。
-
-### 2026-11-18（M2：AI 與攻擊）
-- 完成：PlayerTarget（Contracts）、EnemyController、EnemyAttack、EnemyGeometry、狀態機與 7 個狀態、MockPlayer / MockWeapon / EnemyDebugLabel、EnemyAI 場景布置（NavMesh 已烘焙）、34 個新 EditMode 測試
-- Play Mode 實測（EnemyAI 場景，無 Animator 的佔位模型）：Spawn 1.5 秒 → Patrol → 看到玩家 → Chase → Attack（前搖 0.7 秒、命中扣 10、收招 0.5 秒、冷卻 2 秒）→ 打頭 50 傷害並硬直 0.5 秒 → 身體 20 傷害不硬直 → Dead → 1.5 秒後停用。Console 0 錯誤。
-- 需要在 Editor 手動做：無（場景已用 CLI 布置並存檔）
-- 問題：無。Meta XR 在沒接頭盔時會印 5 個警告，與敵人系統無關。
-
-### 2026-11-18（傷害橋接安裝器）
-- 完成：`DamageBridgeInstaller` 和 3 個 EditMode 測試；給 A 的說明搬到 `Notes For Groupmates/`（這個資料夾會被 git 追蹤）
-- 需要在 Editor 手動做：用真武器測試時，在該場景放一個 `DamageBridgeInstaller`
-- 問題：Unity 6.6 的 `FindObjectsSortMode` 已棄用，改用只帶 `FindObjectsInactive` 的呼叫方式
-
-### 2026-11-18（傷害橋接）
-- 完成：Bridges 組件（ImpactDamageCurve、DamageDispatch、MeleeDamageBridge、ArrowDamageBridge）與 16 個 EditMode 測試；寫了 `Notes For Groupmates/NOTES_FOR_A.md`
-- 需要在 Editor 手動做：（後來改用安裝器，不必改 Prefab）
-- 問題：無（先建 asmdef、再加 .cs，這次沒有發生漏檔）
-
-### 2026-11-18
-- 完成：
-  - 文件改成實際名稱（CLAUDE.md、ENEMY_SYSTEM_SPEC.md 第 0/2/3/4/6/7/8 節、CODE_MAP.md）
-  - M1：EnemyData、EnemyHealthModel、EnemyDamageResult、EnemyHealth、WeakPoint 及 EditMode 測試
-- 修改檔案：見 CODE_MAP.md 的 Enemy / Tests 段落，另有 `Game4026.Enemy.asmdef`、`Game4026.Enemy.EditModeTests.asmdef`
-- 需要在 Editor 手動做：無
-- 問題：
-  - Unity 在建立 asmdef 的同時匯入新腳本，有 3 個 .cs 沒有被加進組件的編譯清單（明明已匯入卻出現 CS0246）。Refresh、ForceUpdate 都沒用，用 `AssetDatabase.RenameAsset` 改名再改回才恢復。之後新增腳本時，建議先建 asmdef 並等編譯完，再加 .cs。
-  - 測試的冷卻邊界不要用剛好等於的時間點（`1f + 0.3f` 會有浮點誤差）。

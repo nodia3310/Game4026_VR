@@ -52,8 +52,11 @@ namespace Game4026.Enemy
         /// <summary>
         /// Applies one hit. Returns false (and leaves state unchanged) when the hit is ignored:
         /// dead, invulnerable, within the hit cooldown, or damage that is not positive and finite.
+        /// <paramref name="ignoreHitCooldown"/>: for several separate objects landing together (a volley of reflected weapons);
+        /// the cooldown exists to stop one weapon swing from counting many times.
         /// </summary>
-        public bool TryApplyDamage(float baseDamage, Vector3 hitPoint, bool isWeakPoint, float time, out EnemyDamageResult result)
+        public bool TryApplyDamage(float baseDamage, Vector3 hitPoint, bool isWeakPoint, float time, out EnemyDamageResult result,
+            bool ignoreHitCooldown = false)
         {
             result = default;
 
@@ -62,7 +65,7 @@ namespace Game4026.Enemy
             if (!(baseDamage > 0f) || float.IsInfinity(baseDamage))
                 return false;
             // Compare against the end time (not the elapsed difference) so a hit exactly at the end is accepted without float drift.
-            if (hasAcceptedHit && time < lastAcceptedHitTime + hitCooldown)
+            if (!ignoreHitCooldown && hasAcceptedHit && time < lastAcceptedHitTime + hitCooldown)
                 return false;
 
             float scaled = (isWeakPoint ? baseDamage * weakPointMultiplier : baseDamage) * damageMultiplier;
