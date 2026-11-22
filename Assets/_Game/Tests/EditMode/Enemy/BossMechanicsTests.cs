@@ -17,6 +17,20 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void Pendulum_PassesBottom_TwicePerPeriod_CountedEarlyByLead()
+        {
+            // Period 2 s: straight down at t = 0, 1, 2 … With a 0.2 s lead the whoosh fires at 0.8, 1.8 …
+            Assert.IsTrue(PendulumMath.PassesBottom(0.7f, 0.85f, 2f, 0f, 0.2f));
+            Assert.IsFalse(PendulumMath.PassesBottom(0.1f, 0.5f, 2f, 0f, 0.2f));
+            Assert.IsFalse(PendulumMath.PassesBottom(0.85f, 0.85f, 2f, 0f, 0.2f), "no time passed");
+            int count = 0;
+            for (float t = 0.05f; t < 10.001f; t += 0.05f)
+                if (PendulumMath.PassesBottom(t - 0.05f, t, 2f, 0.25f, 0.3f))
+                    count++;
+            Assert.AreEqual(10, count, "10 s at a 2 s period = 10 sweeps");
+        }
+
+        [Test]
         public void Pendulum_BladeHangsBelowPivot_AndSwingsSideways()
         {
             var pivot = new Vector3(0f, 9f, 0f);

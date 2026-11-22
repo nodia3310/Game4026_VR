@@ -19,15 +19,16 @@
 - WeakPoint — Scripts/Enemy/Core/WeakPoint.cs — 掛在弱點 Collider 子物件上，以 isWeakPoint=true 轉發給父物件的 EnemyHealth，附 Gizmo
 - EnemyController — Scripts/Enemy/Core/EnemyController.cs — 敵人 AI 主元件：狀態機 + NavMeshAgent + 每 0.2 秒視線檢查，實作 IEnemyContext；可選 Animator；HitStop(秒, 倍率) 慢動作（AI 時鐘扣掉少走的時間、TimeScale 同步到 NavMesh 速度與 Animator、LocalTime、DeltaTime、HitStopChanged）；ForceAttack（反應招式，例如被打舉盾）；Alert / IsAlerted（遭遇戰敵人任何距離都追）；攻擊名額（MustWaitForTurn、CircleTarget 繞圈等待）
 - EnemyAnimator — Scripts/Enemy/Core/EnemyAnimator.cs — 依 AI 狀態切換 Animator（Locomotion 混合樹／Hit／Death）；每個攻擊步驟交叉淡入招式的狀態（鏡像用 `_Mirror`），預警時起手停格（AttackSpeed=0），最後一下的收招等動畫播完（EnemyAttack.RecoveryOverride）
-- EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier；Queue（下一招指定）、IsGuarding / EndGuard（翼盾）
+- EnemyAttack — Scripts/Enemy/Core/EnemyAttack.cs — 攻擊元件（規格的 EnemyAttackRunner）：用 AttackSelector 選招、AttackRunner 出招；BaseAttackSpeed（種類的基本攻速）× SpeedMultiplier = EffectiveSpeed；命中判定（扇形／AreaSlam 圓形）、突進用 NavMeshAgent.Move；事件 AttackStarted/Telegraph/StepStarted/Resolved/Finished/Cancelled；SpeedMultiplier；Queue（下一招指定）、IsGuarding / EndGuard（翼盾）
 - EnemyWeapon — Scripts/Enemy/Core/EnemyWeapon.cs — 掛在敵人武器（刀身 Collider）上的 IDamageable：招架窗內被 A 的武器打到 → EnemyAttack.TryParry；窗外只擋住、不傷本體；leftHand 標記左右手；事件 Deflected/Blocked
 - AttackIndicator — Scripts/Enemy/Core/AttackIndicator.cs — 刀尖光點提示：預警時小橘光、招架窗打開瞬間亮閃、招架成功白閃；跟著揮動那隻手的武器（鏡像招式 = 左手）
-- StatueLocomotion — Scripts/Enemy/Core/StatueLocomotion.cs — 無骨架雕像的程式動作：彈跳走路、各招（Hop/Roll/Slam/Shoot）的預警與動作、生成升起、硬直搖晃、死亡倒下沉地；只動 Model 子物件
+- StatueLocomotion — Scripts/Enemy/Core/StatueLocomotion.cs — 無骨架雕像的程式動作：彈跳走路、各招（Hop/Roll/Slam/Shoot）的預警與動作、生成升起、硬直搖晃、死亡倒下沉地；只動 Model 子物件；Impacted 事件（升起/滾動/落地/頭槌/倒地，給音效）
 - HoverLocomotion — Scripts/Enemy/Core/HoverLocomotion.cs — 有翼、沒有走路動畫的敵人（翼人）：只動 Visual 子物件；懸浮上下晃、移動前傾、轉彎側傾、翼斬前後傾、俯衝（預警時升高再斜衝下來）、舉盾後仰、從天降下生成、硬直晃動、墜地沉入
 - EnemyGuard — Scripts/Enemy/Core/EnemyGuard.cs — 翼盾：Guard 步驟期間擋下正面攻擊（Blocked 事件）、擋 2 下就提前反擊、單擊 ≥ 30 破盾（硬直 + 受傷 ×1.5，Broken 事件）、被打時機率舉盾；EnemyHealth 每次受擊先問它
 - HitStopCurve — Scripts/Enemy/Feedback/HitStopCurve.cs — 慢動作曲線：前 60% 維持慢速，之後線性回到 1；算出某段真實時間內敵人時鐘走了多少（封閉解）
 - EnemyHitFeedback — Scripts/Enemy/Feedback/EnemyHitFeedback.cs — 通用打擊感：受擊/招架/擋刀/擋盾/破盾/擊殺時讓敵人 HitStop 慢動作、模型沿受擊方向抖動、疊 M_HitFlash 閃白、噴火花、播音效、發 HitImpacts
 - HitFeedbackProfile — Scripts/Enemy/Feedback/HitFeedbackProfile.cs — ScriptableObject：慢動作倍率；每種 HitKind（一般/弱點/硬直/擊殺/招架/擋刀/反彈/破盾）的慢動作秒數、震動、閃光、手把震動、火花；傷害縮放；閃光材質、火花 Prefab、音效
+- EnemySfx — Scripts/Enemy/Feedback/EnemySfx.cs — 非受擊音效：生成時的召喚聲、雕像 StatueLocomotion.Impacted 的石頭聲；CreateSource 建 3D 一次性 AudioSource（擺錘也用）
 - HitImpacts — Scripts/Enemy/Feedback/HitImpacts.cs — HitKind、HitImpact，全域同步事件 Played + Count/Last（橋接用來知道剛剛那一下的手感）
 - HitSparkPool — Scripts/Enemy/Feedback/HitSparkPool.cs — 每種火花 Prefab 共用一個粒子系統，Emit 噴出
 - EnemyGeometry — Scripts/Enemy/Core/EnemyGeometry.cs — 忽略高度的水平距離與扇形判定
@@ -47,20 +48,22 @@
 - AttackRunner — Scripts/Enemy/Combat/AttackRunner.cs — 純 C# 出招時間軸（起手 → 預警停格 → 揮下 → 判定 → 收招／連段下一下）；IAttackHost、AttackStepTiming；SkipToHit（翼盾提前結束）
 
 ## Enemy Flow（`Assets/_Game/Scripts/Enemy/Flow/`，`Game4026.Enemy`）
-- DemoFlowModel — Scripts/Enemy/Flow/DemoFlowModel.cs — 純 C# demo 流程：Intro → Hall → BossIntro → Boss → Victory；玩家倒下 → Defeat → Restart；DemoPhase / DemoAction
-- DemoFlow — Scripts/Enemy/Flow/DemoFlow.cs — 場景元件：開展廳遭遇戰、清完開 Boss、倒下時清場並原地重來（重設遭遇戰、補血、移回 PlayerStart）；Boss 前淡出傳送到異空間（realmArrival），勝利後傳回；SkipToBoss / Start At Boss 測試捷徑；傳送保留頭盔偏移；OnGUI 提示文字
-- PlayerRig — Scripts/Enemy/Flow/PlayerRig.cs — 移動玩家（保留頭盔偏移）與淡黑閃現 Blink（不暈的推回/傳送）
+- DemoFlowModel — Scripts/Enemy/Flow/DemoFlowModel.cs — 純 C# demo 流程：Intro（可等 MarkReady 才倒數）→ Hall → BossIntro → Boss → Victory；玩家倒下 → Defeat → Restart；DemoPhase / DemoAction
+- DemoFlow — Scripts/Enemy/Flow/DemoFlow.cs — 場景元件：第一次開場等玩家準備好（MarkPlayerReady 或離起點）；跟著 PlayerTarget.Current 換綁玩家；開展廳遭遇戰、清完開 Boss、倒下時清場並原地重來（重設遭遇戰、補血、移回 PlayerStart）；Boss 前淡出傳送到異空間（realmArrival），勝利後傳回；SkipToBoss / Start At Boss 測試捷徑；傳送保留頭盔偏移；OnGUI 提示文字
+- PlayerRig — Scripts/Enemy/Flow/PlayerRig.cs — 移動玩家（CharacterController 所在物件，保留頭盔偏移）與淡黑閃現 Blink（不暈的推回/傳送）
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
-- PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`、呼叫 `ResetHealth()`（合約還沒有血量 API）
+- PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`/`MaxHealth`、`ResetHealth()` 或 private setter 補滿；轉接元件（A 的桌面模式）讀它持有的 receiver
+- DemoWorldHud — Scripts/Enemy/Flow/DemoWorldHud.cs — 頭盔 HUD：DemoFlow 目標 + HP 的世界空間 TextMesh，浮在頭前、轉頭時慢慢跟上、穿牆可見；只在 XR 裝置啟用時顯示
+- PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body）
 
 ## Enemy Boss（`Assets/_Game/Scripts/Enemy/Boss/`，`Game4026.Enemy`）
 - BossPhase — Scripts/Enemy/Boss/BossPhase.cs — 一個階段的 Inspector 設定：血量門檻、攻速倍率、無敵秒數、是否召喚小兵、要啟用的物件
 - BossPhaseTracker — Scripts/Enemy/Boss/BossPhaseTracker.cs — 純 C#：依血量比例選階段，只往前，可一次跨多個階段
 - PharaohBoss — Scripts/Enemy/Boss/PharaohBoss.cs — 法老階段層：PhaseChanged、換階段無敵、子物件 EncounterController 召喚小兵、啟用弱點、攻速；招式由 PharaohStand 依 CurrentPhase 出
 - PharaohStand — Scripts/Enemy/Boss/PharaohStand.cs — 法老背後的半透明替身（左右兩隻攻擊手，出招輪流換手、閒置的手回休息位）：雙手合擊（前方左右等待 → 合掌，前後一步可躲）、掌拍（預警手掌立起 + 地上紅圈 → 拍下 → 卡地）、橫掃（蹲下或一步躲）、頭部橫斬（頭高光條預警，只能蹲下躲）、擲武器（掌中召喚匕首 → 翻轉丟出，可反彈，1/2/3 把）、連拍；換階段大招萬兵齊發（12 隻手拿武器、每波 3 把、打回 60% 硬直，之後開結界）、結界打開時暫停；QueueUltimate；側面攻擊路線斜向法老讓玩家看得到；跟著 Boss 的慢動作時鐘與階段攻速；Settings 調數值
-- PharaohArena — Scripts/Enemy/Boss/PharaohArena.cs — 法老結界（半徑 5 m、VR 走進去會被推出）、Open（換階段大招後：結界下、從天花板吊下的實體擺錘鐮刀、受傷 ×2；走廊板已移除）、HangPendulums（找天花板、算臂長）、Close 衝擊波淡黑閃現推回；Current、IsOpen
+- PharaohArena — Scripts/Enemy/Boss/PharaohArena.cs — 法老結界（半徑 5 m、VR 走進去會被推出）、Open（換階段大招後：結界下、從天花板吊下的實體擺錘鐮刀、受傷 ×2；走廊板已移除）、HangPendulums（找天花板、算臂長）、擺錘揮砍音效（Sound 欄位）、Close 衝擊波淡黑閃現推回；Current、IsOpen
 - ArenaBarrier — Scripts/Enemy/Boss/ArenaBarrier.cs — 掛在結界與走廊牆上的 IDamageable：吸收武器/箭（只播擋住），不讓傷害傳到法老
-- PendulumMath / BarragePlan — Scripts/Enemy/Boss/BossMechanics.cs — 純 C#：擺錘角度與刀刃位置；萬兵齊發的扇形位置與每波的發射順序
+- PendulumMath / BarragePlan — Scripts/Enemy/Boss/BossMechanics.cs — 純 C#：擺錘角度與刀刃位置、PassesBottom（揮砍音效時機）；萬兵齊發的扇形位置與每波的發射順序
 - HandPose — Scripts/Enemy/Boss/HandPose.cs — 手指彎曲（0 張開 ~ 1 握拳），緩動、各手指稍有延遲；XR Hands 骨架
 - PharaohHand — Scripts/Enemy/Boss/PharaohHand.cs — 替身的大手：卡地時才開 Collider、可被打，傷害 ×damageMultiplier 傳給法老 EnemyHealth；其他時候被打只播擋住；不推擠玩家
 - StandMove / StandMoveSelector / StandGeometry — Scripts/Enemy/Boss/StandMoves.cs — 純 C#：依階段選招（第 2 階段起有連拍、同種側面攻擊不連續）、掌拍/橫掃/橫斬（LaneHits）命中判定、斜向橫掃路線
@@ -91,7 +94,7 @@
 ## 資產與場景
 - EnemyData_Default — Assets/_Game/Data/Enemies/EnemyData_Default.asset — 規格 4.1 預設數值
 - Enemy_Placeholder — Assets/_Game/Prefabs/Enemies/Enemy_Placeholder.prefab — 佔位敵人基底（膠囊身體 + 方塊頭弱點，無 Animator）
-- Enemy_Mummy / Enemy_AnubisGuard / Enemy_Sekhmet / Enemy_Pharaoh — Assets/_Game/Prefabs/Enemies/*.prefab — 以 Placeholder 為基底的 Prefab Variant（弱點：胸口 / 頭 / 背後 / 第三階段胸口）；Pharaoh 含 PharaohBoss、子物件 Minions 遭遇戰、PharaohStand（Stand/Body 佔位替身、Hand、SlamMarker、SweepMarker）
+- Enemy_Mummy / Enemy_AnubisGuard / Enemy_Sekhmet / Enemy_Pharaoh — Assets/_Game/Prefabs/Enemies/*.prefab — 以 Placeholder 為基底的 Prefab Variant（弱點：胸口 / 頭 / 背後 / 第三階段胸口）；Pharaoh 含 PharaohBoss、Model/Sphinx（人面獅身像）、子物件 Minions 遭遇戰、PharaohStand（Stand/Body/Mask 金面具替身、Hand、SlamMarker、SweepMarker）
 - EnemyData_Mummy / _AnubisGuard / _Sekhmet / _Pharaoh — Assets/_Game/Data/Enemies/*.asset — 四種敵人的暫定數值（規格第 5 節）
 - 招式資產 — Assets/_Game/Data/Enemies/Attacks/*.asset — 阿努比斯 5 招（Anubis_QuickSlash / Backhand / HeavySlash / LungeSlash / TripleSlash + TripleSlash_1–3 步驟）；其他敵人各一招（Default_Swing、Mummy_Swing、Sekhmet_HeavySwing、Pharaoh_Swing，數值與時間沿用舊的單招）
 - Enemy_AnubisGuard 的武器 — 雙手 `mixamorig:Right/LeftHand/Weapon_Dagger`（dagger_low_poly.glb + CapsuleCollider + EnemyWeapon + Tip），根物件掛 AttackIndicator
@@ -113,7 +116,7 @@
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
-- Museum_Demo — Assets/_Game/Scenes/Demo/Museum_Demo.unity — playable demo 場景（複製自 Museum_New）：建築與展示櫃加了 MeshCollider、NavMesh（Museum_Demo/NavMesh-Navigation.asset）、MockPlayer、EnemyPool、SpawnPoints_Hall、SP_Throne、Encounter_Hall / Encounter_Boss、DemoFlow、AttackCoordinator；`BossRealm`（y=-200 的建築複製品、王座、即時光、RealmVolume、RealmArrival、SP_Throne）
+- Museum_Demo — Assets/_Game/Scenes/Demo/Museum_Demo.unity — playable demo 場景（複製自 Museum_New）：建築與展示櫃加了 MeshCollider、NavMesh（Museum_Demo/NavMesh-Navigation.asset）、XR 玩家（West gallery play setup：A 的 XR Origin + PlayerTarget/PlayerHealth/BodyCenter、背包、桌面模式）、MuseumGuardDesk、Weapon bench + Weapons（A 的 Knife/Axe/Shovel/Bow）、VR Services（DamageBridgeInstaller）、MockPlayer（停用）、EnemyPool、SpawnPoints_Hall、SP_Throne、Encounter_Hall / Encounter_Boss、DemoFlow、AttackCoordinator；`BossRealm`（y=-200 的建築複製品、王座、即時光、RealmVolume、RealmArrival、SP_Throne）
 - M_ScreenFade / M_Throne / RealmVolume — Assets/_Game/Scenes/Demo/Museum_Demo/ — 淡出材質、王座材質、異空間的局部後處理（紫色、暗角）
 - M_SpectralGold / M_StandTelegraph — Assets/_Game/Prefabs/Enemies/Materials/ — 替身的神聖半透明金色（SpectralGlow shader）/ 預警紅光
 - SpectralGlow — Assets/_Game/Prefabs/Enemies/Materials/Shaders/SpectralGlow.shader — URP 無光照 shader：深度預寫 + 半透明身體 + 菲涅耳邊光 + 光紋（不需要 HDR/Bloom，支援 VR single-pass instanced）
@@ -163,3 +166,5 @@
 - HitFeedbackPlayModeTests — Tests/PlayMode/Enemy/HitFeedbackPlayModeTests.cs — HitStop 讓 AI 時鐘與 NavMesh 變慢後緩回、出招順延少走的時間、受擊依種類觸發反應、震動不留位移
 - ParryPlayModeTests — Tests/PlayMode/Enemy/ParryPlayModeTests.cs — 真的 EnemyController：招架窗內打武器 → 硬直、×1.5 傷害、結束後恢復、玩家沒被打到
 - EncounterPlayModeTests — Tests/PlayMode/Enemy/EncounterPlayModeTests.cs — 執行中烘焙 NavMesh：遭遇戰開始到 Cleared、物件池重用、ForceClear、Boss 觸發與擊敗、生成點檢查
+- M_TutankhamunMask — Assets/_Game/Character Models/Enemy/Meshy_AI_Mask_of_Tutankhamun_20260717_texture_fbx/ — 面具 URP Lit（底色、法線、合成的 _metallicSmoothness.png）；fbx 材質槽已 remap 到它
+- DemoStartOnGrab — Scripts/Bridges/DemoStartOnGrab.cs — 玩家第一次抓起武器（MeleeWeapon/BowDrawAim 的 XRBaseInteractable）→ DemoFlow.MarkPlayerReady；Refresh 給之後生成的武器

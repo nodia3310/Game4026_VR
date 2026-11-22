@@ -7,7 +7,9 @@ namespace Game4026.Enemy
     /// <summary>
     /// Playable-demo run for one hall: hall waves → fade + teleport to the boss realm → boss → victory → back to the hall.
     /// The player dying → fade out, restart in place (encounters reset, player health restored, back at the start).
-    /// The HUD is OnGUI (desktop only); a world-space version is needed for the headset.
+    /// The HUD is OnGUI on desktop; in a headset <see cref="DemoWorldHud"/> shows <see cref="HudMessage"/>.
+    /// The player is re-resolved whenever <see cref="PlayerTarget.Current"/> changes (A's desktop adapter swaps the XR rig
+    /// for its own camera a couple of frames after start).
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DemoFlow : MonoBehaviour
@@ -16,7 +18,14 @@ namespace Game4026.Enemy
         [SerializeField] private EncounterController bossEncounter;
         [Tooltip("Where the player is put back on restart. Empty = where the player was at start.")]
         [SerializeField] private Transform playerStart;
+        [Tooltip("Countdown before the first wave (after the player is ready).")]
         [SerializeField, Min(0f)] private float introDelay = 3f;
+        [Header("Start")]
+        [Tooltip("First run: no countdown until the player is ready — picks up a weapon (MarkPlayerReady, e.g. from " +
+                 "DemoStartOnGrab) or walks away from the start. Restarts after a defeat do not wait.")]
+        [SerializeField] private bool waitForPlayerReady = true;
+        [Tooltip("Walking this far (horizontally) from the start also counts as ready.")]
+        [SerializeField, Min(0.5f)] private float leaveStartRadius = 5f;
         [SerializeField, Min(0f)] private float bossDelay = 4f;
         [SerializeField, Min(0f)] private float restartDelay = 4f;
         [Header("Boss realm")]
@@ -44,6 +53,17 @@ namespace Game4026.Enemy
         public DemoPhase Phase => model != null ? model.Phase : DemoPhase.Intro;
         public EncounterController HallEncounter => hallEncounter;
         public EncounterController BossEncounter => bossEncounter;
+        public bool ShowHud => showHud;
+        /// <summary>True while the first intro waits for the player to pick up a weapon.</summary>
+        public bool IsWaitingForPlayer => model != null && model.Phase == DemoPhase.Intro && !model.IsReady;
+        /// <summary>Current HUD line (objective / phase), empty when nothing to show.</summary>
+        public string HudMessage => model != null ? HudText() : string.Empty;
+        /// <summary>Player health as (current, max) when readable.</summary>
+        public bool TryGetPlayerHealth(out float current, out float max)
+        {
+            current = max = 0f;
+            return vitals != null && vitals.TryGetHealth(out current, out max);
+        }
 
         /// <summary>Runtime / test setup.</summary>
         public void Configure(EncounterController hall, EncounterController boss, float intro, float bossWait, float restart)
@@ -58,21 +78,29 @@ namespace Game4026.Enemy
 
         private void Start()
         {
-            player = PlayerTarget.Current;
+            ResolvePlayer();
             if (player != null)
             {
-                vitals = PlayerVitals.From(player.Damageable);
                 startPosition = playerStart != null ? playerStart.position : player.transform.position;
                 startRotation = playerStart != null ? playerStart.rotation : player.transform.rotation;
-                if (!vitals.CanReadHealth)
-                    Debug.LogWarning("[DemoFlow] player health can't be read; defeat/restart is disabled.", this);
-                if (fadeMaterial != null)
-                    fader = ScreenFader.Create(player.Head, fadeMaterial);
+            }
+            else if (playerStart != null)
+            {
+                startPosition = playerStart.position;
+                startRotation = playerStart.rotation;
             }
             EnsureModel();
-            model.Begin(Time.time);
+            model.Begin(Time.time, waitForPlayerReady);
             if (startAtBoss)
                 SkipToBoss();
+        }
+
+        /// <summary>The player is ready (picked up a weapon): the intro countdown starts. Ignored when not waiting.</summary>
+        public void MarkPlayerReady()
+        {
+            EnsureModel();
+            if (model.MarkReady(Time.time))
+                Debug.Log("[DemoFlow] player ready — first wave in " + introDelay + " s", this);
         }
 
         /// <summary>Test shortcut: clears the hall (no kills counted) and starts the boss intro / teleport.</summary>
@@ -86,6 +114,27 @@ namespace Game4026.Enemy
             model.SkipToBoss(Time.time);
         }
 
+        /// <summary>Binds to <see cref="PlayerTarget.Current"/> if it changed: health adapter and the fade quad on its head.</summary>
+        private void ResolvePlayer()
+        {
+            PlayerTarget current = PlayerTarget.Current;
+            if (current == null || current == player)
+                return;
+            player = current;
+            vitals = PlayerVitals.From(player.Damageable);
+            if (!vitals.CanReadHealth)
+                Debug.LogWarning("[DemoFlow] player health can't be read; defeat/restart is disabled.", this);
+            if (fadeMaterial != null)
+            {
+                float alpha = fader != null ? fader.Alpha : 0f;
+                if (fader != null)
+                    Destroy(fader.gameObject);
+                fader = ScreenFader.Create(player.Head, fadeMaterial);
+                if (alpha > 0f)
+                    fader.FadeTo(alpha, 0f);
+            }
+        }
+
         private void EnsureModel()
         {
             if (model != null)
@@ -96,10 +145,18 @@ namespace Game4026.Enemy
 
         private void Update()
         {
+            ResolvePlayer();
             EnsureModel();
             bool hallCleared = hallEncounter == null || hallEncounter.IsCleared;
             bool bossCleared = bossEncounter == null || (bossEncounter.IsCleared && !bossEncounter.WasForceCleared);
             bool dead = vitals != null && vitals.IsDead;
+            if (IsWaitingForPlayer && player != null)
+            {
+                Vector3 offset = player.Head.position - startPosition;
+                offset.y = 0f;
+                if (offset.sqrMagnitude > leaveStartRadius * leaveStartRadius)
+                    MarkPlayerReady();
+            }
 
             switch (model.Tick(Time.time, hallCleared, bossCleared, dead))
             {
@@ -205,7 +262,7 @@ namespace Game4026.Enemy
 
         private void OnGUI()
         {
-            if (!showHud || model == null)
+            if (!showHud || model == null || DemoWorldHud.InHeadset)
                 return;
             if (style == null)
                 style = new GUIStyle(GUI.skin.label) { fontSize = 26, alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold };
@@ -220,12 +277,24 @@ namespace Game4026.Enemy
             GUI.Label(rect, text, style);
         }
 
+        private static readonly string[] Countdown = new string[10];
+
+        private static string CountdownText(int seconds)
+        {
+            if (seconds >= Countdown.Length)
+                return $"The exhibits are waking up... {seconds}";
+            return Countdown[seconds] ??= $"The exhibits are waking up... {seconds}";
+        }
+
         private string HudText()
         {
             switch (model.Phase)
             {
                 case DemoPhase.Intro:
-                    return "The exhibits are waking up...";
+                    if (!model.IsReady)
+                        return "Pick up a weapon from the table";
+                    int left = Mathf.CeilToInt(model.IntroRemaining(Time.time));
+                    return left > 0 ? CountdownText(left) : "The exhibits are waking up...";
                 case DemoPhase.Hall:
                     return hallEncounter != null
                         ? $"Defeat the guardians  {hallEncounter.KillCount} / {hallEncounter.TotalEnemies}"

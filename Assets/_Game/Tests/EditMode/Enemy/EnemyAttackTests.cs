@@ -286,6 +286,24 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void BaseAttackSpeed_SlowsTheMove_StacksWithRuntimeMultiplier_AndSurvivesReset()
+        {
+            PlacePlayer(0f, 1.5f);
+            attack.BaseAttackSpeed = 0.5f;
+            attack.ResetState();
+            Assert.AreEqual(0.5f, attack.EffectiveSpeed, 1e-5f, "reset keeps the type's base speed");
+            Start(Make(telegraph: 0.2f, hitTime: 0.3f)); // (0.2 + 0.3) / 0.5 = 1.0 s to the hit
+
+            Run(0.9f);
+            Assert.AreEqual(0, receiver.Hits.Count);
+            Run(0.15f);
+            Assert.AreEqual(1, receiver.Hits.Count);
+
+            attack.SpeedMultiplier = 3f;
+            Assert.AreEqual(1.5f, attack.EffectiveSpeed, 1e-5f);
+        }
+
+        [Test]
         public void SpeedMultiplier_HasSafeMinimum_AndResets()
         {
             attack.SpeedMultiplier = 0f;

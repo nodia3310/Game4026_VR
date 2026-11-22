@@ -118,6 +118,7 @@ GameObject:
   - component: {fileID: 2549659751717642369}
   - component: {fileID: 7228662164460101173}
   - component: {fileID: 8140761247854903009}
+  - component: {fileID: 5186337433370510370}
   m_Layer: 0
   m_Name: Enemy_ObsidianOracle
   m_TagString: Untagged
@@ -297,6 +298,25 @@ MonoBehaviour:
   profile: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
   visual: {fileID: 0}
   flashRenderers: []
+--- !u!114 &5186337433370510370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1201497268666825568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12eb96787801ca941899805dc575be04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemySfx
+  spawnClip: {fileID: 8300000, guid: 242de3229fe5b8949a93d44b0dcf9ef1, type: 3}
+  spawnVolume: 0.8
+  impactClip: {fileID: 8300000, guid: 0f7809e0838e30843bb8c8d0a6e5fef3, type: 3}
+  impactVolume: 0.9
+  pitchJitter: 0.06
+  minDistance: 2
+  maxDistance: 30
 --- !u!1 &3680534343934043447
 GameObject:
   m_ObjectHideFlags: 0

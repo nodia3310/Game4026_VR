@@ -116,10 +116,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.035
-  m_Height: 0.4273529
+  m_Radius: 0.07
+  m_Height: 0.5
   m_Direction: 1
-  m_Center: {x: 0, y: 0.17867646, z: 0}
+  m_Center: {x: 0, y: 0.215, z: 0}
 --- !u!114 &9168220771041216789
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -190,10 +190,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.035
-  m_Height: 0.4273529
+  m_Radius: 0.07
+  m_Height: 0.5
   m_Direction: 1
-  m_Center: {x: 0, y: 0.17867646, z: 0}
+  m_Center: {x: 0, y: 0.215, z: 0}
 --- !u!114 &5566054109289830512
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -386,6 +386,10 @@ PrefabInstance:
       propertyPath: data
       value: 
       objectReference: {fileID: 11400000, guid: fdb4eaebc0a085a4f96d8f15d0a1fd86, type: 2}
+    - target: {fileID: 4868458333637273861, guid: 9634a939c43e1b141b5087624d446811, type: 3}
+      propertyPath: baseAttackSpeed
+      value: 0.7
+      objectReference: {fileID: 0}
     - target: {fileID: 7582066741030406578, guid: 9634a939c43e1b141b5087624d446811, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.05
@@ -458,6 +462,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8770251294825056679, guid: 9634a939c43e1b141b5087624d446811, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1030403756890798561}
+    - targetCorrespondingSourceObject: {fileID: 8770251294825056679, guid: 9634a939c43e1b141b5087624d446811, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2214354153028941729}
   m_SourcePrefab: {fileID: 100100000, guid: 9634a939c43e1b141b5087624d446811, type: 3}
 --- !u!1 &1496217061182641104 stripped
 GameObject:
@@ -503,6 +510,25 @@ MonoBehaviour:
   profile: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
   visual: {fileID: 0}
   flashRenderers: []
+--- !u!114 &2214354153028941729
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1496217061182641104}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12eb96787801ca941899805dc575be04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemySfx
+  spawnClip: {fileID: 8300000, guid: 242de3229fe5b8949a93d44b0dcf9ef1, type: 3}
+  spawnVolume: 0.8
+  impactClip: {fileID: 0}
+  impactVolume: 0.9
+  pitchJitter: 0.06
+  minDistance: 2
+  maxDistance: 30
 --- !u!114 &3379297757337744242 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4868458333637273861, guid: 9634a939c43e1b141b5087624d446811, type: 3}

@@ -22,6 +22,40 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void WaitForReady_HoldsIntro_ThenCountsFromReady()
+        {
+            var m = new DemoFlowModel(introDelay: 3f, bossDelay: 4f, restartDelay: 5f);
+            m.Begin(0f, waitForReady: true);
+            Assert.IsFalse(m.IsReady);
+            Assert.AreEqual(DemoAction.None, m.Tick(60f, false, false, false), "no countdown while waiting");
+            Assert.AreEqual(0f, m.IntroRemaining(60f));
+
+            Assert.IsTrue(m.MarkReady(60f));
+            Assert.IsFalse(m.MarkReady(61f), "only once");
+            Assert.AreEqual(1.5f, m.IntroRemaining(61.5f), 1e-4f);
+            Assert.AreEqual(DemoAction.None, m.Tick(62.9f, false, false, false));
+            Assert.AreEqual(DemoAction.StartHall, m.Tick(63f, false, false, false));
+        }
+
+        [Test]
+        public void BeginWithoutWait_IsReadyAtOnce_AndMarkReadyIsIgnored()
+        {
+            var m = Started();
+            Assert.IsTrue(m.IsReady);
+            Assert.IsFalse(m.MarkReady(1f));
+            Assert.AreEqual(DemoAction.StartHall, m.Tick(3f, false, false, false), "countdown not restarted");
+        }
+
+        [Test]
+        public void SkipToBoss_WorksWhileWaitingForReady()
+        {
+            var m = new DemoFlowModel(3f, 4f, 5f);
+            m.Begin(0f, waitForReady: true);
+            Assert.IsTrue(m.SkipToBoss(1f));
+            Assert.AreEqual(DemoAction.StartBoss, m.Tick(5f, true, false, false));
+        }
+
+        [Test]
         public void HallCleared_WaitsThenStartsBoss_ThenVictory()
         {
             var m = Started();

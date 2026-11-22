@@ -68,6 +68,14 @@ namespace Game4026.Enemy
         [Tooltip("Flat ring for the closing shockwave.")]
         [SerializeField] private Transform shockRing;
 
+        [Header("Sound")]
+        [Tooltip("Whoosh each time a scythe sweeps through the bottom of its swing (3D, from the blade).")]
+        [SerializeField] private AudioClip pendulumSwingClip;
+        [SerializeField, Range(0f, 1f)] private float pendulumSwingVolume = 0.9f;
+        [Tooltip("Start the whoosh this many seconds before the blade reaches the bottom.")]
+        [SerializeField, Min(0f)] private float pendulumSwingLead = 0.3f;
+        [SerializeField, Min(0.1f)] private float pendulumSoundMinDistance = 3f;
+
         private EnemyController controller;
         private EnemyHealth health;
         private Quaternion spawnRotation;
@@ -75,6 +83,8 @@ namespace Game4026.Enemy
         private float insideTime;
         private float[] nextPendulumHit = new float[0];
         private float[] armLength = new float[0];
+        private AudioSource[] pendulumSources = new AudioSource[0];
+        private float lastPendulumTime;
         private float ringTime = -1f;
         private bool blinking;
 
@@ -94,6 +104,14 @@ namespace Game4026.Enemy
             health = GetComponent<EnemyHealth>();
             nextPendulumHit = new float[pendulums.Length];
             armLength = new float[pendulums.Length];
+            pendulumSources = new AudioSource[pendulums.Length];
+            for (int i = 0; i < pendulums.Length; i++)
+            {
+                if (pendulums[i] == null)
+                    continue;
+                Transform blade = pendulums[i].Find("Blade");
+                pendulumSources[i] = EnemySfx.CreateSource((blade != null ? blade : pendulums[i]).gameObject, pendulumSoundMinDistance, 35f);
+            }
         }
 
         private void OnEnable()
@@ -205,6 +223,7 @@ namespace Game4026.Enemy
             openUntil = controller.LocalTime + settings.openSeconds;
             for (int i = 0; i < nextPendulumHit.Length; i++)
                 nextPendulumHit[i] = 0f;
+            lastPendulumTime = controller.LocalTime;
             SetOpen(true);
             Opened?.Invoke(this);
         }
@@ -238,6 +257,8 @@ namespace Game4026.Enemy
 
         private void TickPendulums(float now, PlayerTarget player)
         {
+            float from = lastPendulumTime;
+            lastPendulumTime = now;
             for (int i = 0; i < pendulums.Length; i++)
             {
                 Transform pivot = pendulums[i];
@@ -246,6 +267,8 @@ namespace Game4026.Enemy
                 float phase = pendulums.Length > 1 ? i / (float)pendulums.Length : 0f;
                 float angle = PendulumMath.Angle(now, settings.pendulumPeriod, settings.pendulumAmplitude, phase);
                 pivot.localRotation = Quaternion.Euler(0f, 0f, angle);
+                if (pendulumSwingClip != null && PendulumMath.PassesBottom(from, now, settings.pendulumPeriod, phase, pendulumSwingLead))
+                    PlaySwing(i);
 
                 if (player == null || now < nextPendulumHit[i])
                     continue;
@@ -259,6 +282,15 @@ namespace Game4026.Enemy
                     player.Damageable?.ApplyPlayerDamage(settings.pendulumDamage);
                 }
             }
+        }
+
+        private void PlaySwing(int i)
+        {
+            AudioSource source = i < pendulumSources.Length ? pendulumSources[i] : null;
+            if (source == null || !source.isActiveAndEnabled)
+                return;
+            source.pitch = 1f + UnityEngine.Random.Range(-0.05f, 0.05f);
+            source.PlayOneShot(pendulumSwingClip, pendulumSwingVolume);
         }
 
         // ---- Shockwave ----

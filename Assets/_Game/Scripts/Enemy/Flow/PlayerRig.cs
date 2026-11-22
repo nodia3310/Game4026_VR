@@ -18,9 +18,11 @@ namespace Game4026.Enemy
         {
             if (target == null)
                 return;
-            Transform root = target.transform;
+            // The rig root is the body that carries the head: the CharacterController's object when there is one
+            // (A's desktop adapter puts PlayerTarget on its camera, under the controller), otherwise the target itself.
             Transform head = target.Head;
-            CharacterController controller = root.GetComponent<CharacterController>();
+            CharacterController controller = target.GetComponentInParent<CharacterController>();
+            Transform root = controller != null ? controller.transform : target.transform;
             bool wasEnabled = controller != null && controller.enabled;
             if (wasEnabled)
                 controller.enabled = false;
