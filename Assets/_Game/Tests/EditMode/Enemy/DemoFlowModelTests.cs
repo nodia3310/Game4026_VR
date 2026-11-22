@@ -22,6 +22,26 @@ namespace Game4026.Tests.Enemy
         }
 
         [Test]
+        public void ClearedHall_WaitsForArtifact_ThenGoesToBoss()
+        {
+            var m = Started();
+            m.Tick(3f, false, false, false); // → Hall
+            Assert.AreEqual(DemoAction.None, m.Tick(10f, true, false, false, artifactReady: false));
+            Assert.AreEqual(DemoPhase.Hall, m.Phase, "held until the artifact is back");
+            m.Tick(20f, true, false, false, artifactReady: true);
+            Assert.AreEqual(DemoPhase.BossIntro, m.Phase);
+        }
+
+        [Test]
+        public void ArtifactReady_BeforeHallCleared_DoesNotSkipTheHall()
+        {
+            var m = Started();
+            m.Tick(3f, false, false, false);
+            m.Tick(5f, false, false, false, artifactReady: true);
+            Assert.AreEqual(DemoPhase.Hall, m.Phase);
+        }
+
+        [Test]
         public void WaitForReady_HoldsIntro_ThenCountsFromReady()
         {
             var m = new DemoFlowModel(introDelay: 3f, bossDelay: 4f, restartDelay: 5f);
