@@ -18,6 +18,7 @@ namespace Game4026.Interaction.TestScene
     {
         [SerializeField] private GameObject xrRig;
         [SerializeField] private Camera xrCamera;
+        [SerializeField] private Transform sharedPlayerRoot;
         [SerializeField] private BowDrawAim bow;
         [SerializeField] private MeleeWeapon melee;
         [SerializeField] private bool enableInEditorWithoutHeadset = true;
@@ -31,13 +32,15 @@ namespace Game4026.Interaction.TestScene
         private Quaternion originalRigRotation, originalHeadRotation;
         private FieldInfo trackedField;
         private bool originalRequireTracked;
-        private float yaw, pitch;
+        private float pitch;
         private Material leftMaterial, rightMaterial;
         public bool IsDesktopActive => desktopRig != null;
         public DesktopTestHand LeftHand { get; private set; }
         public DesktopTestHand RightHand { get; private set; }
         public DesktopTestHand ActiveHand { get; private set; }
         public Camera DesktopCamera => desktopCamera;
+        internal GameObject XRRig => xrRig;
+        internal Camera GameplayCamera => IsDesktopActive ? desktopCamera : xrCamera;
         public const string Controls = "DESKTOP: WASD move | RMB look | Tab hand | Q grab/release/catch | E use/throw axe\nArrows move hand X/Y | R/F hand forward/back | Shift fast hand (melee)";
 
         private IEnumerator Start()
@@ -46,12 +49,21 @@ namespace Game4026.Interaction.TestScene
             // Give XR startup a chance to supply the real HMD before choosing the editor adapter.
             yield return null;
             yield return null;
-            if (!enableInEditorWithoutHeadset || XRSettings.isDeviceActive ||
+            if (!isActiveAndEnabled || !enableInEditorWithoutHeadset || XRSettings.isDeviceActive ||
                 InputDevices.GetDeviceAtXRNode(XRNode.Head).isValid) yield break;
             EnableDesktop();
 #else
             yield break;
 #endif
+        }
+
+        internal void ReturnToXRWhenHeadsetIsTracked()
+        {
+            if (!IsDesktopActive) return;
+            var head = InputDevices.GetDeviceAtXRNode(XRNode.Head);
+            if (head.isValid && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out bool tracked) &&
+                tracked && (!head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.userPresence, out bool worn) || worn))
+                enabled = false;
         }
 
         private void EnableDesktop()
@@ -65,24 +77,25 @@ namespace Game4026.Interaction.TestScene
             xrRig.SetActive(false);
             desktopRig = new GameObject("Desktop test rig (Editor only)");
             desktopRig.layer = 2; // Ignore Raycast: the simulated player must not obstruct its own tools.
+            if (sharedPlayerRoot) desktopRig.transform.SetParent(sharedPlayerRoot, false);
             desktopRig.transform.SetPositionAndRotation(originalRigPosition, originalRigRotation);
-            yaw = desktopRig.transform.eulerAngles.y;
             character = desktopRig.AddComponent<CharacterController>();
             character.height = 1.7f;
             character.radius = 0.2f;
             character.center = Vector3.up * 0.87f;
             character.minMoveDistance = 0f;
             var cameraObject = new GameObject("Desktop test camera", typeof(Camera), typeof(AudioListener));
-            cameraObject.transform.SetParent(desktopRig.transform, false);
-            cameraObject.transform.localPosition = Vector3.up * 1.65f;
             desktopCamera = cameraObject.GetComponent<Camera>();
             desktopCamera.CopyFrom(xrCamera);
+            cameraObject.transform.SetParent(desktopRig.transform, false);
+            cameraObject.transform.SetLocalPositionAndRotation(Vector3.up * 1.65f, Quaternion.identity);
             desktopCamera.enabled = true;
             desktopCamera.nearClipPlane = 0.03f;
             cameraObject.tag = "MainCamera";
-            if (xrRig.TryGetComponent<PlayerTarget>(out _))
+            if (!sharedPlayerRoot && xrRig.GetComponentInChildren<PlayerTarget>(true))
             {
-                if (xrRig.TryGetComponent<PlayerHealth>(out var health))
+                var health = xrRig.GetComponentInChildren<PlayerHealth>(true);
+                if (health)
                     cameraObject.AddComponent<DesktopPlayerDamageReceiver>().Health = health;
                 cameraObject.AddComponent<PlayerTarget>();
             }
@@ -145,7 +158,7 @@ namespace Game4026.Interaction.TestScene
             if (mouse != null && mouse.rightButton.isPressed)
             {
                 var delta = mouse.delta.ReadValue();
-                yaw += delta.x * 0.12f;
+                float yaw = desktopRig.transform.eulerAngles.y + delta.x * 0.12f;
                 pitch = Mathf.Clamp(pitch - delta.y * 0.12f, -75f, 75f);
                 desktopRig.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
                 desktopCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
@@ -225,9 +238,13 @@ namespace Game4026.Interaction.TestScene
                 if (trackedField != null) trackedField.SetValue(bow, originalRequireTracked);
                 bow.SetTrackingValid(true);
             }
-            if (xrRig != null)
+            // Switching back to a headset needs the rig, unloading its scene does not.
+            if (xrRig != null && xrRig.scene.isLoaded)
             {
-                xrRig.transform.SetPositionAndRotation(originalRigPosition, originalRigRotation);
+                if (sharedPlayerRoot)
+                    xrRig.transform.SetPositionAndRotation(desktopRig.transform.position, desktopRig.transform.rotation);
+                else
+                    xrRig.transform.SetPositionAndRotation(originalRigPosition, originalRigRotation);
                 if (xrCamera != null)
                 {
                     xrCamera.transform.localPosition = originalHeadPosition;

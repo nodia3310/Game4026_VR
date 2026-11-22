@@ -1,0 +1,6 @@
+{
+  "name": "Game4026.PlayerCombat",
+  "rootNamespace": "Game4026.PlayerCombat",
+  "references": ["Game4026.Contracts", "Game4026.Interaction", "Game4026.Enemy", "Unity.XR.CoreUtils", "Unity.InputSystem", "Unity.XR.Interaction.Toolkit"],
+  "autoReferenced": true
+}

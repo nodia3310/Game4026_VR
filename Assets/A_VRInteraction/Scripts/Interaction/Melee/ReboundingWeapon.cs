@@ -3,9 +3,12 @@ using Game4026.Contracts;
 using Game4026.Interaction.Grabbing;
 using Unity.XR.CoreUtils;
 using UnityEngine;
+using UnityEngine.InputSystem.XR;
+using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Attachment;
 using UnityEngine.XR.Interaction.Toolkit.Filtering;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
@@ -30,11 +33,14 @@ namespace Game4026.Interaction.Melee
         public event Action CatchWindowOpened;
         public event Action<bool> ReturnEnded;
         public bool IsInFlight => flight == Flight.Outbound || flight == Flight.Returning;
+        internal bool RequiresManualCatch => thrower && thrower is not XRBaseInputInteractor;
 
         private XRGrabInteractable grab;
         private Rigidbody body;
         private XRBaseInteractor thrower;
         private Transform throwerRoot;
+        private TrackedPoseDriver throwerPose;
+        private AutoCatchGrip autoCatchGrip;
         private Flight flight;
         private float outboundUntil;
         private float returnElapsed, returnDuration;
@@ -47,8 +53,11 @@ namespace Game4026.Interaction.Melee
 
         bool IXRSelectFilter.canProcess => isActiveAndEnabled;
 
-        bool IXRSelectFilter.Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable) =>
-            flight == Flight.None || (selectingCatch && ReferenceEquals(interactor, thrower));
+        bool IXRSelectFilter.Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
+        {
+            if (autoCatchGrip != null) return ReferenceEquals(interactor, autoCatchGrip.Hand);
+            return flight == Flight.None || (selectingCatch && ReferenceEquals(interactor, thrower));
+        }
 
         private void Awake()
         {
@@ -67,16 +76,23 @@ namespace Game4026.Interaction.Melee
         {
             grab.lastSelectExited.RemoveListener(OnReleased);
             grab.selectFilters.Remove(this);
+            var catchingHand = autoCatchGrip is { GripAdopted: false } grip ? grip.Hand : null;
+            ClearAutoCatchGrip();
+            if (catchingHand && catchingHand.IsSelecting(grab) && catchingHand.interactionManager)
+                catchingHand.interactionManager.SelectCancel((IXRSelectInteractor)catchingHand, grab);
             if (flight == Flight.Returning) RestorePhysics();
             ClearFlight();
         }
 
         private void OnReleased(SelectExitEventArgs args)
         {
-            if (args.isCanceled || args.interactorObject is not XRBaseInteractor hand ||
+            bool releasedBeforeGripping = autoCatchGrip is { GripAdopted: false };
+            ClearAutoCatchGrip();
+            if (releasedBeforeGripping || args.isCanceled || args.interactorObject is not XRBaseInteractor hand ||
                 hand.handedness == InteractorHandedness.None) return;
 
             thrower = hand;
+            throwerPose = hand.GetComponentInParent<TrackedPoseDriver>();
             var origin = hand.GetComponentInParent<XROrigin>();
             throwerRoot = origin ? origin.transform : hand.transform.root;
             flight = Flight.Released;
@@ -93,6 +109,8 @@ namespace Game4026.Interaction.Melee
 
         private void LateUpdate()
         {
+            if (autoCatchGrip is { GripAdopted: true }) ClearAutoCatchGrip();
+
             if (flight == Flight.Released)
             {
                 // The XRI manager applies its smoothed throw velocity in its earlier LateUpdate.
@@ -109,16 +127,13 @@ namespace Game4026.Interaction.Melee
             }
 
             if (flight != Flight.Returning || !CanCatch(thrower)) return;
-            var inputHand = thrower as XRBaseInputInteractor;
             if (!signaledCatch)
             {
                 signaledCatch = true;
-                inputHand?.SendHapticImpulse(0.3f, 0.045f);
                 CatchWindowOpened?.Invoke();
             }
 
-            if (inputHand != null && inputHand.isSelectActive && inputHand.selectInput.ReadWasPerformedThisFrame())
-                TryCatch(inputHand);
+            if (thrower is XRBaseInputInteractor inputHand) TryCatch(inputHand);
         }
 
         private void FixedUpdate()
@@ -186,12 +201,25 @@ namespace Game4026.Interaction.Melee
                 other.GetComponentInParent<IDamageable>()?.TakeDamage(impactDamage, hitPoint, false);
         }
 
-        private bool HasThrower => thrower && thrower.isActiveAndEnabled;
+        private bool HasThrower
+        {
+            get
+            {
+                if (!thrower || !thrower.isActiveAndEnabled) return false;
+                var tracking = throwerPose ? throwerPose.trackingStateInput.action : null;
+                return tracking == null || (tracking.enabled &&
+                    ((InputTrackingState)tracking.ReadValue<int>() & InputTrackingState.Position) != 0);
+            }
+        }
 
         private bool CanCatch(XRBaseInteractor hand)
         {
-            if (flight != Flight.Returning || !HasThrower || hand != thrower || hand.hasSelection ||
+            if (flight != Flight.Returning || !HasThrower || hand != thrower || !hand.allowSelect ||
+                hand.hasSelection || hand.isPerformingManualInteraction || grab.isSelected ||
                 returnDuration - returnElapsed > catchSeconds) return false;
+
+            if (hand.containingGroup?.activeInteractor is IXRSelectInteractor other && other.hasSelection)
+                return false;
 
             var grip = body.position + body.rotation * gripOffset;
             return (grip - hand.GetAttachTransform(grab).position).sqrMagnitude <= catchRadius * catchRadius;
@@ -202,6 +230,8 @@ namespace Game4026.Interaction.Melee
             if (!CanCatch(hand) || !grab.isActiveAndEnabled || !hand.interactionManager) return false;
 
             var manager = hand.interactionManager;
+            if (!manager.IsRegistered((IXRInteractor)hand) || !manager.IsRegistered((IXRInteractable)grab))
+                return false;
             selectingCatch = true;
             try
             {
@@ -209,6 +239,8 @@ namespace Game4026.Interaction.Melee
 
                 RestorePhysics();
                 ClearFlight();
+                if (hand is XRBaseInputInteractor inputHand && !inputHand.selectInput.ReadIsPerformed())
+                    autoCatchGrip = new AutoCatchGrip(inputHand, grab);
 
                 // A direct catch always attaches at the controller, even if its ray is over a far target.
                 var previousMode = grab.farAttachMode;
@@ -216,8 +248,9 @@ namespace Game4026.Interaction.Melee
                 try { manager.SelectEnter((IXRSelectInteractor)hand, grab); }
                 finally { grab.farAttachMode = previousMode; }
 
-                bool caught = grab.isSelected;
-                if (caught && hand is XRBaseInputInteractor inputHand) inputHand.SendHapticImpulse(0.55f, 0.07f);
+                bool caught = hand.IsSelecting(grab);
+                if (!caught) ClearAutoCatchGrip();
+                else (hand as XRBaseInputInteractor)?.SendHapticImpulse(0.55f, 0.07f);
                 ReturnEnded?.Invoke(caught);
                 return caught;
             }
@@ -238,7 +271,56 @@ namespace Game4026.Interaction.Melee
             flight = Flight.None;
             thrower = null;
             throwerRoot = null;
+            throwerPose = null;
             desktopLaunchVelocity = null;
+        }
+
+        private void ClearAutoCatchGrip()
+        {
+            autoCatchGrip?.Dispose();
+            autoCatchGrip = null;
+        }
+
+        // Keep XRI's normal selection and detach events, including external selection cancellation.
+        // Override only the returning axe's hand until its next deliberate squeeze of Grip.
+        private sealed class AutoCatchGrip : IXRInputButtonReader, IXRSelectFilter, IDisposable
+        {
+            private readonly XRInputButtonReader reader;
+            private readonly IXRInputButtonReader previous;
+            private readonly XRGrabInteractable axe;
+            public XRBaseInputInteractor Hand { get; }
+            public bool GripAdopted { get; private set; }
+
+            public AutoCatchGrip(XRBaseInputInteractor hand, XRGrabInteractable axe)
+            {
+                Hand = hand;
+                this.axe = axe;
+                reader = hand.selectInput;
+                previous = reader.bypass;
+                reader.bypass = this;
+                hand.selectFilters.Add(this);
+            }
+
+            bool IXRSelectFilter.canProcess => true;
+            bool IXRSelectFilter.Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
+                => ReferenceEquals(interactable, axe);
+
+            public bool ReadIsPerformed()
+            {
+                GripAdopted |= (previous ?? reader).ReadIsPerformed();
+                return true;
+            }
+
+            public bool ReadWasPerformedThisFrame() => GripAdopted && (previous ?? reader).ReadWasPerformedThisFrame();
+            public bool ReadWasCompletedThisFrame() => GripAdopted && (previous ?? reader).ReadWasCompletedThisFrame();
+            public float ReadValue() => (previous ?? reader).ReadValue();
+            public bool TryReadValue(out float value) => (previous ?? reader).TryReadValue(out value);
+
+            public void Dispose()
+            {
+                if (ReferenceEquals(reader.bypass, this)) reader.bypass = previous;
+                if (Hand) Hand.selectFilters.Remove(this);
+            }
         }
     }
 }

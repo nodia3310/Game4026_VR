@@ -145,7 +145,8 @@ namespace Game4026.Interaction.TestScene
 
         private void HandleCatchWindow()
         {
-            lastEvent = "Catch now - Grip / Q";
+            if (!reboundWeapon.RequiresManualCatch) return;
+            lastEvent = "Catch now - Q";
             PlayTone(1.75f);
         }
 
