@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game4026.Contracts;
 using Unity.XR.CoreUtils;
 using UnityEngine;
@@ -61,7 +62,9 @@ namespace Game4026.Interaction.Melee
         private readonly Collider[] overlaps = new Collider[64];
         private readonly Collider[] occlusionOverlaps = new Collider[64];
         private readonly RaycastHit[] casts = new RaycastHit[64];
-        private Vector3 previousBase, previousTip, previousRigPosition;
+        private Vector3[] localSweepPoints;
+        private Matrix4x4 previousWeaponPose;
+        private Vector3 previousRigPosition;
         private Quaternion previousRigRotation;
         private bool hasSample;
 
@@ -128,31 +131,43 @@ namespace Game4026.Interaction.Melee
                 ResetSampling();
                 return;
             }
-            var currentBase = bladeBase.position;
-            var currentTip = bladeTip.position;
+            localSweepPoints ??= BuildSweepPoints();
+            var pose = transform.localToWorldMatrix;
             var rigPosition = rig.position;
             var rigRotation = rig.rotation;
             float dt = Time.deltaTime;
-            if (!MeleeMotion.IsFinite(currentBase) || !MeleeMotion.IsFinite(currentTip) ||
-                !MeleeMotion.IsFinite(rigPosition) || !MeleeMotion.IsFinite(dt) || dt <= 0)
+            if (!MeleeMotion.IsFinite(dt) || dt <= 0 || localSweepPoints.Length == 0)
             {
                 ResetSampling();
                 return;
             }
+
+            var oldPose = previousWeaponPose;
+            var oldRigPosition = previousRigPosition;
+            var oldRigRotation = previousRigRotation;
+            previousWeaponPose = pose;
+            previousRigPosition = rigPosition;
+            previousRigRotation = rigRotation;
             if (!hasSample)
             {
-                SaveSample(currentBase, currentTip, rigPosition, rigRotation);
+                hasSample = true;
                 return;
             }
-            var oldBase = MeleeMotion.RebasePoint(previousBase, previousRigPosition, previousRigRotation, rigPosition, rigRotation);
-            var oldTip = MeleeMotion.RebasePoint(previousTip, previousRigPosition, previousRigRotation, rigPosition, rigRotation);
-            float movement = Mathf.Max(Vector3.Distance(oldBase, currentBase), Vector3.Distance(oldTip, currentTip));
-            bool discontinuity = dt > maximumSampleSeconds || movement > maximumSampleDistance ||
-                movement / dt > maximumTrackedSpeed ||
-                Vector3.Distance(previousRigPosition, rigPosition) > rigTeleportDistance ||
-                Quaternion.Angle(previousRigRotation, rigRotation) > rigTeleportAngle;
-            SaveSample(currentBase, currentTip, rigPosition, rigRotation);
-            if (discontinuity)
+
+            // Express both weapon poses in the current rig frame so locomotion cannot arm a swing.
+            var rigDelta = rigRotation * Quaternion.Inverse(oldRigRotation);
+            oldPose = Matrix4x4.TRS(rigPosition - rigDelta * oldRigPosition, rigDelta, Vector3.one) * oldPose;
+            float maxDistanceSquared = 0f;
+            foreach (var point in localSweepPoints)
+            {
+                var delta = pose.MultiplyPoint3x4(point) - oldPose.MultiplyPoint3x4(point);
+                if (!MeleeMotion.IsFinite(delta)) { ResetSampling(); return; }
+                maxDistanceSquared = Mathf.Max(maxDistanceSquared, delta.sqrMagnitude);
+            }
+            float movement = Mathf.Sqrt(maxDistanceSquared);
+            if (dt > maximumSampleSeconds || movement > maximumSampleDistance || movement / dt > maximumTrackedSpeed ||
+                Vector3.Distance(oldRigPosition, rigPosition) > rigTeleportDistance ||
+                Quaternion.Angle(oldRigRotation, rigRotation) > rigTeleportAngle)
             {
                 CurrentSpeed = 0;
                 swing.Reset();
@@ -160,30 +175,57 @@ namespace Game4026.Interaction.Melee
             }
             CurrentSpeed = movement / dt;
             if (!swing.Advance(CurrentSpeed, dt)) return;
-
-            // <= radius spacing leaves overlap between neighbouring swept spheres along the blade.
-            int samples = Mathf.CeilToInt(Mathf.Max(Vector3.Distance(oldBase, oldTip),
-                Vector3.Distance(currentBase, currentTip)) / sweepRadius) + 1;
-            if (samples > maximumBladeSamples)
-            {
-                // Do not silently create unswept gaps for an overlong weapon.
-                swing.Reset();
-                return;
-            }
-            samples = Mathf.Max(samples, 2);
-            for (int i = 0; i < samples; ++i)
-            {
-                float t = (float)i / (samples - 1);
-                Sweep(Vector3.Lerp(oldBase, oldTip, t), Vector3.Lerp(currentBase, currentTip, t), dt);
-            }
+            foreach (var point in localSweepPoints)
+                Sweep(oldPose.MultiplyPoint3x4(point), pose.MultiplyPoint3x4(point), dt);
         }
 
-        private void SaveSample(Vector3 b, Vector3 t, Vector3 position, Quaternion rotation)
+        private Vector3[] BuildSweepPoints()
         {
-            previousBase = b; previousTip = t; previousRigPosition = position;
-            previousRigRotation = rotation; hasSample = true;
-        }
+            var start = bladeBase.position;
+            var tip = bladeTip.position;
+            var axis = (tip - start).normalized;
+            var grip = GetComponent<XRGrabInteractable>().attachTransform;
+            var points = new List<Vector3>(maximumBladeSamples);
+            bool AddSegment(Vector3 from, Vector3 to, bool includeStart)
+            {
+                int steps = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(from, to) / sweepRadius));
+                if (points.Count + steps + (includeStart ? 1 : 0) > maximumBladeSamples) return false;
+                for (int i = includeStart ? 0 : 1; i <= steps; i++)
+                    points.Add(transform.InverseTransformPoint(Vector3.Lerp(from, to, (float)i / steps)));
+                return true;
+            }
 
+            if (!AddSegment(start, tip, true)) return Array.Empty<Vector3>();
+            if (!grip || axis == Vector3.zero) return points.ToArray();
+
+            // The blade markers can sit off the shaft (axe head and crowbar hook).
+            // Follow the shaft through the grip instead of cutting diagonally across empty space.
+            var handle = grip.position;
+            float rear = 0f;
+            foreach (var box in GetComponentsInChildren<BoxCollider>())
+            {
+                if (!box.enabled || box.isTrigger) continue;
+                var extents = box.size * 0.5f;
+                var boxTransform = box.transform;
+                float center = Vector3.Dot(boxTransform.TransformPoint(box.center) - handle, axis);
+                float halfLength = Mathf.Abs(Vector3.Dot(boxTransform.TransformVector(Vector3.right * extents.x), axis))
+                    + Mathf.Abs(Vector3.Dot(boxTransform.TransformVector(Vector3.up * extents.y), axis))
+                    + Mathf.Abs(Vector3.Dot(boxTransform.TransformVector(Vector3.forward * extents.z), axis));
+                rear = Mathf.Min(rear, center - halfLength);
+            }
+            var joint = start;
+            var shoulder = handle + axis * Vector3.Dot(joint - handle, axis);
+            if (Vector3.Distance(shoulder, joint) > sweepRadius)
+            {
+                // Offset heads join the shaft inside the head, between the two striking markers.
+                joint = (start + tip) * 0.5f;
+                shoulder = handle + axis * Vector3.Dot(joint - handle, axis);
+            }
+            if ((shoulder - joint).sqrMagnitude > 0.000001f && !AddSegment(joint, shoulder, false))
+                return Array.Empty<Vector3>();
+            if (!AddSegment(shoulder, handle + axis * rear, false)) return Array.Empty<Vector3>();
+            return points.ToArray();
+        }
         private bool Ignore(Collider collider)
         {
             var playerRoot = ignoredPlayerRoot ? ignoredPlayerRoot : selectingOrigin ? selectingOrigin.transform : null;
@@ -286,9 +328,8 @@ namespace Game4026.Interaction.Melee
         {
             if (!bladeBase || !bladeTip) return;
             Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(bladeBase.position, bladeTip.position);
-            Gizmos.DrawWireSphere(bladeBase.position, sweepRadius);
-            Gizmos.DrawWireSphere(bladeTip.position, sweepRadius);
+            foreach (var point in localSweepPoints ?? BuildSweepPoints())
+                Gizmos.DrawWireSphere(transform.TransformPoint(point), sweepRadius);
         }
     }
 }
