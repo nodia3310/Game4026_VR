@@ -54,6 +54,7 @@
 - PlayerRig — Scripts/Enemy/Flow/PlayerRig.cs — 移動玩家（CharacterController 所在物件，保留頭盔偏移）與淡黑閃現 Blink（不暈的推回/傳送）
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
 - PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`/`MaxHealth`、`ResetHealth()` 或 private setter 補滿；轉接元件（A 的桌面模式）讀它持有的 receiver
+- Demo 文物（Museum_Demo 場景）— `Demo Artifact - Golden Mask`（Meshy 金面具 0.38 m、BoxCollider、Kinematic Rigidbody、XRGrabInteractable、ArtifactIdentity demo_golden_mask / TutankhamunMask、RestorableArtifact，預設隱藏）；`Demo Artifact Display`（人面獅身像展區西側 (4.8, 0, -0.1)：Pedestal 圓柱 + NavMeshObstacle、Glow 光圈、Snap、Volume = ArtifactDisplayTrigger、Artifact Fallback Spawn）；材質 Assets/_Game/Materials/M_DemoPedestal.mat
 - DemoMusic — Scripts/Enemy/Flow/DemoMusic.cs — 掛在 Museum_Demo 的 DemoFlow 物件：展廳戰鬥（Hall）播 `Audio & SFX/Normal battle.mp3`、BossIntro/Boss 播 `Boss.mp3`，其他階段靜音；兩個 2D 循環 AudioSource 交叉淡入（Volume 0.45、Fade Seconds 1.5）；兩首設 Streaming
 - DemoWorldHud — Scripts/Enemy/Flow/DemoWorldHud.cs — 頭盔 HUD：DemoFlow 目標 + HP 的世界空間 TextMesh，浮在頭前、轉頭時慢慢跟上、穿牆可見；只在 XR 裝置啟用時顯示
 - PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body；Museum_Demo 改用 A 的 TrackedPlayerHurtbox 後目前沒用到）
@@ -133,6 +134,7 @@
 - ParryZone — Scripts/Bridges/ParryZone.cs — 把 Collider 形狀（Capsule/Box/Sphere，停用的也行）放大一圈做 Overlap 查詢、找符合條件的 Collider、畫 Gizmo
 - HeldWeaponParryProbe — Scripts/Bridges/HeldWeaponParryProbe.cs — 實作 IParryProbe、裝成 ParryProbe.Current（DamageBridgeInstaller 開場自動加）：放大範圍內有玩家握著的近戰武器，且武器比玩家身體（Body–Head 線）更靠近飛來的武器（Front Margin 0.1）才算；成功後讓握武器的手把照反應震動
 - ArrowDamageBridge — Scripts/Bridges/ArrowDamageBridge.cs — 掛在 A 的箭上（由安裝器自動加），聽 Impact 事件扣血
+- DemoArtifactStep — Scripts/Bridges/DemoArtifactStep.cs — 掛在 Museum_Demo 的 DemoFlow 物件：展廳最後一隻敵人倒下處（HitImpacts 的 Kill 位置；沒有就用 Fallback Spawn）浮出黃金面具（A 的 RestorableArtifact，浮著旋轉到被抓）；放上 ArtifactDisplayTrigger → DemoFlow.MarkArtifactRestored → 傳送打 Boss；重來時收回面具、重置展台。設 DemoFlow.RequireArtifact / ArtifactHint
 - ArtifactEventBridge — Scripts/Bridges/ArtifactEventBridge.cs — 訂閱場景裡所有 A 的 ArtifactDisplayTrigger.OnArtifactRestored，轉給 EncounterDirector
 - DamageBridgeInstaller — Scripts/Bridges/DamageBridgeInstaller.cs — 場景元件：開場時幫所有 MeleeWeapon 加橋接，每次射擊後幫新的箭加橋接
 
