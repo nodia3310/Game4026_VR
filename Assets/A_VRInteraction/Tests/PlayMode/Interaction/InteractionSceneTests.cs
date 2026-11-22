@@ -583,6 +583,44 @@ namespace Game4026.Tests.Interaction
             TestContext.WriteLine($"Anubis arrow damage: {enemy.MaxHealth - enemy.CurrentHealth:F2} HP");
         }
 
+        [UnityTest]
+        public IEnumerator Anubis_EmbeddedArrowFollowsHitboxAndIsRemovedWhenEnemyDies()
+        {
+            var enemy = FindAnubis(out var body);
+            Collider impact = null;
+            yield return ShootArrow(body.bounds.center + new Vector3(0f, .33f, 1.95f), (collision, _) => impact = collision.collider);
+            Assert.That(impact, Is.SameAs(body));
+
+            var arrow = Object.FindObjectsByType<ArrowProjectile>().Single();
+            Assert.That(arrow.transform.parent, Is.SameAs(body.transform));
+            Assert.That(arrow.GetComponent<Rigidbody>().detectCollisions, Is.False);
+            Vector3 localImpact = arrow.transform.localPosition;
+            Vector3 originalPosition = arrow.transform.position;
+            body.transform.localPosition += Vector3.right * .3f;
+            yield return null;
+            Assert.That(Vector3.Distance(arrow.transform.position, originalPosition), Is.GreaterThan(.1f));
+            Assert.That(Vector3.Distance(arrow.transform.position, body.transform.TransformPoint(localImpact)), Is.LessThan(.001f));
+
+            Assert.That(enemy.TakeProjectileDamage(enemy.MaxHealth, body.bounds.center, false), Is.True);
+            Assert.That(enemy.IsDead, Is.True);
+            yield return null;
+            Assert.That(arrow == null, Is.True, "The arrow should be removed when the death animation begins.");
+        }
+
+        [UnityTest]
+        public IEnumerator Anubis_EmbeddedArrowIsRemovedWhenTargetIsReused()
+        {
+            var enemy = FindAnubis(out var body);
+            yield return ShootArrow(body.bounds.center + new Vector3(0f, .33f, 1.95f), (_, _) => { });
+            var arrow = Object.FindObjectsByType<ArrowProjectile>().Single();
+            Assert.That(arrow.transform.parent, Is.SameAs(body.transform));
+
+            enemy.gameObject.SetActive(false);
+            enemy.gameObject.SetActive(true);
+            yield return null;
+            Assert.That(arrow == null, Is.True, "An arrow from the previous life should be removed on reuse.");
+        }
+
         private IEnumerator ShootArrow(Vector3 muzzlePosition, System.Action<Collision, ArrowDamageBridge> onImpact)
         {
             var bow = Object.FindAnyObjectByType<BowDrawAim>();
