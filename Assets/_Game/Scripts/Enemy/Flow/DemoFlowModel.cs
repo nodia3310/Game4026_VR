@@ -68,7 +68,8 @@ namespace Game4026.Enemy
             return true;
         }
 
-        public DemoAction Tick(float now, bool hallCleared, bool bossCleared, bool playerDead)
+        /// <param name="artifactReady">False holds the cleared hall until the artifact is back on its display.</param>
+        public DemoAction Tick(float now, bool hallCleared, bool bossCleared, bool playerDead, bool artifactReady = true)
         {
             float elapsed = now - phaseStart;
             if (playerDead && IsFighting)
@@ -87,7 +88,7 @@ namespace Game4026.Enemy
                     }
                     break;
                 case DemoPhase.Hall:
-                    if (hallCleared)
+                    if (hallCleared && artifactReady)
                         Set(DemoPhase.BossIntro, now);
                     break;
                 case DemoPhase.BossIntro:
