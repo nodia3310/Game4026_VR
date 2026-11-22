@@ -7487,6 +7487,13 @@ MonoBehaviour:
   - {fileID: 2733700469406795083, guid: 5cdd5d3dc8936ec4a8d36c7fbe529cb9, type: 3}
   - {fileID: 1598012065776718366, guid: fe422b099a63dee4cb31fead252b00fa, type: 3}
   barrageHandTemplate: {fileID: 1121790542375198278}
+  slamSound: {fileID: 8300000, guid: fadf558b6df92864e8164f2970be8d1a, type: 3}
+  sweepSound: {fileID: 8300000, guid: 23a7fe221994d194f837f03eff4d8526, type: 3}
+  clapSound: {fileID: 8300000, guid: e2b0fb9df0f731244a9d267bb5c6a1a4, type: 3}
+  throwSound: {fileID: 8300000, guid: 23a7fe221994d194f837f03eff4d8526, type: 3}
+  handSoundVolume: 0.9
+  handSoundPitchJitter: 0.06
+  handSoundMinDistance: 3
   floatAmplitude: 0.15
   floatSpeed: 1.2
 --- !u!114 &8676175506887067853

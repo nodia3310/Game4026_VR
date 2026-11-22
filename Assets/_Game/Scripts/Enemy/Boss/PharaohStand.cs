@@ -159,6 +159,18 @@ namespace Game4026.Enemy
         [SerializeField] private EnemyProjectile[] barrageWeapons = new EnemyProjectile[0];
         [Tooltip("Inactive hand model copied for every barrage slot.")]
         [SerializeField] private GameObject barrageHandTemplate;
+        [Header("Sound (3D, from the hand)")]
+        [Tooltip("Palm hitting the floor (every slam of a combo).")]
+        [SerializeField] private AudioClip slamSound;
+        [Tooltip("Sweep and head slash: plays as the hand starts across.")]
+        [SerializeField] private AudioClip sweepSound;
+        [Tooltip("The two palms meeting.")]
+        [SerializeField] private AudioClip clapSound;
+        [Tooltip("A thrown weapon leaving the hand (played a bit higher).")]
+        [SerializeField] private AudioClip throwSound;
+        [SerializeField, Range(0f, 1f)] private float handSoundVolume = 0.9f;
+        [SerializeField, Range(0f, 0.3f)] private float handSoundPitchJitter = 0.06f;
+        [SerializeField, Min(0.1f)] private float handSoundMinDistance = 3f;
         [SerializeField, Min(0f)] private float floatAmplitude = 0.15f;
         [SerializeField, Min(0f)] private float floatSpeed = 1.2f;
 
@@ -175,6 +187,7 @@ namespace Game4026.Enemy
         private float throwSide = 1f;
         private Vector3 activeHeldScale = Vector3.one, rightHeldScale = Vector3.one, leftHeldScale = Vector3.one;
         private PharaohHand activeHand;
+        private AudioSource rightSource, leftSource;
         private Transform activeRest, activeHeld;
         private HandPose activePose, rightPose, leftPose;
         private bool activeIsLeft, lastSlamLeft;
@@ -228,6 +241,10 @@ namespace Game4026.Enemy
             if (leftHeldWeapon != null)
                 leftHeldScale = leftHeldWeapon.localScale;
             arena = GetComponent<PharaohArena>();
+            if (hand != null)
+                rightSource = EnemySfx.CreateSource(hand.gameObject, handSoundMinDistance, 40f);
+            if (leftHand != null)
+                leftSource = EnemySfx.CreateSource(leftHand.gameObject, handSoundMinDistance, 40f);
             BuildBarrageHands();
         }
 
@@ -401,7 +418,10 @@ namespace Game4026.Enemy
                     MoveHand(Vector3.Lerp(fromPos, sweepStart, Smooth(Mathf.Clamp01(t * 2f))), SideRotation());
                     ShowSweepMarker(t);
                     if (t >= 1f)
+                    {
+                        PlayHandSound(activeHand, sweepSound);
                         Enter(Step.Sweep, move == StandMove.HeadSlash ? settings.headSlashDuration : settings.sweepDuration);
+                    }
                     break;
 
                 case Step.Sweep:
@@ -485,6 +505,7 @@ namespace Game4026.Enemy
                     if (t >= 1f)
                     {
                         HideMarkers();
+                        PlayHandSound(hand, clapSound);
                         bool clapHit = player != null && StandGeometry.ClapHits(target, clapAxis, player.Body.position,
                             settings.clapDepth, settings.clapHalfWidth);
                         if (clapHit)
@@ -826,6 +847,7 @@ namespace Game4026.Enemy
         private void ReleaseWeapon(PlayerTarget player)
         {
             ShowHeldWeapon(0f);
+            PlayHandSound(activeHand, throwSound, 1.25f);
             Vector3 from = activeHeld != null ? activeHeld.position : activeHand.transform.position;
             if (weaponPrefab != null && player != null)
             {
@@ -894,6 +916,7 @@ namespace Game4026.Enemy
         private void LandSlam(PlayerTarget player)
         {
             bool hit = player != null && StandGeometry.SlamHits(target, settings.slamRadius, player.Body.position);
+            PlayHandSound(activeHand, slamSound);
             if (hit)
                 Damage(player, settings.slamDamage);
             HideMarkers();
@@ -1044,6 +1067,15 @@ namespace Game4026.Enemy
             sweepMarker.SetPositionAndRotation(target + Vector3.up * 0.02f, Quaternion.LookRotation(clapSide));
             float depth = settings.clapDepth * 2f * Mathf.Lerp(0.5f, 1f, Smooth(t));
             SetWorldScale(sweepMarker, new Vector3(depth, 0.01f, settings.clapHalfWidth * 2f));
+        }
+
+        private void PlayHandSound(PharaohHand h, AudioClip clip, float pitch = 1f)
+        {
+            AudioSource source = h == null ? null : h == leftHand ? leftSource : rightSource;
+            if (source == null || clip == null || handSoundVolume <= 0f)
+                return;
+            source.pitch = pitch * (1f + UnityEngine.Random.Range(-handSoundPitchJitter, handSoundPitchJitter));
+            source.PlayOneShot(clip, handSoundVolume);
         }
 
         private static void Damage(PlayerTarget player, float amount)

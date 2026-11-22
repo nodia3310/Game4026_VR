@@ -41996,6 +41996,7 @@ GameObject:
   - component: {fileID: 1621965821}
   - component: {fileID: 1621965822}
   - component: {fileID: 1621965823}
+  - component: {fileID: 1621965824}
   m_Layer: 0
   m_Name: DemoFlow
   m_TagString: Untagged
@@ -42109,6 +42110,23 @@ MonoBehaviour:
     realmRest: {fileID: 0}
   - item: {fileID: 1403361768}
     realmRest: {fileID: 0}
+--- !u!114 &1621965824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621965818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a4d01ffdbc609e44aa4773dab50ffdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.DemoMusic
+  flow: {fileID: 1621965819}
+  hallMusic: {fileID: 8300000, guid: d6d0c28dc279da140a830246f61aa041, type: 3}
+  bossMusic: {fileID: 8300000, guid: 306fc91a54cd67a4aa8871bbf6a0cec6, type: 3}
+  volume: 0.45
+  fadeSeconds: 1.5
 --- !u!1 &1622812119
 GameObject:
   m_ObjectHideFlags: 0

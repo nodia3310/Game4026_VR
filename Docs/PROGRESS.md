@@ -17,6 +17,7 @@
 - **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth`；A 的 `PlayerHealth` 沒有 `ResetHealth()` → 用反射呼叫 private setter 補滿（已在 NOTES_FOR_A 請 A 加）；桌面模式的 `DesktopPlayerDamageReceiver` 從它的 `Health` 屬性讀；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
 - **音效**（2026-11-22）：`EnemySfx` 敵人生成播召喚聲（阿努比斯、神諭、翼人；法老沒掛）、神諭的石頭聲（升起、滾動起步、跳砸落地、頭槌、倒地；走路跳步沒有）；結界擺錘鐮刀每次擺過最低點前 0.3 秒播揮砍聲（`PharaohArena` 的 Sound 欄位）。三個音檔已設 Force To Mono。
 - **招架輔助**（2026-11-23）：`ParryAssist` 掛在三種敵人的 EnemyWeapon 上，招架窗內玩家握著的武器靠近（比武器大 0.13 m、刀尖外 0.15 m）就算招架，舉刀擋也行。VR 還沒實測，範圍在 prefab 的 ParryAssist 欄位調。法老的手部招式（掌拍、連拍、橫掃、頭部橫斬、合擊）**不能招架**（試過，使用者覺得太簡單，已拿掉）。**飛行武器**（擲武器、萬兵齊發，也包含神諭光彈）擋著也會反彈：`EnemyProjectile` 的 Reflect Assist（預設開、Padding 0.13）。
+- **BGM**（2026-11-23）：`DemoMusic`（DemoFlow 物件上）展廳開打播 Normal battle、進 Boss（傳送開始）切 Boss，交叉淡入；開場等待、勝利、倒下時淡出。Play 實測：Hall → Normal battle、SkipToBoss → Boss。
 - **測試**：EditMode 305/305（含 A 的）、PlayMode 61/64（3 個 A 的失敗，見紀錄）、PlayMode 62/64（A 的 2 個抓取測試失敗，見紀錄）。
 - **Git**：feature/enemy-ai 8aaa7ce 已 push（音效、VR 玩家、法老換模型、拿武器開始）；使用者要開 PR 到 main。A 的 feature/vr-interaction 比 main 多 4 個 commit（只動 A_VRInteraction，和我們不重疊；含 `PlayerHealth.ResetHealth`、`TrackedPlayerHurtbox` 追蹤閃避、`MuseumDemoRun`），由 A 開 PR、使用者 merge。兩邊都進 main 後：把 main 合進 feature/enemy-ai，Museum_Demo 的 XR Origin 接 TrackedPlayerHurtbox（我們的是舊版 Museum_test 複製來的，不會自動更新），確認 MuseumDemoRun 和 DemoFlow 不重複。
 - 下一步：
