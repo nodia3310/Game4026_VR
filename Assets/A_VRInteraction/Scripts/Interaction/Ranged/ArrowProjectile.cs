@@ -54,6 +54,7 @@ namespace Game4026.Interaction.Ranged
         {
             if (!launched || impacted) return;
             impacted = true;
+            Vector3 impactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
             if (freezeOnImpact)
             {
                 body.linearVelocity = Vector3.zero;
@@ -62,7 +63,7 @@ namespace Game4026.Interaction.Ranged
                 body.isKinematic = true;
             }
             Impact?.Invoke(collision);
-            onImpactPoint.Invoke(collision.contactCount > 0 ? collision.GetContact(0).point : transform.position);
+            onImpactPoint.Invoke(impactPoint);
         }
     }
 }
