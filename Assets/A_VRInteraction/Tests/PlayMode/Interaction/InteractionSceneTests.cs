@@ -405,30 +405,51 @@ namespace Game4026.Tests.Interaction
         [UnityTest]
         public IEnumerator Melee_ActualHeldSweepHitsCompoundTargetOnce_WithPhysicalEstimates()
         {
-            foreach (var melee in Object.FindObjectsByType<MeleeWeapon>().OrderBy(w => w.name))
+            var weapons = Object.FindObjectsByType<MeleeWeapon>().OrderBy(weapon => weapon.name).ToArray();
+            Assert.That(weapons.Length, Is.EqualTo(4));
+            var target = Object.FindObjectsByType<MeleeHitTarget>().Single(item => item.name == "Melee compound target");
+            var face = target.transform.Find("Target center").GetComponent<Collider>().bounds;
+            var hand = desktop.RightHand;
+
+            // XRI reads controller poses in Update before moving its velocity-tracked body in FixedUpdate.
+            // Keep one input pose per physics step even in a headless Editor.
+            float previousCaptureStep = Time.captureDeltaTime;
+            Time.captureDeltaTime = Time.fixedDeltaTime;
+            try
             {
-                var physical = melee.GetComponent<PhysicalGrabbable>();
-                var midpoint = (Field<Transform>(melee,"bladeBase").localPosition + Field<Transform>(melee,"bladeTip").localPosition) * .5f;
-                var tip = Field<Transform>(melee,"bladeTip").localPosition;
-                int before = feedback.MeleeHitCount;
-                // Sweep the tip across the target's front face. Placing the blade midpoint
-                // at the face embeds the longer head in the solid target and tests repeated rebounds.
-                Grab(desktop.RightHand, physical, new Vector3(-3.5f, 1.3f-midpoint.y, 1.91f-tip.z));
-                // Let the held weapon establish a slow-motion sample before starting the swing.
-                yield return Settle();
-                for (int i = 0; i < 19; i++)
+                foreach (var melee in weapons)
                 {
-                    desktop.RightHand.transform.position += Vector3.right * .045f;
-                    yield return new WaitForFixedUpdate();
+                    var physical = melee.GetComponent<PhysicalGrabbable>();
+                    var tip = physical.transform.InverseTransformPoint(Field<Transform>(melee, "bladeTip").position);
+                    float clearance = Field<float>(melee, "sweepRadius") * .75f;
+                    var start = new Vector3(face.min.x - .35f, face.center.y, face.min.z - clearance);
+                    int before = feedback.MeleeHitCount;
+                    GameObject hitTarget = null;
+                    melee.Hit += hit => hitTarget = hit.Target;
+
+                    // The swept sphere reaches the raised face while the solid blade travels in front of it.
+                    Grab(hand, physical, start - tip);
+                    yield return Settle();
+                    const float speed = 2.25f;
+                    for (int i = 0; i < 19; i++)
+                    {
+                        hand.transform.position += Vector3.right * (speed * Time.fixedDeltaTime);
+                        yield return new WaitForFixedUpdate();
+                    }
+                    Assert.That(feedback.MeleeHitCount, Is.EqualTo(before + 1), melee.name + ": one notification per swing against the compound target.");
+                    Assert.That(hitTarget, Is.SameAs(target.gameObject), melee.name);
+                    Assert.That(feedback.LastSpeed, Is.GreaterThan(1.2f), melee.name);
+                    Assert.That(feedback.LastEnergy, Is.GreaterThan(0f), melee.name);
+                    Assert.That(feedback.LastForce, Is.GreaterThan(0f), melee.name);
+                    Assert.That(melee.QueryOverflowCount, Is.Zero);
+                    hand.Release();
+                    // A released axe can rebound into a later weapon's swing.
+                    physical.gameObject.SetActive(false);
                 }
-                Assert.That(feedback.MeleeHitCount, Is.EqualTo(before+1), melee.name+": one notification per swing against the compound target.");
-                Assert.That(feedback.LastSpeed, Is.GreaterThan(1.2f), melee.name);
-                Assert.That(feedback.LastEnergy, Is.GreaterThan(0f), melee.name);
-                Assert.That(feedback.LastForce, Is.GreaterThan(0f), melee.name);
-                Assert.That(melee.QueryOverflowCount, Is.Zero);
-                desktop.RightHand.Release();
-                yield return null;
-                Pose(physical,new Vector3(-5f,1f,7f));
+            }
+            finally
+            {
+                Time.captureDeltaTime = previousCaptureStep;
             }
         }
 
@@ -504,13 +525,26 @@ namespace Game4026.Tests.Interaction
             yield return Settle();
             var enemy = FindAnubis(out var body);
             var weakCollider = enemy.GetComponentInChildren<WeakPoint>().GetComponent<Collider>();
+            // Headless rendering culls this Animator's bone updates. Sample and hold the authored
+            // idle pose so the moving head collider has a consistent position throughout the shot.
+            var animator = enemy.GetComponentInChildren<Animator>();
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            animator.Play(animator.GetCurrentAnimatorStateInfo(0).fullPathHash, 0, 0f);
+            animator.Update(0f);
+            animator.speed = 0f;
+            Physics.SyncTransforms();
+
             var melee = Object.FindObjectsByType<MeleeWeapon>().Single(weapon => weapon.name == "Melee weapon - Knife");
             EnemyDamageResult result = default;
             int hits = 0;
             enemy.Damaged += (_, damage) => { result = damage; hits++; };
             Collider impact = null;
             float expected = 0f;
+            // Aim from behind the guard and allow for gravity over the short flight.
             var muzzle = weakCollider.bounds.center + new Vector3(0f, .04f, 1.95f);
+            Assert.That(Physics.Raycast(muzzle, Vector3.back, out var firstHit, 1.95f,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore), Is.True);
+            Assert.That(firstHit.collider, Is.SameAs(weakCollider), "The head must be exposed along the test shot.");
             yield return ShootArrow(muzzle, (collision, arrowBridge) =>
             {
                 impact = collision.collider;
