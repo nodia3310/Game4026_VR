@@ -1,6 +1,8 @@
 using System;
 using Game4026.Contracts;
+using Unity.XR.CoreUtils;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace Game4026.Interaction.Melee
@@ -12,7 +14,7 @@ namespace Game4026.Interaction.Melee
     [DisallowMultipleComponent, RequireComponent(typeof(XRGrabInteractable)), DefaultExecutionOrder(200)]
     public sealed class MeleeWeapon : MonoBehaviour
     {
-        [Header("References (required)")]
+        [Header("References")]
         [SerializeField] private Transform bladeBase;
         [SerializeField] private Transform bladeTip;
         [Tooltip("XR Origin root moved by locomotion, not a tracked hand or Camera.")]
@@ -21,6 +23,8 @@ namespace Game4026.Interaction.Melee
         [SerializeField] private Transform obstructionOrigin;
         [Tooltip("Optional player root whose colliders must never be hit.")]
         [SerializeField] private Transform ignoredPlayerRoot;
+        [Tooltip("Fill unassigned rig references from the XR Origin of the hand that grabs this weapon.")]
+        [SerializeField] private bool useSelectingXrOrigin;
         [Header("Queries")]
         [SerializeField, Min(0.005f)] private float sweepRadius = 0.035f;
         [SerializeField] private LayerMask targetMask = ~0;
@@ -52,6 +56,7 @@ namespace Game4026.Interaction.Melee
         public int QueryOverflowCount { get; private set; }
 
         private XRGrabInteractable grab;
+        private XROrigin selectingOrigin;
         private MeleeSwingWindow swing;
         private readonly Collider[] overlaps = new Collider[64];
         private readonly Collider[] occlusionOverlaps = new Collider[64];
@@ -59,6 +64,9 @@ namespace Game4026.Interaction.Melee
         private Vector3 previousBase, previousTip, previousRigPosition;
         private Quaternion previousRigRotation;
         private bool hasSample;
+
+        private Transform ActiveObstructionOrigin => obstructionOrigin ? obstructionOrigin :
+            selectingOrigin && selectingOrigin.Camera ? selectingOrigin.Camera.transform : null;
 
         private void Awake()
         {
@@ -88,7 +96,21 @@ namespace Game4026.Interaction.Melee
         private static float SafePositive(float value, float fallback, float minimum) =>
             MeleeMotion.IsFinite(value) ? Mathf.Max(minimum, value) : Mathf.Max(minimum, fallback);
 
-        private void OnDisable() => ResetSampling();
+        private void OnEnable() => grab.firstSelectEntered.AddListener(OnGrabbed);
+
+        private void OnDisable()
+        {
+            grab.firstSelectEntered.RemoveListener(OnGrabbed);
+            selectingOrigin = null;
+            ResetSampling();
+        }
+
+        private void OnGrabbed(SelectEnterEventArgs args)
+        {
+            if (!useSelectingXrOrigin) return;
+            selectingOrigin = args.interactorObject.transform.GetComponentInParent<XROrigin>();
+            ResetSampling();
+        }
 
         /// <summary>Call on an explicit teleport/recenter or known tracking loss, in addition to automatic guards.</summary>
         public void ResetSampling()
@@ -100,15 +122,16 @@ namespace Game4026.Interaction.Melee
 
         private void LateUpdate()
         {
-            if (!grab.isSelected || !bladeBase || !bladeTip || !rigMotionReference || !obstructionOrigin)
+            var rig = rigMotionReference ? rigMotionReference : selectingOrigin ? selectingOrigin.transform : null;
+            if (!grab.isSelected || !bladeBase || !bladeTip || !rig || !ActiveObstructionOrigin)
             {
                 ResetSampling();
                 return;
             }
             var currentBase = bladeBase.position;
             var currentTip = bladeTip.position;
-            var rigPosition = rigMotionReference.position;
-            var rigRotation = rigMotionReference.rotation;
+            var rigPosition = rig.position;
+            var rigRotation = rig.rotation;
             float dt = Time.deltaTime;
             if (!MeleeMotion.IsFinite(currentBase) || !MeleeMotion.IsFinite(currentTip) ||
                 !MeleeMotion.IsFinite(rigPosition) || !MeleeMotion.IsFinite(dt) || dt <= 0)
@@ -161,8 +184,12 @@ namespace Game4026.Interaction.Melee
             previousRigRotation = rotation; hasSample = true;
         }
 
-        private bool Ignore(Collider collider) => !collider || collider.transform.IsChildOf(transform) ||
-            (ignoredPlayerRoot && collider.transform.IsChildOf(ignoredPlayerRoot));
+        private bool Ignore(Collider collider)
+        {
+            var playerRoot = ignoredPlayerRoot ? ignoredPlayerRoot : selectingOrigin ? selectingOrigin.transform : null;
+            return !collider || collider.transform.IsChildOf(transform) ||
+                (playerRoot && collider.transform.IsChildOf(playerRoot));
+        }
 
         private static bool InMask(Collider collider, LayerMask mask) => (mask.value & (1 << collider.gameObject.layer)) != 0;
 
@@ -236,7 +263,7 @@ namespace Game4026.Interaction.Melee
 
         private bool IsOccluded(Vector3 point, GameObject target)
         {
-            Vector3 origin = obstructionOrigin.position;
+            Vector3 origin = ActiveObstructionOrigin.position;
             // Raycasts alone miss a wall containing the origin. Check a tiny starting volume first.
             int count = Physics.OverlapSphereNonAlloc(origin, 0.005f, occlusionOverlaps, blockerMask, triggerInteraction);
             if (count >= occlusionOverlaps.Length) { ++QueryOverflowCount; return true; }
