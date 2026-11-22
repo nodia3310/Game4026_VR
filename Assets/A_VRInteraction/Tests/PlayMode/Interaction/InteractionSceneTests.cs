@@ -455,6 +455,52 @@ namespace Game4026.Tests.Interaction
         }
 
         [UnityTest]
+        public IEnumerator Melee_HeldWeaponsDamageFromPommelToTip()
+        {
+            var weapons = Object.FindObjectsByType<MeleeWeapon>();
+            Assert.That(weapons.Length, Is.EqualTo(4));
+            var previousStep = Time.captureDeltaTime;
+            Time.captureDeltaTime = Time.fixedDeltaTime;
+            try
+            {
+                foreach (var weapon in weapons)
+                {
+                    var item = weapon.GetComponent<PhysicalGrabbable>();
+                    var hand = desktop.RightHand;
+                    Grab(hand, item, new Vector3(2.6f, 1.7f, 3.4f));
+                    yield return Settle();
+                    var tip = Field<Transform>(weapon, "bladeTip").localPosition;
+                    float butt = weapon.name.Contains("Knife") ? -.058f : -.085f;
+                    var offsets = new[] { Vector3.forward * butt, Vector3.zero, Vector3.forward * (tip.z * .5f),
+                        tip, Vector3.forward * (butt - .06f), Vector3.forward * (tip.z * .5f) + Vector3.up * .08f };
+                    for (int i = 0; i < offsets.Length; ++i)
+                    {
+                        // Use one target at a time so an adjacent probe cannot occlude a hit.
+                        hand.transform.position += new Vector3(2.6f, 1.7f, 3.4f) - item.transform.TransformPoint(offsets[i]);
+                        yield return Settle(20);
+                        var probe = new GameObject("Full-length probe " + i);
+                        probe.transform.position = item.transform.TransformPoint(offsets[i]) + Vector3.right * .28f;
+                        var collider = probe.AddComponent<SphereCollider>();
+                        collider.radius = .006f;
+                        var receiver = probe.AddComponent<ReboundDamageReceiver>();
+                        foreach (var solid in item.Grab.colliders)
+                            Physics.IgnoreCollision(solid, collider);
+                        for (int step = 0; step < 16; ++step)
+                        {
+                            hand.transform.position += Vector3.right * .045f;
+                            yield return new WaitForFixedUpdate();
+                        }
+                        Assert.That(receiver.Hits, Is.EqualTo(i < 4 ? 1 : 0), weapon.name + " at " + offsets[i]);
+                        Object.Destroy(probe);
+                    }
+                    hand.Release();
+                    item.gameObject.SetActive(false);
+                }
+            }
+            finally { Time.captureDeltaTime = previousStep; }
+        }
+
+        [UnityTest]
         public IEnumerator Melee_ActualHeldSweepDamagesDefaultLayerEnemy()
         {
             var melee = Object.FindAnyObjectByType<ReboundingWeapon>().GetComponent<MeleeWeapon>();
