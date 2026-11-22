@@ -13,6 +13,7 @@ namespace Game4026.Tests.Enemy
         public float DistanceToTarget { get; set; } = float.PositiveInfinity;
         public float TimeSinceTargetSeen { get; set; }
         public float LoseSightSeconds { get; set; } = 5f;
+        public bool IsAlerted { get; set; }
         public bool HasPatrolPoints { get; set; }
         public bool ReachedDestination { get; set; }
         /// <summary>A move is off cooldown (cleared when one finishes, like a cooldown starting).</summary>

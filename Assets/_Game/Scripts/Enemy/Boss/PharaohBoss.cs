@@ -8,7 +8,7 @@ namespace Game4026.Enemy
     /// Pharaoh boss phase layer (spec 4.7) on top of the normal enemy (EnemyHealth + state machine).
     /// Phases are a list in the Inspector: threshold, attack speed, invulnerability, minions, objects to enable.
     /// Default: 100–60 % melee, 60–25 % summons minions, 25–0 % faster attacks and an exposed weak point.
-    /// Move sets are not designed yet (spec: TBD); see the TODO hooks in <see cref="OnPhaseEntered"/>.
+    /// The moves come from <see cref="PharaohStand"/> (spectral hand) when the boss has one.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyController))]
@@ -136,21 +136,13 @@ namespace Game4026.Enemy
             OnPhaseEntered(index);
         }
 
-        /// <summary>Per-phase move-set hooks. Move details are still to be decided (spec 4.7).</summary>
+        /// <summary>
+        /// Per-phase hook. The move set lives in <see cref="PharaohStand"/>, which reads <see cref="CurrentPhase"/>
+        /// (phase 2+ adds the combo slam) and the attack speed set above.
+        /// </summary>
         private void OnPhaseEntered(int index)
         {
-            switch (index)
-            {
-                case 0:
-                    // TODO(boss): phase 1 melee combo.
-                    break;
-                case 1:
-                    // TODO(boss): phase 2 summon animation / taunt while minions arrive.
-                    break;
-                case 2:
-                    // TODO(boss): phase 3 enraged moves (e.g. sweeping attack, charge).
-                    break;
-            }
+            // TODO(boss): summon pose / taunt while minions arrive (phase 1).
         }
 
         private void EndPhaseInvulnerability()

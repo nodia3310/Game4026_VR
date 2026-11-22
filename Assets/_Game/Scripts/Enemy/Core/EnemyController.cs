@@ -257,6 +257,7 @@ namespace Game4026.Enemy
             health.ResetState();
             attack.ResetState();
             WasForceCleared = false;
+            IsAlerted = false;
             patrolIndex = -1;
             canSee = false;
             lastSeenTime = float.NegativeInfinity;
@@ -404,6 +405,10 @@ namespace Game4026.Enemy
         public float DistanceToTarget => distanceToTarget;
         public float TimeSinceTargetSeen => currentTime - lastSeenTime;
         public float LoseSightSeconds => loseSightSeconds;
+        public bool IsAlerted { get; private set; }
+
+        /// <summary>Chase the player from now on, at any distance (encounter enemies). Cleared on respawn.</summary>
+        public void Alert() => IsAlerted = true;
 
         public bool HasPatrolPoints => patrolPoints != null && patrolPoints.Length > 0;
 

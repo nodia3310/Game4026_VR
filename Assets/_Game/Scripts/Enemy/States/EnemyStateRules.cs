@@ -4,10 +4,11 @@ namespace Game4026.Enemy
     public static class EnemyStateRules
     {
         public static bool ShouldStartChase(IEnemyContext c) =>
-            c.HasTarget && c.CanSeeTarget && c.DistanceToTarget <= c.Data.DetectionRange;
+            c.HasTarget && (c.IsAlerted || (c.CanSeeTarget && c.DistanceToTarget <= c.Data.DetectionRange));
 
         public static bool ShouldLoseTarget(IEnemyContext c) =>
-            !c.HasTarget || c.DistanceToTarget > c.Data.LoseTargetRange || c.TimeSinceTargetSeen > c.LoseSightSeconds;
+            !c.HasTarget || (!c.IsAlerted &&
+                             (c.DistanceToTarget > c.Data.LoseTargetRange || c.TimeSinceTargetSeen > c.LoseSightSeconds));
 
         public static EnemyStateId CalmState(IEnemyContext c) =>
             c.HasPatrolPoints ? EnemyStateId.Patrol : EnemyStateId.Idle;

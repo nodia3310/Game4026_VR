@@ -12,17 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae230d32804a3f04da0e28905ae4e91a, type: 3}
   m_Name: EnemyData_Pharaoh
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyData
-  maxHealth: 600
+  maxHealth: 450
   weakPointMultiplier: 2.5
   hitCooldown: 0.3
   staggerThreshold: 80
   staggerDuration: 0.5
-  moveSpeed: 1
-  chaseSpeed: 1.8
+  moveSpeed: 0
+  chaseSpeed: 0
   detectionRange: 12
   loseTargetRange: 18
   attacks:
   - {fileID: 11400000, guid: c5a99ba66b576b84e8df039ed3603cbe, type: 2}
   globalAttackCooldown: 0
+  attackSlotCost: 1
+  waitDistance: 3.5
+  parryStaggerDuration: 1.5
+  parriedDamageMultiplier: 1.5
   spawnDuration: 1.5
   despawnDuration: 2.5
