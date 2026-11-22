@@ -54,6 +54,7 @@
 - PlayerRig — Scripts/Enemy/Flow/PlayerRig.cs — 移動玩家（CharacterController 所在物件，保留頭盔偏移）與淡黑閃現 Blink（不暈的推回/傳送）
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
 - PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`/`MaxHealth`、`ResetHealth()` 或 private setter 補滿；轉接元件（A 的桌面模式）讀它持有的 receiver
+- DemoMusic — Scripts/Enemy/Flow/DemoMusic.cs — 掛在 Museum_Demo 的 DemoFlow 物件：展廳戰鬥（Hall）播 `Audio & SFX/Normal battle.mp3`、BossIntro/Boss 播 `Boss.mp3`，其他階段靜音；兩個 2D 循環 AudioSource 交叉淡入（Volume 0.45、Fade Seconds 1.5）；兩首設 Streaming
 - DemoWorldHud — Scripts/Enemy/Flow/DemoWorldHud.cs — 頭盔 HUD：DemoFlow 目標 + HP 的世界空間 TextMesh，浮在頭前、轉頭時慢慢跟上、穿牆可見；只在 XR 裝置啟用時顯示
 - PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body；Museum_Demo 改用 A 的 TrackedPlayerHurtbox 後目前沒用到）
 
@@ -146,6 +147,7 @@
 - FakeEnemyContext — Tests/EditMode/Enemy/FakeEnemyContext.cs — 測試用 IEnemyContext（不需要 NavMesh / Play Mode）
 - EnemyAttackTests — Tests/EditMode/Enemy/EnemyAttackTests.cs — 出招時間、命中範圍與角度、AreaSlam、連段、突進距離、打斷、攻速倍率、預設招式
 - EnemyProjectileTests — Tests/EditMode/Enemy/EnemyProjectileTests.cs — 飛行、打中玩家、壽命、反彈（一次、方向、速度）、箭不能反彈、線段距離
+- DemoMusicTests — Tests/EditMode/Enemy/DemoMusicTests.cs — 每個 DemoPhase 對應的曲目
 - ProjectileReflectAssistTests — Tests/EditMode/Enemy/ProjectileReflectAssistTests.cs — 飛行中問 ParryProbe：有擋著的武器就反彈、沒有就打中玩家、Reflect Assist 關掉不問、反彈後不再問
 - AttackSelectorTests — Tests/EditMode/Enemy/AttackSelectorTests.cs — 距離篩選、權重、各招與全域冷卻、不支援的類型、HoldRange
 - EnemyAnimatorTests — Tests/EditMode/Enemy/EnemyAnimatorTests.cs — 移動混合、預警停格速度、收招跟動畫長度

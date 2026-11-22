@@ -250,7 +250,9 @@ MonoBehaviour:
   - {fileID: 8017292713556511752}
   flyingColor: {r: 1, g: 0.8, b: 0.42, a: 1}
   reflectedColor: {r: 0.55, g: 0.85, b: 1, a: 1}
-  hitFeedback: {fileID: 0}
+  reflectAssist: 1
+  reflectAssistPadding: 0.13
+  hitFeedback: {fileID: 11400000, guid: addad9c4c528ba542973564737f25598, type: 2}
 --- !u!114 &1824525612365300486
 MonoBehaviour:
   m_ObjectHideFlags: 0
