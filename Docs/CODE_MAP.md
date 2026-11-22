@@ -44,6 +44,7 @@
 - WeaponGrip — Scripts/Enemy/Combat/WeaponGrip.cs — 飛刀的握柄位置（本地座標，長度沿 Z），神之手握在這裡、刀刃朝上
 - ProjectileSpin — Scripts/Enemy/Combat/ProjectileSpin.cs — 讓投射物的外觀子物件旋轉（擲出的武器翻轉）
 - EnemyProjectilePool — Scripts/Enemy/Combat/EnemyProjectilePool.cs — 每種光彈 Prefab 一個 ObjectPool，同時上限 8 個
+- ParryProbe / IParryProbe — Scripts/Enemy/Combat/ParryProbe.cs — 飛行武器（EnemyProjectile）問「這個放大形狀裡有沒有擋著的武器」；沒裝 probe 就什麼都不做（Bridges 實作）
 - IParryTarget — Scripts/Enemy/Combat/IParryTarget.cs — 可被招架/反彈的東西（EnemyWeapon、EnemyProjectile）；箭改呼叫 TakeUnparryableHit
 - AttackRunner — Scripts/Enemy/Combat/AttackRunner.cs — 純 C# 出招時間軸（起手 → 預警停格 → 揮下 → 判定 → 收招／連段下一下）；IAttackHost、AttackStepTiming；SkipToHit（翼盾提前結束）
 
@@ -126,7 +127,10 @@
 ## Bridges（`Assets/_Game/Scripts/Bridges/`，`Game4026.Bridges`，引用 Contracts + Interaction + Enemy）
 - ImpactDamageCurve — Scripts/Bridges/ImpactDamageCurve.cs — 速度 → 基礎傷害（速度 × 係數，限制在上下限之間），含近戰／箭預設值
 - DamageDispatch — Scripts/Bridges/DamageDispatch.cs — 對命中 Collider 找 IDamageable 並呼叫 TakeDamage（isWeakPoint=false）；allowParry=false 時（箭）忽略 EnemyWeapon
-- MeleeDamageBridge — Scripts/Bridges/MeleeDamageBridge.cs — 掛在 A 的 MeleeWeapon 旁，聽 Hit 事件扣血；依這一下的 HitImpact 震動握武器的手把（hapticScale）
+- MeleeDamageBridge — Scripts/Bridges/MeleeDamageBridge.cs — 掛在 A 的 MeleeWeapon 旁，聽 Hit 事件扣血；依這一下的 HitImpact 震動握武器的手把（hapticScale）；Rumble(HitImpact) 給 ParryAssist 用
+- ParryAssist — Scripts/Bridges/ParryAssist.cs — 掛在 EnemyWeapon 旁（阿努比斯雙匕首、翼人雙翼骨頭、神諭 Body）：招架窗內每個物理幀查比武器 Collider 大一圈的範圍（Radius Padding 0.13、Length Padding 0.15；骨頭上沒 Collider 就用屬於它的子 Collider），玩家握著的近戰武器在裡面就招架（不用揮）；雙持只看這一步揮的那隻手；只是查詢、不擋玩家攻擊；Gizmo 顯示範圍；幾何用 ParryZone
+- ParryZone — Scripts/Bridges/ParryZone.cs — 把 Collider 形狀（Capsule/Box/Sphere，停用的也行）放大一圈做 Overlap 查詢、找符合條件的 Collider、畫 Gizmo
+- HeldWeaponParryProbe — Scripts/Bridges/HeldWeaponParryProbe.cs — 實作 IParryProbe、裝成 ParryProbe.Current（DamageBridgeInstaller 開場自動加）：放大範圍內有玩家握著的近戰武器，且武器比玩家身體（Body–Head 線）更靠近飛來的武器（Front Margin 0.1）才算；成功後讓握武器的手把照反應震動
 - ArrowDamageBridge — Scripts/Bridges/ArrowDamageBridge.cs — 掛在 A 的箭上（由安裝器自動加），聽 Impact 事件扣血
 - ArtifactEventBridge — Scripts/Bridges/ArtifactEventBridge.cs — 訂閱場景裡所有 A 的 ArtifactDisplayTrigger.OnArtifactRestored，轉給 EncounterDirector
 - DamageBridgeInstaller — Scripts/Bridges/DamageBridgeInstaller.cs — 場景元件：開場時幫所有 MeleeWeapon 加橋接，每次射擊後幫新的箭加橋接
@@ -142,6 +146,7 @@
 - FakeEnemyContext — Tests/EditMode/Enemy/FakeEnemyContext.cs — 測試用 IEnemyContext（不需要 NavMesh / Play Mode）
 - EnemyAttackTests — Tests/EditMode/Enemy/EnemyAttackTests.cs — 出招時間、命中範圍與角度、AreaSlam、連段、突進距離、打斷、攻速倍率、預設招式
 - EnemyProjectileTests — Tests/EditMode/Enemy/EnemyProjectileTests.cs — 飛行、打中玩家、壽命、反彈（一次、方向、速度）、箭不能反彈、線段距離
+- ProjectileReflectAssistTests — Tests/EditMode/Enemy/ProjectileReflectAssistTests.cs — 飛行中問 ParryProbe：有擋著的武器就反彈、沒有就打中玩家、Reflect Assist 關掉不問、反彈後不再問
 - AttackSelectorTests — Tests/EditMode/Enemy/AttackSelectorTests.cs — 距離篩選、權重、各招與全域冷卻、不支援的類型、HoldRange
 - EnemyAnimatorTests — Tests/EditMode/Enemy/EnemyAnimatorTests.cs — 移動混合、預警停格速度、收招跟動畫長度
 - EnemyGeometryTests — Tests/EditMode/Enemy/EnemyGeometryTests.cs — 水平距離與扇形
@@ -152,6 +157,8 @@
 - ImpactDamageCurveTests — Tests/EditMode/Bridges/ImpactDamageCurveTests.cs — 公式換算與上下限
 - DamageBridgeInstallerTests — Tests/EditMode/Bridges/DamageBridgeInstallerTests.cs — 安裝器的 AttachMelee/AttachArrows（只用明確清單，不掃描開啟中的場景）
 - EnemyWeaponBridgeTests — Tests/EditMode/Bridges/EnemyWeaponBridgeTests.cs — 近戰打刀身在窗內招架、窗外擋住、箭不能招架、本體不受傷
+- ParryAssistTests — Tests/EditMode/Bridges/ParryAssistTests.cs — 放大範圍內握著的武器在窗內招架（含刀尖外）、窗前/範圍外/沒握著不招架、Padding 縮小、雙持只看揮的手（含鏡像）、骨頭武器用子 Collider 且不含弱點
+- HeldWeaponParryProbeTests — Tests/EditMode/Bridges/HeldWeaponParryProbeTests.cs — 停用的 Box Collider 放大範圍內握著的武器算、範圍外/沒握著不算、大形狀已經壓到玩家時刀在旁邊或身後不算、刀伸向它才算
 - DamageBridgeTests — Tests/EditMode/Bridges/DamageBridgeTests.cs — 自己組的 MeleeHit／箭命中 → 橋接 → 真的 EnemyHealth/WeakPoint
 - EncounterScheduleTests / ArtifactProgressTests / EncounterDirectorTests — Tests/EditMode/Enemy/*.cs — 波次排程、文物去重、Director 路由
 - BossPhaseTrackerTests — Tests/EditMode/Enemy/BossPhaseTrackerTests.cs — 階段門檻、只往前、跨階段、4 個階段

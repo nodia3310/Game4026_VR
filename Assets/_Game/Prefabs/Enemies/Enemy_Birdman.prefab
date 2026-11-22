@@ -124,6 +124,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemyAttack
   lungeStopDistance: 0.9
   muzzle: {fileID: 0}
+  baseAttackSpeed: 1
 --- !u!114 &8242878300374556300
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -933,9 +934,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8031545911264619795, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4207611493981371979}
+    - targetCorrespondingSourceObject: {fileID: 8031545911264619795, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5437893806382955681}
     - targetCorrespondingSourceObject: {fileID: -757449126553286465, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7279359776430708330}
+    - targetCorrespondingSourceObject: {fileID: -757449126553286465, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3028894812749397957}
   m_SourcePrefab: {fileID: 100100000, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
 --- !u!4 &1411259273903415244 stripped
 Transform:
@@ -978,6 +985,24 @@ MonoBehaviour:
   leftHand: 0
   passDamageWhenNotParrying: 1
   tip: {fileID: 1991083782135024055}
+--- !u!114 &3028894812749397957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2398372722257013434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bb6343361035154ab6c4a5c694a4550, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.ParryAssist
+  radiusPadding: 0.13
+  lengthPadding: 0.15
+  onlySwingingHand: 1
+  playerWeaponMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!4 &2554028187729397053 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8593994376193189688, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}
@@ -1004,6 +1029,24 @@ MonoBehaviour:
   leftHand: 1
   passDamageWhenNotParrying: 1
   tip: {fileID: 1411259273903415244}
+--- !u!114 &5437893806382955681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4269539118207864598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bb6343361035154ab6c4a5c694a4550, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.ParryAssist
+  radiusPadding: 0.13
+  lengthPadding: 0.15
+  onlySwingingHand: 1
+  playerWeaponMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!4 &6034544489131689454 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1dbbafdfca3433541a7d3f1c4c9575ec, type: 3}

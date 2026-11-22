@@ -16,7 +16,8 @@
 - **VR 操作備忘（A 的 MeleeWeapon）**：沒有按鈕，抓著武器真的揮；刀刃 ≥ 1.2 m/s 算一次揮擊、最長 0.6 秒、慢到 0.45 m/s 才能再揮；同一揮擊對同一目標只算一次；刀刃判定半徑 3.5 cm → 飛行物 Collider 做大（0.35–0.6 m），大招一波一波來。
 - **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth`；A 的 `PlayerHealth` 沒有 `ResetHealth()` → 用反射呼叫 private setter 補滿（已在 NOTES_FOR_A 請 A 加）；桌面模式的 `DesktopPlayerDamageReceiver` 從它的 `Health` 屬性讀；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
 - **音效**（2026-11-22）：`EnemySfx` 敵人生成播召喚聲（阿努比斯、神諭、翼人；法老沒掛）、神諭的石頭聲（升起、滾動起步、跳砸落地、頭槌、倒地；走路跳步沒有）；結界擺錘鐮刀每次擺過最低點前 0.3 秒播揮砍聲（`PharaohArena` 的 Sound 欄位）。三個音檔已設 Force To Mono。
-- **測試**：EditMode 286/286、PlayMode 62/64（A 的 2 個抓取測試失敗，見紀錄）。
+- **招架輔助**（2026-11-23）：`ParryAssist` 掛在三種敵人的 EnemyWeapon 上，招架窗內玩家握著的武器靠近（比武器大 0.13 m、刀尖外 0.15 m）就算招架，舉刀擋也行。VR 還沒實測，範圍在 prefab 的 ParryAssist 欄位調。法老的手部招式（掌拍、連拍、橫掃、頭部橫斬、合擊）**不能招架**（試過，使用者覺得太簡單，已拿掉）。**飛行武器**（擲武器、萬兵齊發，也包含神諭光彈）擋著也會反彈：`EnemyProjectile` 的 Reflect Assist（預設開、Padding 0.13）。
+- **測試**：EditMode 305/305（含 A 的）、PlayMode 61/64（3 個 A 的失敗，見紀錄）、PlayMode 62/64（A 的 2 個抓取測試失敗，見紀錄）。
 - **Git**：feature/enemy-ai 8aaa7ce 已 push（音效、VR 玩家、法老換模型、拿武器開始）；使用者要開 PR 到 main。A 的 feature/vr-interaction 比 main 多 4 個 commit（只動 A_VRInteraction，和我們不重疊；含 `PlayerHealth.ResetHealth`、`TrackedPlayerHurtbox` 追蹤閃避、`MuseumDemoRun`），由 A 開 PR、使用者 merge。兩邊都進 main 後：把 main 合進 feature/enemy-ai，Museum_Demo 的 XR Origin 接 TrackedPlayerHurtbox（我們的是舊版 Museum_test 複製來的，不會自動更新），確認 MuseumDemoRun 和 DemoFlow 不重複。
 - 下一步：
   1. 使用者在 Museum_Demo 實玩法老戰並調數值（`Enemy_Pharaoh` → `PharaohStand` / `PharaohArena` 的 Settings、`PharaohHand` 的 Damage Multiplier）。合擊的「前後一步可躲」只有單元測試，Play Mode 沒驗到。
@@ -74,6 +75,14 @@
 
 ## 紀錄
 > 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-23（VR 招架輔助）
+- 量到 A 的斧頭、鐵撬刀刃判定線（Blade Base → Tip）只有前端 14 cm、半徑 3.5 cm，斧刃還偏離判定線；而且 A 的武器只在揮 ≥ 1.2 m/s 時偵測 → VR 招架難、要靠很近才打到。使用者已轉告 A 調武器。
+- 使用者選：敵人這邊加放大招架判定（`ParryAssist`，Bridges），窗內握著的武器進範圍就招架、不用揮；箭/弓不算；雙持只看揮的手。已加到 Anubis（2）、Birdman（2，用翼 Collider）、Oracle（1）prefab。法老的手沒有 EnemyWeapon，沒加。
+- 測試：ParryAssistTests 9 個、Bridges 組 36/36。PlayMode 沒重跑（招架 PlayMode 測試不用 prefab）。
+- 法老全招式招架（使用者要求）：Enemy 端加 `ParryProbe`（介面），Bridges 的 `HeldWeaponParryProbe` 實作（DamageBridgeInstaller 開場自動加，不用改場景）。發現法老手很大（約 2.3×1.1×2.7 m），手壓到玩家時刀一定在範圍內 → 加「刀比身體更靠近攻擊」條件，否則每招都會自動被擋。招架在傷害判定前檢查（Drop/Sweep/ClapStrike 每幀、投射物每步）。
+- 之後使用者覺得法老手部招架太簡單 → 手部招架整段拿掉（PharaohStand/PharaohHand 回到原本、刪 PharaohParryPlayModeTests），只留飛行武器反彈輔助。
+- 測試：EditMode 305/305（含 A 的；我們的 Enemy 207 + Bridges 42）；PlayMode 63/66（拿掉手部招架前；PharaohParryPlayModeTests 2 個已刪），失敗 3 個都是 A 的（舊的 2 個 + `InteractionSceneTests.Museum_PlayModeConnects…`，Meta XR 的 `XR_EXT_hand_joints_motion_range` 錯誤 log，疑似 Quest Link 連著，和這次無關）。
 
 ### 2026-11-22（合 main、改用 A 的 VR 玩家）
 - `git merge --ff-only origin/main`（2a07924，PR #12 我們、#13 A）。
