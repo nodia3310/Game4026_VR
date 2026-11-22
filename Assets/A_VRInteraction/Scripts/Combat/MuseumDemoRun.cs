@@ -24,6 +24,7 @@ namespace Game4026.PlayerCombat
         [SerializeField] private DemoFlow flow;
         [SerializeField] private Behaviour debugKeys;
         [SerializeField] private MuseumFloorConfirmation floorConfirmation;
+        [SerializeField] private MuseumPatrolLogPage patrolBook;
         [SerializeField] private TrackedPlayerHurtbox player;
         [SerializeField] private InteractionDesktopMode desktop;
         [SerializeField] private Camera headset;
@@ -33,6 +34,8 @@ namespace Game4026.PlayerCombat
 
         private Pose playerPose;
         private bool enteredRealm, restartRequested;
+        private TextMesh worldHudText;
+        private string fullHudText, readingHudText;
 
         private void Awake()
         {
@@ -42,7 +45,11 @@ namespace Game4026.PlayerCombat
         }
 
         private void OnEnable() => player.ResetForRestart += OnRestart;
-        private void OnDisable() => player.ResetForRestart -= OnRestart;
+        private void OnDisable()
+        {
+            player.ResetForRestart -= OnRestart;
+            RestoreHealthDisplay();
+        }
         private void OnRestart() => restartRequested = true;
 
         private void Update()
@@ -54,6 +61,7 @@ namespace Game4026.PlayerCombat
 
         private void LateUpdate()
         {
+            UpdateReadingHud();
             var camera = desktop.IsDesktopActive ? desktop.DesktopCamera : headset;
             var fader = ScreenFader.Current;
             if (fader && fader.transform.parent != camera.transform)
@@ -92,6 +100,34 @@ namespace Game4026.PlayerCombat
 
             playerPose = newPose;
             enteredRealm = nowInRealm;
+        }
+
+        private void UpdateReadingHud()
+        {
+            if (!patrolBook || !patrolBook.IsOpen)
+            {
+                RestoreHealthDisplay();
+                return;
+            }
+
+            // DemoWorldHud writes the objective and HP to one TextMesh before this LateUpdate.
+            if (!worldHudText)
+                worldHudText = flow.GetComponentInChildren<TextMesh>(true);
+            if (!worldHudText || !worldHudText.gameObject.activeInHierarchy) return;
+
+            string current = worldHudText.text;
+            if (fullHudText != null && current == readingHudText) return;
+            readingHudText = flow.HudMessage;
+            fullHudText = current;
+            worldHudText.text = readingHudText;
+        }
+
+        private void RestoreHealthDisplay()
+        {
+            if (fullHudText == null) return;
+            if (worldHudText && worldHudText.text == readingHudText)
+                worldHudText.text = fullHudText;
+            fullHudText = null;
         }
 
         private static void ReturnToRest(PhysicalGrabbable item, Pose pose)
