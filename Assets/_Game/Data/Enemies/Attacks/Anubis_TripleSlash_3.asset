@@ -22,7 +22,10 @@ MonoBehaviour:
   telegraphPoseTime: 0.55
   hitTime: 0.77
   recoveryTime: 0.6
-  parryWindow: 0.3
+  parryWindow: 0.45
+  slowMotionAt: -1
+  slowMotionDuration: 0.6
+  slowMotionScale: 0.12
   minRange: 0
   maxRange: 1.8
   cooldown: 0
@@ -32,5 +35,11 @@ MonoBehaviour:
   hitAngle: 80
   lungeDistance: 2
   lungeDuration: 0
+  lungeStopDistance: -1
+  lungeArcHeight: 0
   comboSteps: []
   slamRadius: 2
+  leap: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 7
+  statueMotion: 0

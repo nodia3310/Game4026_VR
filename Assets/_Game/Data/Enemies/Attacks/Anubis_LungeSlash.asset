@@ -22,7 +22,7 @@ MonoBehaviour:
   telegraphPoseTime: 0.2
   hitTime: 1.58
   recoveryTime: 0.4
-  parryWindow: 0.4
+  parryWindow: 0.55
   slowMotionAt: 1.12
   slowMotionDuration: 0.6
   slowMotionScale: 0.12
