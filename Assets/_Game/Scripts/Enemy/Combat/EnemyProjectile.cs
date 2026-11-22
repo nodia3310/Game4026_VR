@@ -34,6 +34,9 @@ namespace Game4026.Enemy
         [SerializeField] private Renderer[] tintRenderers = new Renderer[0];
         [SerializeField] private Color flyingColor = new Color(1f, 0.08f, 0.04f, 1f);
         [SerializeField] private Color reflectedColor = new Color(1f, 0.85f, 0.3f, 1f);
+        [Tooltip("A held player melee weapon this close (m) to the flying weapon reflects it, even held still (needs a ParryProbe, installed by the bridges).")]
+        [SerializeField] private bool reflectAssist = true;
+        [SerializeField, Min(0f)] private float reflectAssistPadding = 0.13f;
         [Tooltip("Hit feel of the reflect (Reflect entry: the bolt freezes for its hit stop, then flies back). Empty = defaults.")]
         [SerializeField] private HitFeedbackProfile hitFeedback;
 
@@ -134,6 +137,9 @@ namespace Game4026.Enemy
             Vector3 to = from + direction * distance;
             PlayerTarget player = PlayerTarget.Current;
 
+            if (!IsReflected && reflectAssist && TryAssistReflect())
+                return;
+
             // VR heads have no reliable collider: test the player's body-to-head line directly.
             if (!IsReflected && player != null &&
                 SegmentDistance(from, to, player.Body.position, player.Head.position) <= playerHitRadius)
@@ -207,6 +213,21 @@ namespace Game4026.Enemy
 
         /// <summary>Arrows cannot reflect bolts.</summary>
         public bool TakeUnparryableHit(float hitDamage, Vector3 hitPoint) => false;
+
+        public bool ReflectAssist { get => reflectAssist; set => reflectAssist = value; }
+
+        /// <summary>A held player weapon inside the grown collider shape reflects the weapon (before it can reach the player).</summary>
+        private bool TryAssistReflect()
+        {
+            if (ParryProbe.Current == null)
+                return false;
+            if (colliders == null)
+                colliders = GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                if (ParryProbe.TryFind(colliders[i], reflectAssistPadding, out _))
+                    return Reflect();
+            return false;
+        }
 
         /// <summary>Turns the bolt into a player-side bolt flying at its shooter. Returns false if already reflected or not flying.</summary>
         public bool Reflect()

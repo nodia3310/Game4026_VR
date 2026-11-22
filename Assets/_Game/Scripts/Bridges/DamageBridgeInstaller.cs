@@ -23,6 +23,13 @@ namespace Game4026.Bridges
         public ImpactDamageCurve MeleeDamage => meleeDamage;
         public ImpactDamageCurve ArrowDamage => arrowDamage;
 
+        private void Awake()
+        {
+            // Forgiving reflects for flying weapons (held weapon in the way, no swing needed).
+            if (GetComponent<HeldWeaponParryProbe>() == null)
+                gameObject.AddComponent<HeldWeaponParryProbe>();
+        }
+
         private void Start() => Refresh();
 
         private void OnDestroy() => UnsubscribeBows();

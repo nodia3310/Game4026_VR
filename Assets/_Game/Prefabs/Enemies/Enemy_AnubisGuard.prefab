@@ -73,6 +73,7 @@ GameObject:
   - component: {fileID: 6058226388287795357}
   - component: {fileID: 3323442788951162862}
   - component: {fileID: 9168220771041216789}
+  - component: {fileID: 1228324959226285849}
   m_Layer: 0
   m_Name: Weapon_Dagger
   m_TagString: Untagged
@@ -136,6 +137,24 @@ MonoBehaviour:
   leftHand: 1
   passDamageWhenNotParrying: 0
   tip: {fileID: 1254574826824436657}
+--- !u!114 &1228324959226285849
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3539724609396318246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bb6343361035154ab6c4a5c694a4550, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.ParryAssist
+  radiusPadding: 0.13
+  lengthPadding: 0.15
+  onlySwingingHand: 1
+  playerWeaponMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &7368410144693437595
 GameObject:
   m_ObjectHideFlags: 0
@@ -147,6 +166,7 @@ GameObject:
   - component: {fileID: 7624163077847658599}
   - component: {fileID: 6063129580751152313}
   - component: {fileID: 5566054109289830512}
+  - component: {fileID: 8262433236437477428}
   m_Layer: 0
   m_Name: Weapon_Dagger
   m_TagString: Untagged
@@ -210,6 +230,24 @@ MonoBehaviour:
   leftHand: 0
   passDamageWhenNotParrying: 0
   tip: {fileID: 5858428251741487733}
+--- !u!114 &8262433236437477428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7368410144693437595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bb6343361035154ab6c4a5c694a4550, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.ParryAssist
+  radiusPadding: 0.13
+  lengthPadding: 0.15
+  onlySwingingHand: 1
+  playerWeaponMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1001 &1450134060087758234
 PrefabInstance:
   m_ObjectHideFlags: 0
