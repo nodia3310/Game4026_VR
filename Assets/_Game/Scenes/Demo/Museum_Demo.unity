@@ -42075,7 +42075,7 @@ MonoBehaviour:
   flow: {fileID: 1621965819}
   showOnDesktop: 0
   distance: 1.6
-  height: 0.35
+  height: 1.25
   followSpeed: 4
   characterSize: 0.012
   color: {r: 1, g: 0.92, b: 0.7, a: 1}
