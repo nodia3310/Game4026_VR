@@ -1,6 +1,6 @@
 {
   "name": "Game4026.Interaction",
   "rootNamespace": "Game4026.Interaction",
-  "references": ["Unity.XR.Interaction.Toolkit", "Unity.XR.CoreUtils", "Unity.InputSystem", "Game4026.Contracts", "Game4026.Artifacts", "Oculus.VR"],
+  "references": ["Unity.XR.Interaction.Toolkit", "Unity.XR.CoreUtils", "Unity.InputSystem", "Unity.TextMeshPro", "Game4026.Contracts", "Game4026.Artifacts", "Oculus.VR"],
   "autoReferenced": true
 }
