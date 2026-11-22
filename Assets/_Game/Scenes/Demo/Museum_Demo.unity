@@ -42018,9 +42018,9 @@ MonoBehaviour:
   hallEncounter: {fileID: 1077262405}
   bossEncounter: {fileID: 549288715}
   playerStart: {fileID: 148921071}
-  introDelay: 3
+  introDelay: 59
   waitForPlayerReady: 1
-  leaveStartRadius: 5
+  leaveStartRadius: Infinity
   bossDelay: 4
   restartDelay: 4
   realmArrival: {fileID: 600877019}
