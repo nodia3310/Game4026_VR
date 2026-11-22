@@ -96,7 +96,15 @@ namespace Game4026.Interaction.Ranged
             if (hand.handedness == InteractorHandedness.None) return false;
             XRNode node = hand.handedness == InteractorHandedness.Left ? XRNode.LeftHand : XRNode.RightHand;
             var device = InputDevices.GetDeviceAtXRNode(node);
-            return device.isValid && device.TryGetFeatureValue(CommonUsages.isTracked, out bool tracked) && tracked;
+            if (device.isValid && device.TryGetFeatureValue(CommonUsages.isTracked, out bool tracked))
+                return tracked;
+
+            // Input System rigs can supply a tracked hand without publishing a legacy XR node.
+            var pose = hand.transform.GetComponentInParent<UnityEngine.InputSystem.XR.TrackedPoseDriver>();
+            if (!pose || !pose.isActiveAndEnabled || pose.trackingStateInput.action is not { enabled: true } tracking)
+                return false;
+            const InputTrackingState required = InputTrackingState.Position | InputTrackingState.Rotation;
+            return ((InputTrackingState)tracking.ReadValue<int>() & required) == required;
         }
 
         private bool BowHeldAndTracked()
