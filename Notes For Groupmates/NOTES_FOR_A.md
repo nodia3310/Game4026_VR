@@ -57,7 +57,16 @@ A: ArrowProjectile.Impact(Collision) ──┤→ B: Bridges（MeleeDamageBridge
 - 如果 A 比較想直接呼叫：`EncounterDirector.NotifyArtifactRestored(ArtifactRestoredEvent)` 是公開方法（但這樣 Interaction 就要引用 Enemy，建議還是走橋接）。
 - B 依賴的 A 公開 API 多了一個：`Game4026.Interaction.Artifacts.ArtifactDisplayTrigger.OnArtifactRestored`（`event Action<ArtifactRestoredEvent>`）。改動前請通知 B。
 
+## 4c. Museum_Demo 用了 A 的玩家與道具（2026-11-22）
+
+- B 把 A 在 `Museum_test` 的「West gallery play setup」（XR Origin、XR Interaction Manager、背包、`InteractionDesktopMode`）和 `MuseumGuardDesk` 搬進 `Assets/_Game/Scenes/Demo/Museum_Demo.unity`，加上 `Weapons/` 下的 Knife、Axe、Shovel、Bow。A 的場景和 Prefab 檔都沒改。
+- 在 Museum_Demo 的 XR Origin 實例上加了 `PlayerTarget`、`PlayerHealth`、`BodyCenter`（B 的 `PlayerBodyAnchor`），場景另放 `DamageBridgeInstaller`。
+- B 依賴的 A 行為多了兩個：
+  - `InteractionDesktopMode` 的桌面相機掛 `PlayerTarget` + `DesktopPlayerDamageReceiver`（把傷害轉給 XR Rig 的 `PlayerHealth`）。B 的 DemoFlow 會改綁 `PlayerTarget.Current`，並從轉接元件的 `Health` 讀血量。
+  - `PlayerHealth.CurrentHealth` / `MaxHealth`。因為沒有 `ResetHealth()`，B 重來時暫時用反射呼叫 `CurrentHealth` 的 private setter 補血。
+
 ## 5. 要問 A 的問題
 
 1. 文物歸位事件：B 目前接的是 `ArtifactDisplayTrigger.OnArtifactRestored`。這是正式的來源嗎？還是應該用 `ArtifactRestorationTracker.OnArtifactRestored`？（Tracker 不是場景元件，由誰建立、要怎麼拿到它？）
-2. 不同武器（棍、彎刀、矛）要不要有不同的傷害係數？目前一律用同一組預設值，可以在每把武器的元件上分別調。
+2. 可以在 `PlayerHealth` 加一個 `public void ResetHealth()`（補滿）嗎？B 的 demo 重來時會優先用它，就不用反射改 private setter。
+3. 不同武器（棍、彎刀、矛）要不要有不同的傷害係數？目前一律用同一組預設值，可以在每把武器的元件上分別調。

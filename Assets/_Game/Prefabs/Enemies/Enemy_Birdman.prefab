@@ -50,6 +50,7 @@ GameObject:
   - component: {fileID: 5170370068835378470}
   - component: {fileID: 7556981711747011353}
   - component: {fileID: 5155902835197605901}
+  - component: {fileID: 5024868072532535011}
   m_Layer: 0
   m_Name: Enemy_Birdman
   m_TagString: Untagged
@@ -278,6 +279,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game4026.Enemy.DebugTools::Game4026.Enemy.DebugTools.EnemyDebugLabel
   controller: {fileID: 0}
   offset: {x: 0, y: 2.6, z: 0}
+--- !u!114 &5024868072532535011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2184795520648503982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12eb96787801ca941899805dc575be04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EnemySfx
+  spawnClip: {fileID: 8300000, guid: 242de3229fe5b8949a93d44b0dcf9ef1, type: 3}
+  spawnVolume: 0.8
+  impactClip: {fileID: 0}
+  impactVolume: 0.9
+  pitchJitter: 0.06
+  minDistance: 2
+  maxDistance: 30
 --- !u!1 &2266537360725875279
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,6 +10,7 @@ namespace Game4026.Enemy
     /// (<see cref="AttackDefinition.Motion"/>) on the step's timeline: tilt back / crouch / spin up during the
     /// wind-up and telegraph hold (with a shake), then hop, roll, slam or recoil until the hit.
     /// Also: rise on spawn, wobble when staggered, topple and sink on death. No allocation per frame.
+    /// Raises <see cref="Impacted"/> on heavy moments (rise, roll start, slam landing, headbutt, topple) for sound.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyController))]
@@ -56,8 +58,12 @@ namespace Game4026.Enemy
         private float rollAngle;
         private float afterHitTilt, impactSquash;
         private Vector3 lastRootPosition;
+        private EnemyStateId lastState;
 
         public Transform Model => model;
+
+        /// <summary>(statue, strength 0–1): a heavy stone moment — rise from the ground, roll start, slam landing, headbutt, topple.</summary>
+        public event Action<StatueLocomotion, float> Impacted;
 
         private void Awake()
         {
@@ -80,6 +86,7 @@ namespace Game4026.Enemy
             if (attack != null)
                 attack.StepStarted += HandleStepStarted;
             lastRootPosition = transform.position;
+            lastState = EnemyStateId.None;
         }
 
         private void OnDisable()
@@ -125,16 +132,23 @@ namespace Game4026.Enemy
             float squash = 0f; // + flattens
             bool rolling = false;
             EnemyData data = controller.Data;
+            EnemyStateId state = controller.CurrentState;
+            bool entered = state != lastState;
+            lastState = state;
 
-            switch (controller.CurrentState)
+            switch (state)
             {
                 case EnemyStateId.Spawn:
+                    if (entered)
+                        Impacted?.Invoke(this, 0.7f); // grinding up out of the floor
                     float rise = data != null && data.SpawnDuration > 0f ? Mathf.Clamp01(stateTime / data.SpawnDuration) : 1f;
                     offset.y = -riseDepth * (1f - Smooth(rise));
                     offset += Shake(1f - rise);
                     break;
 
                 case EnemyStateId.Dead:
+                    if (stateTime >= 0.5f && stateTime - dt < 0.5f)
+                        Impacted?.Invoke(this, 0.8f); // hits the floor
                     side = toppleAngle * Smooth(Mathf.Clamp01(stateTime / 0.5f));
                     float sinkTime = data != null ? Mathf.Max(0.1f, data.DespawnDuration - 0.6f) : 1f;
                     offset.y = -sinkDepth * Smooth(Mathf.Clamp01((stateTime - 0.6f) / sinkTime));
@@ -201,6 +215,8 @@ namespace Game4026.Enemy
             switch (def.Motion)
             {
                 case StatueMotion.Roll:
+                    if (t >= holdEnd && t - dt < holdEnd)
+                        Impacted?.Invoke(this, 0.6f); // starts rolling
                     if (t < holdEnd)
                     {
                         tilt = -tiltBackAngle * 0.6f * windUp; // rock back before rolling
@@ -232,7 +248,10 @@ namespace Game4026.Enemy
                         return false;
                     }
                     if (t - dt < hit) // landing frame
+                    {
                         impactSquash = 0.22f;
+                        Impacted?.Invoke(this, 1f);
+                    }
                     return false;
 
                 case StatueMotion.Shoot:
@@ -263,6 +282,7 @@ namespace Game4026.Enemy
                     {
                         afterHitTilt = 25f;
                         impactSquash = 0.1f;
+                        Impacted?.Invoke(this, 0.7f);
                     }
                     return false;
             }

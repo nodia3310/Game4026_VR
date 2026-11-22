@@ -17,6 +17,9 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float lungeStopDistance = 0.9f;
         [Tooltip("Where projectiles spawn (e.g. the eyes). Defaults to the controller's eye.")]
         [SerializeField] private Transform muzzle;
+        [Tooltip("Base attack speed of this enemy type, multiplied with the runtime SpeedMultiplier (boss phases). " +
+                 "0.7 = every telegraph, swing, recovery and cooldown takes 1/0.7 as long; the parry window (seconds) grows too.")]
+        [SerializeField, Range(0.3f, 2f)] private float baseAttackSpeed = 1f;
 
         private readonly AttackSelector selector = new AttackSelector();
         private readonly AttackRunner runner = new AttackRunner();
@@ -83,6 +86,16 @@ namespace Game4026.Enemy
             set => speedMultiplier = Mathf.Max(0.1f, value);
         }
 
+        /// <summary>Base speed of this enemy type (Inspector).</summary>
+        public float BaseAttackSpeed
+        {
+            get => baseAttackSpeed;
+            set => baseAttackSpeed = Mathf.Clamp(value, 0.1f, 4f);
+        }
+
+        /// <summary>Speed the move timeline actually runs at: <see cref="BaseAttackSpeed"/> × <see cref="SpeedMultiplier"/>.</summary>
+        public float EffectiveSpeed => Mathf.Max(0.1f, baseAttackSpeed * speedMultiplier);
+
         /// <summary>
         /// Recovery wanted by the animation for the current step (set by <see cref="EnemyAnimator"/> on
         /// <see cref="StepStarted"/> so the clip can finish). The longer of this and the move's recovery is used.
@@ -130,9 +143,9 @@ namespace Game4026.Enemy
 
             if (index < 0 && attacks != null)
                 index = Array.IndexOf(attacks, move);
-            selector.MarkStarted(index, move, now, speedMultiplier);
+            selector.MarkStarted(index, move, now, EffectiveSpeed);
             AttackStarted?.Invoke(this, move);
-            runner.Start(move, speedMultiplier, this);
+            runner.Start(move, EffectiveSpeed, this);
             return true;
         }
 
@@ -145,7 +158,7 @@ namespace Game4026.Enemy
             AttackDefinition move = runner.Attack;
             if (runner.Tick(deltaTime, this))
                 return true;
-            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, speedMultiplier);
+            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, EffectiveSpeed);
             AttackFinished?.Invoke(this, move);
             return false;
         }
@@ -171,7 +184,7 @@ namespace Game4026.Enemy
                 return;
             AttackDefinition move = runner.Attack;
             runner.Stop();
-            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, speedMultiplier);
+            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, EffectiveSpeed);
             AttackCancelled?.Invoke(this, move);
         }
 
@@ -187,7 +200,7 @@ namespace Game4026.Enemy
             AttackDefinition step = runner.Step;
             pendingIndex = -1;
             runner.Stop();
-            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, speedMultiplier);
+            selector.MarkEnded(now, data != null ? data.GlobalAttackCooldown : 0f, EffectiveSpeed);
             Parried?.Invoke(this, move, step);
             return true;
         }

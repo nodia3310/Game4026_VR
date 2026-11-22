@@ -5,23 +5,25 @@
 ## 目前狀態
 > 2026-11-22 整理。舊的詳細條目在 `PROGRESS_ARCHIVE.md`（「2026-11-22 目前狀態快照」）。
 
-- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（OnGUI，只有桌面看得到）。
-- **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。
-- **法老 Boss**（`Enemy_Pharaoh`，450 HP，坐在王座不動）：背後半透明金色替身（`PharaohStand`，身體是佔位形狀）用**左右兩隻大手**出招，閒置的手回休息位：
+- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場等玩家拿起武器（`DemoStartOnGrab`；或離起點 5 m）→ 倒數 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（桌面 OnGUI；頭盔裡是 `DemoWorldHud` 世界空間文字，含 HP）。
+- **玩家是 A 的 XR Origin**（2026-11-22）：從 A 的 Museum_test 搬來的「West gallery play setup」與 `MuseumGuardDesk`（平移 -20.3 m 讓玩家站在 PlayerStart），加 `Weapon bench` + `Weapons/`（Knife、Axe、Shovel、Bow，A 的 Prefab）、`VR Services`（DamageBridgeInstaller）；XR Origin 實例掛 PlayerTarget、PlayerHealth、BodyCenter（PlayerBodyAnchor）；MockPlayer 停用（要用就勾回來並關掉 West gallery play setup）。沒戴頭盔時 A 的 `InteractionDesktopMode` 自動接手：WASD、右鍵轉視角、Tab 換手、方向鍵/R/F 移手、Q 抓、E 使用、Shift 快速揮。
+- **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。（舊的 MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。）
+- **法老 Boss**（`Enemy_Pharaoh`，450 HP，不動）：本體是大廳中間的人面獅身像（`Model/Sphinx`，sphinx_of_hatshepsut_new.glb，王座前，Body 改 BoxCollider 貼合雕像，已移除阿努比斯模型與 EnemyAnimator）；背後替身的身體是圖坦卡門金面具（`Stand/Body/Mask`，Meshy 模型 + `M_TutankhamunMask`；舊佔位形狀停用留著）用**左右兩隻大手**出招，閒置的手回休息位：
   - 掌拍（拍完卡地，打手 ×1.5 傳給法老）、連拍（第 2 階段起，左右輪流）、橫掃（往前後一步或蹲下）、頭部橫斬（只能蹲下）、擲武器（掌中召喚匕首，可打回去 35）、**雙手合擊**（前後一步可躲，合掌後兩手都能打）
   - 換階段（60%、25%）大招**萬兵齊發**：12 隻手各握一把武器（`egyptian_weapons.glb`）每 0.75 秒丟 3 把，每把都能打回去（12），打回 60% 法老硬直 → **結界**（半徑 5 m，平常進不去）打開 12 秒：天花板吊下的**實體擺錘大鐮刀**（3 把）、本體受傷 ×2 → 結束時衝擊波把附近玩家淡黑閃現推回 12 m。小兵召喚關閉中。
   - 材質：自寫 shader `Game4026/SpectralGlow`；繪製順序 手/武器 3000 → 替身身體 3010 → 結界 3020（避免手在身體後面消失）。
-- **其他敵人**：阿努比斯（5 招、雙持匕首可招架）、黑曜石神諭（5 招、鐳射可反彈）、翼人菁英（翼斬/俯衝/翼盾）；打擊感（慢動作 hit stop）、攻擊名額（一打多最多 2 個、只有視線內能出手）、遭遇戰敵人生成就追玩家（`Alert`）。
+- **其他敵人**：阿努比斯（5 招、雙持匕首可招架；`EnemyAttack.Base Attack Speed` 0.7、招架窗各 +0.15 秒、匕首 Capsule 半徑 0.07 / 長 0.5）、黑曜石神諭（5 招、鐳射可反彈）、翼人菁英（翼斬/俯衝/翼盾）；打擊感（慢動作 hit stop）、攻擊名額（一打多最多 2 個、只有視線內能出手）、遭遇戰敵人生成就追玩家（`Alert`）。
 - **VR 操作備忘（A 的 MeleeWeapon）**：沒有按鈕，抓著武器真的揮；刀刃 ≥ 1.2 m/s 算一次揮擊、最長 0.6 秒、慢到 0.45 m/s 才能再揮；同一揮擊對同一目標只算一次；刀刃判定半徑 3.5 cm → 飛行物 Collider 做大（0.35–0.6 m），大招一波一波來。
-- **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth` / 呼叫 `ResetHealth()`（合約沒有血量 API）；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
-- **測試**：EditMode 281/281、PlayMode 29/29。
-- **Git**：feature/enemy-ai，demo 與法老相關改動已 commit + push（2026-11-22），PR 頁面已開，**使用者要按 Create pull request**；A 的 `feature/vr-interaction` 由使用者自己 merge。
+- **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth`；A 的 `PlayerHealth` 沒有 `ResetHealth()` → 用反射呼叫 private setter 補滿（已在 NOTES_FOR_A 請 A 加）；桌面模式的 `DesktopPlayerDamageReceiver` 從它的 `Health` 屬性讀；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
+- **音效**（2026-11-22）：`EnemySfx` 敵人生成播召喚聲（阿努比斯、神諭、翼人；法老沒掛）、神諭的石頭聲（升起、滾動起步、跳砸落地、頭槌、倒地；走路跳步沒有）；結界擺錘鐮刀每次擺過最低點前 0.3 秒播揮砍聲（`PharaohArena` 的 Sound 欄位）。三個音檔已設 Force To Mono。
+- **測試**：EditMode 286/286、PlayMode 39/39（含 A 的 10 個）。
+- **Git**：feature/enemy-ai 已快轉到 main（338a6ee，含 A 的 PR #10）。音效 + VR 整合尚未 commit。A 的分支還有 1 個 main 沒有的 commit（795aa02 換弓箭模型），由使用者 merge。
 - 下一步：
   1. 使用者在 Museum_Demo 實玩法老戰並調數值（`Enemy_Pharaoh` → `PharaohStand` / `PharaohArena` 的 Settings、`PharaohHand` 的 Damage Multiplier）。合擊的「前後一步可躲」只有單元測試，Play Mode 沒驗到。
   2. 使用者放法老替身模型：換 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；手是 `Hand/Model`、`HandL/Model`（XR Hands 範例的手）。
-  3. A 合併後接 VR：Museum_Demo 換成 A 的 XR 玩家（PlayerTarget 指定 head、DamageBridgeInstaller）；A 的武器 targetMask 要包含 Default（飛刀、結界的 Layer）；實測淡黑傳送/閃現推回；A 的 `PlayerHealth` 沒有 ResetHealth → 重來不會補血，要和 A 定玩家血量合約；HUD 改世界空間文字。
+  3. VR 真機驗收（Quest Link）：拿武器打敵人、弓箭、淡黑傳送到異空間/閃現推回、世界空間 HUD 位置、蹲下躲頭部橫斬（A 的 Quest 左手 X 切蹲下）、背包。桌面模式已驗：被打扣血、倒下重來補血回起點、武器 4/4 接上傷害橋接。和 A 定玩家血量合約（ResetHealth）。
   4. 文物流程（使用者定的，等 A 合併後做）：每波一隻精英，死掉時原地留下它的文物（A 的 RestorableArtifact），放回展台（ArtifactDisplayTrigger → ArtifactEventBridge）後才開下一波；三件都歸位 → 法老。生成點改成從對應展品出現（阿努比斯像 x=-24、Case_wMummy x=23、SphinxPharaoh x=11.5）。A 的 `MuseumEncounterPlan.zh-TW.md` 也是這個方向。
-  5. 打磨：替身招式/合擊/擺錘/結界音效、異空間燈光（現在紫燈讓地板看起來紫黑）、Bloom 要跟組員討論 Quest 效能。
+  5. 打磨：替身招式/合擊/結界音效（擺錘已有）、異空間燈光（現在紫燈讓地板看起來紫黑）、Bloom 要跟組員討論 Quest 效能。
   6. 舊項目：一打多錯開出場與蓄力音效、阿努比斯 5 招手感調整、規格 M4（StatuePart、WingShield、卡雕像）、其他敵人換模型、身體 Collider 掛骨頭。
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
@@ -72,6 +74,31 @@
 
 ## 紀錄
 > 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-22（拿起武器才開始）
+- 使用者回報：開場來不及看清楚資訊和道具，怪物就來了。
+- `DemoFlowModel.Begin(now, waitForReady)` / `MarkReady` / `IsReady` / `IntroRemaining`（測試 +3）；DemoFlow `Wait For Player Ready`（只有第一次開場；倒下重來不等）、`Leave Start Radius` 5 m 保險、`MarkPlayerReady()`；HUD「Pick up a weapon from the table」→ 倒數。
+- `Bridges/DemoStartOnGrab`（掛在 VR Services）：監聽有 MeleeWeapon / BowDrawAim 的 XRBaseInteractable 的 selectEntered（XR 手和 A 的桌面手都會觸發）。Play 實測：等待中 0 敵人，抓刀後開始。
+
+### 2026-11-22（阿努比斯變慢、法老換模型）
+- `EnemyAttack.baseAttackSpeed`（Inspector「Base Attack Speed」）× 執行期 SpeedMultiplier = `EffectiveSpeed`；Reset 保留基本值。測試 +1。阿努比斯 0.7（每招時間 ×1.43，招架窗秒數也跟著變長）。
+- 阿努比斯 8 個招式資產 parryWindow +0.15；匕首碰撞體加大（VR 刀刃判定只有 3.5 cm，原本也 3.5 cm 很難碰到）。
+- 面具：法線貼圖改 Normal map、金屬/粗糙度改線性，合成 `_metallicSmoothness.png`（R=金屬、A=1-粗糙），`M_TutankhamunMask`（URP Lit），fbx 的 Material.001 重新指到它；自發光貼圖全黑沒用。
+- Quest Link：使用者已能用頭盔測。
+
+### 2026-11-22（接 A 的 VR 玩家）
+- `git merge --ff-only main`（使用者要求合併 A 的東西；只快轉到 main，沒動 A 的分支）。
+- DemoFlow：`ResolvePlayer` 每幀跟著 `PlayerTarget.Current` 換綁（A 的桌面模式第 2 幀才換相機），淡黑面片跟著換；`HudMessage`、`TryGetPlayerHealth`、`ShowHud`；頭盔中不畫 OnGUI。
+- `PlayerRig.MoveTo` 移動 CharacterController 所在的物件（桌面模式 PlayerTarget 在相機上）。
+- `PlayerVitals`：MaxHealth、private setter 補血、轉接元件的 Health。
+- 新增 `Flow/DemoWorldHud.cs`、`Flow/PlayerBodyAnchor.cs`。
+- 場景：見「目前狀態」。Weapon bench 1 m 深、武器抬到碰撞體貼桌面、弓橫放；桌子和守衛桌加 NavMeshObstacle（carve）。
+
+### 2026-11-22（音效）
+- A 在 `Notes For Groupmates/README.md` 留了 VR 互動試玩指南（InteractionTest 場景、Quest/桌面按鍵、文物歸位引出法老），沒有給 B 的新需求。
+- 新增 `Feedback/EnemySfx.cs`（召喚聲 + 雕像撞擊聲，3D AudioSource 跟著敵人）；`StatueLocomotion.Impacted` 事件；`PharaohArena` 擺錘揮砍聲（`PendulumMath.PassesBottom`，新增 1 個測試）。
+- 第二波：`Wave_Demo_2` 本來就是阿努比斯×2 + 神諭×1，Play Mode 實跑確認神諭有生成，沒改資料。
+- EditMode 282/282、PlayMode 29/29。尚未 commit。
 
 ### 2026-11-22（雙手替身 + 合擊）
 - `PharaohStand` 改成「目前出招的手」（SetActiveHand / UseHand、FollowIdleHand、UsesBothHands）、左手欄位 leftHand / leftHandRest / leftHeldWeapon、合擊 ClapTelegraph/Strike/Stuck 與 Clap 設定（含 clapForward 讓兩手在玩家前方等待）、LeftHand / ActiveHand 屬性；`StandMoveSelector` 權重加 Clap；`StandGeometry.ClapHits`。

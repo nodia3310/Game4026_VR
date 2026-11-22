@@ -14,6 +14,19 @@ namespace Game4026.Enemy
         }
 
         /// <summary>
+        /// True if the swing passes straight down (twice per period) within (<paramref name="from"/>, <paramref name="to"/>],
+        /// counted <paramref name="lead"/> seconds early — for a whoosh that peaks as the blade sweeps the bottom.
+        /// </summary>
+        public static bool PassesBottom(float from, float to, float period, float phase01, float lead)
+        {
+            if (period <= 0f || to <= from)
+                return false;
+            float a = Mathf.Floor(((from + lead) / period + phase01) * 2f);
+            float b = Mathf.Floor(((to + lead) / period + phase01) * 2f);
+            return b > a;
+        }
+
+        /// <summary>
         /// Blade centre of a pendulum hanging from <paramref name="pivot"/>, swinging sideways along <paramref name="swingDirection"/>
         /// (horizontal), <paramref name="angle"/> degrees from straight down.
         /// </summary>
