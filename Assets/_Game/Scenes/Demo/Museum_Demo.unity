@@ -43240,7 +43240,7 @@ MonoBehaviour:
   display: {fileID: 2121885266}
   fallbackSpawn: {fileID: 1235890955}
   hint: Return the golden mask to the Sphinx
-  floatHeight: 1.1
+  floatHeight: 0.95
   spinSpeed: 60
   bobAmplitude: 0.06
   displayGlow: {fileID: 501810557}
