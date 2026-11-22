@@ -1002,7 +1002,7 @@ GameObject:
   - component: {fileID: 35290056}
   - component: {fileID: 35290055}
   - component: {fileID: 35290054}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Demo Artifact - Golden Mask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -43240,7 +43240,7 @@ MonoBehaviour:
   display: {fileID: 2121885266}
   fallbackSpawn: {fileID: 1235890955}
   hint: Return the golden mask to the Sphinx
-  floatHeight: 1.1
+  floatHeight: 0.475
   spinSpeed: 60
   bobAmplitude: 0.06
   displayGlow: {fileID: 501810557}
