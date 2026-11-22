@@ -1,8 +1,8 @@
 # A 的四项 VR 交互组件
 
-现已另行建立可直接运行的 `Assets/_Game/Scenes/InteractionTest.unity`，操作方式与本次场景验证见 [测试场景说明](InteractionTest.zh-TW.md)。以下正文保留原组件接口说明；末尾 56+2 的结果是组件阶段历史记录，新场景的最终结果为 64/64，见 `Docs/QA/InteractionTest-AllTests.json`。
+现已另行建立可直接运行的 `Assets/A_VRInteraction/Scenes/InteractionTest.unity`，操作方式与本次场景验证见 [测试场景说明](InteractionTest.zh-TW.md)。以下正文保留原组件接口说明；末尾 56+2 的结果是组件阶段历史记录，新场景的最终结果为 64/64，见 `Docs/QA/InteractionTest-AllTests.json`。
 
-当前范围只有物理抓取、武器挥击、射线/拉弓和文物展柜归位。实现为 Assets/_Game/Scripts/Interaction 下的独立组件，不创建场景、不依赖敌人、Boss 或其他开发者的进度。既有全游戏开发计划不再作为当前工作队列。
+当前范围只有物理抓取、武器挥击、射线/拉弓和文物展柜归位。实现为 Assets/A_VRInteraction/Scripts/Interaction 下的独立组件，不创建场景、不依赖敌人、Boss 或其他开发者的进度。既有全游戏开发计划不再作为当前工作队列。
 
 基于项目已有 Unity 6000.6.7f1、XRI 3.6.1。脚本编译和自动测试通过情况见本文末尾。没有头显实测，下面的数值是初始调参值。
 

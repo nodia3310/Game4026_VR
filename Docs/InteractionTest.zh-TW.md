@@ -1,6 +1,6 @@
 # 四項 VR 交互測試場景
 
-打開 `Assets/_Game/Scenes/InteractionTest.unity`，按 Play 即可測試。此場景使用既有 Starter Assets XR Origin 和左右手 Input Actions，包含八件可抓道具（刀、斧頭、撬棍、鏟子、手電筒、射線工具、弓、文物）、三個多碰撞體靶、遮擋牆、手電筒照明牆及文物展櫃。沒有敵人、Boss 或完整博物館系統。
+打開 `Assets/A_VRInteraction/Scenes/InteractionTest.unity`，按 Play 即可測試。此場景使用既有 Starter Assets XR Origin 和左右手 Input Actions，包含七件可抓工具、三件可歸位文物、三個多碰撞體靶、遮擋牆及手電筒照明牆。房間後方偏右有一隻固定站位的阿努比斯，可測近戰、弓箭和斧頭投擲的傷害。Play Mode 可從頭頂的文字讀血量，重新進入 Play 會回滿。
 
 ## Quest／XR 控制器
 
@@ -31,27 +31,47 @@ Editor 未檢測到頭顯時自動建立桌面相機與兩隻模擬手；先點 
 | 方向鍵 | 移動活動手左右／上下 |
 | R／F | 活動手向前／向後 |
 | Shift + 手部移動鍵 | 快速移手，測近戰 |
-| Q | 抓取附近道具或弦／放開 |
-| E | 對所持物發出 Activate，切手電筒或射線發射 |
+| Q | 抓取附近道具或弦、放開、接回斧頭 |
+| E | 投擲手上的斧頭、切換手電筒或發射射線 |
 
 拉弓時先以一手 Q 拿弓，Tab 換手，用方向鍵與 R/F 把手移到弦珠附近，Q 抓弦，再按 F 逐步後拉，Q 放弦。兩手都跟隨桌面視角，因此拉弓期間先固定視角。桌面模式只在 Editor 啟用；Android 不會啟用它。桌面失去焦點會取消拉弓。
 
+測阿努比斯扣血時，從側後方瞄準軀幹。正面可能先撞上它的短刀，短刀擋下攻擊時血量維持原值。桌面模式可讓活動手朝向軀幹，按 E 投擲斧頭，等回彈接取提示出現後按 Q。錯過時機時，斧頭會落地，可以再撿起。
+
+## 三件文物與法老
+
+原有的卡諾卜罐在右側。羅塞塔石碑與圖坦卡門面具的測試道具放在左後方的底座，對應的藍色托盤在後壁，旁邊有英文標籤。把三件文物各自放到正確托盤中心再鬆手，順序可互換。第三件歸位後，法老會從房間右後方出現。生成點至少要離玩家 3 公尺，站得太近時可退開等待。三件歸位與法老生成只在本測試場景配置。
+
 ## 接線與變更範圍
+
+### 敵人系統
+
+- `InteractionTest` 和 `Museum` 使用 `DamageBridgeInstaller` 接近戰與弓箭傷害。執行中生成武器或弓後，呼叫安裝器的 `Refresh()`。
+- 兩個場景的 XR Rig 都把 `PlayerTarget.head` 指向 HMD 相機，`PlayerHealth` 從 100 HP 開始並接收敵人的傷害。桌面模式沿用同一份血量。
+- 文物歸位由 `ArtifactDisplayTrigger.OnArtifactRestored` 通知 `ArtifactEventBridge`，再由 `EncounterDirector` 按 ID 去重及推進遭遇戰。執行中生成展示台後，呼叫橋接的 `Refresh()`。
+- `ArtifactBossTest.prefab` 包含兩個補充測試台、Boss 生成點和小型導覽網格。法老使用 B 的 `Wave_Boss_Pharaoh` 與 `Enemy_Pharaoh`。斧頭投擲和接取在 `InteractionTest` 驗收。
 
 ### 匯入模型更新
 
-已套用 `Assets/Weapon-20261111T153418Z-1-001 1/Weapon/` 的 Knife、Axe、Crowbar、Shovel、Flashlight FBX；手榴彈依本次選擇保留為素材。原始 FBX 不變，模型以場景子物件引用。匯出父節點 `T_ORPH_ToolsAll` 的約 0.32 m 位移在實例上歸零，使握點、刀刃標記與燈頭對齊。
+已套用 `Assets/A_VRInteraction/Models/ImportedTools/Weapon/` 的 Knife、Axe、Crowbar、Shovel、Flashlight FBX；手榴彈依本次選擇保留為素材。原始 FBX 不變，模型以場景子物件引用。匯出父節點 `T_ORPH_ToolsAll` 的約 0.32 m 位移在實例上歸零，使握點、刀刃標記與燈頭對齊。
 
 四件近戰物件各自有 Rigidbody、PhysicalGrabbable、MeleeWeapon、簡化 BoxCollider、握點和打擊段，質量初值分別為 0.35／1.15／0.9／1.1 kg；它們共同更新命中板。模型包未附貼圖，目前使用新增的簡單 URP 金屬／握柄／木柄材質。原弓、射線工具與文物保留灰模。
 
 本輪建置工具為 `Docs/Tools/ReplaceInteractionModels.cs`，會拒絕重複覆寫已替換的模型。模型替換後重新編譯通過、8/8 PlayMode 測試通過，其中近戰測試逐一抓取並揮擊四件武器。相關結果存於 `Docs/QA/ModelReplacement-*`；測試亦確認打擊點貼近實際幾何、燈頭位於鏡片前，以及物品在物理模擬後仍留在桌台上。原場景備份在 `Docs/QA/InteractionTest-BeforeModels.unity`（不會當作遊戲場景匯入）。
 
 - 新場景由 Editor API 建立，沒有手寫 Unity YAML；建場工具保存在 `Docs/Tools/BuildInteractionTest.cs`，遇到已存在場景會拒絕覆寫。
-- 實體箭：`Assets/_Game/InteractionTest/Prefabs/TestArrow.prefab`，含 Rigidbody、非 Trigger 碰撞體、ArrowProjectile 和實際碰撞回饋。
+- 實體箭：`Assets/A_VRInteraction/InteractionTestAssets/Prefabs/TestArrow.prefab`，含 Rigidbody、非 Trigger 碰撞體、ArrowProjectile 和實際碰撞回饋。
 - 所有工具為單手、Velocity Tracking 物理抓取；弓根 Collider 清單排除獨立 XRSimpleInteractable 弦。String Rest 與 String Visual 分離，Arrow Origin.forward 為射出方向。
 - 近戰接 Blade Base/Tip、XR Origin、頭部遮擋原點及自體忽略。新增物理圖層 8/9/10：InteractionTestTarget／InteractionTestProp／InteractionTestArtifact；既有圖層保留。新場景的 Sphere/Curve caster mask 包含道具層，近距離 Sphere caster 使用 Collide 偵測弦 Trigger。
 - 原 Android Low 品質的 Performance URP 關閉額外燈光。新增獨立 `InteractionTest URP.asset`，只開啟 PerPixel 額外燈光、每物件上限 1、不加額外燈光陰影。SceneLightingOverride 僅在此場景運行時切換，停止後恢復；原品質資產不變。Android build 的 shader stripping、效能及真機輸出尚未驗證。
 - `SampleScene`、`BasicScene` 及原 `Performance URP Config.asset` 的前後 SHA-256 完全相同，紀錄在 `Docs/QA/InteractionTest-PreservedAssets.json`。未把測試場景設成正式 build 啟動場景。
+
+## 敵人整合驗證（2026-11-22）
+
+- Unity 6000.6.7f1 完整回歸通過 251 項 Edit Mode 與 39 項 Play Mode 測試。
+- Unity 6000.6.7f1 Play Mode 載入儲存的 `InteractionTest`，用實際 XRI 抓取與物理武器命中阿努比斯。刀、實體箭和投擲斧各使身體扣血一次。斧頭回彈時按接取鍵可重新握住。實體箭命中頭部時採用 2.5 倍弱點傷害，冷卻期間的下一擊不重複扣血。
+- 阿努比斯以原有的 Quick Slash 命中 XR Rig 的 `PlayerTarget`，玩家血量由 100 降至 92 HP。另載入 `Museum` 驗證近戰橋接、同一份玩家血量與既有卡諾卜罐歸位。
+- 逐一抓放三件實體文物，完成後只生成一隻法老。重複歸位會經過展示台與橋接，Director 仍只計一次同 ID。
 
 ## 本次驗證（2026-11-12，Asia/Singapore）
 

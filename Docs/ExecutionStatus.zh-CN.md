@@ -32,8 +32,8 @@ Console 历史缓冲存在一次 Editor 窗口缩放不匹配的 Assert；本次
 ## 当前代码范围
 
 - Assets/_Game/Scripts/Contracts：IDamageable、IPlayerDamageReceiver、ArtifactType、ArtifactRestoredEvent。
-- Assets/_Game/Scripts/Artifacts：ArtifactRestorationTracker；只有主线程纯逻辑，不包含场景碰撞、物理锁定或 XRI Socket。
-- Assets/_Game/Tests/EditMode/Artifacts：对应自动测试。
+- Assets/A_VRInteraction/Scripts/Artifacts：ArtifactRestorationTracker；只有主线程纯逻辑，不包含场景碰撞、物理锁定或 XRI Socket。
+- Assets/A_VRInteraction/Tests/EditMode/Artifacts：对应自动测试。
 
 归位核心在正确 ID/type 首次提交后计数并通知；后续 adapter 必须在调用前完成展柜匹配、已松手、容差和物理接收检查。事件订阅者不得抛出异常，关卡系统应处理自己的重复订阅与一次性 Boss 触发。新一轮游戏创建新 tracker。
 

@@ -2770,6 +2770,9 @@ GameObject:
   - component: {fileID: 252311414}
   - component: {fileID: 252311413}
   - component: {fileID: 252311412}
+  - component: {fileID: 252311419}
+  - component: {fileID: 252311418}
+  - component: {fileID: 252311417}
   m_Layer: 0
   m_Name: Interaction Services
   m_TagString: Untagged
@@ -2816,6 +2819,7 @@ MonoBehaviour:
   bow: {fileID: 495026429}
   display: {fileID: 1402834104}
   flashlight: {fileID: 397200877}
+  reboundWeapon: {fileID: 0}
   statusText: {fileID: 0}
   targetRenderers:
   - {fileID: 1479747475}
@@ -2948,6 +2952,55 @@ Transform:
   m_Children: []
   m_Father: {fileID: 20947019}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &252311417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252311411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a6b7b00b8fd5e749abfef2d5ac582f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.ArtifactEventBridge
+  director: {fileID: 252311418}
+  logInstalls: 1
+--- !u!114 &252311418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252311411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ead48792816447d4daf67b8993e8dd67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.EncounterDirector
+  encounters: []
+  bossEncounter: {fileID: 0}
+--- !u!114 &252311419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252311411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31ad8a9c03e6f6147b7e892fe2af4da7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Bridges::Game4026.Bridges.DamageBridgeInstaller
+  meleeDamage:
+    DamagePerSpeed: 8
+    MinDamage: 5
+    MaxDamage: 40
+  arrowDamage:
+    DamagePerSpeed: 1
+    MinDamage: 10
+    MaxDamage: 35
+  logInstalls: 1
 --- !u!1001 &266698694
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4224,6 +4277,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -6503,6 +6559,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -13698,6 +13757,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -19000,6 +19062,9 @@ MonoBehaviour:
   targetMask:
     serializedVersion: 2
     m_Bits: 256
+  damageableTargetMask:
+    serializedVersion: 2
+    m_Bits: 1
   blockerMask:
     serializedVersion: 2
     m_Bits: 257
@@ -24585,6 +24650,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2093938552}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2093938553}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2093938554}
     - targetCorrespondingSourceObject: {fileID: 1763277165867629938, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1981752355}
@@ -24649,6 +24720,33 @@ MonoBehaviour:
       m_Flags: 0
     m_Flags: 0
     m_Priority: 0
+--- !u!114 &2093938553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2093938544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd118f8b55861934790c3d5f0cd84297, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Contracts::Game4026.Contracts.PlayerTarget
+  head: {fileID: 2093938541}
+  body: {fileID: 0}
+--- !u!114 &2093938554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2093938544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 677b39bdf998f3f499eb14961d3e4712, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Interaction::Game4026.Interaction.PlayerHealth
+  maxHealth: 100
 --- !u!1 &2097421980
 GameObject:
   m_ObjectHideFlags: 0
