@@ -104,7 +104,7 @@ namespace Game4026.Interaction.Grabbing
                     index = items.IndexOf(requested);
                     items.RemoveAt(index);
                     index = Mathf.Clamp(index, 0, Mathf.Max(0, Count - 1));
-                    changed = true;
+                    panel.gameObject.SetActive(false);
                 }
             }
             if (changed && pack.IsOpen) Refresh();

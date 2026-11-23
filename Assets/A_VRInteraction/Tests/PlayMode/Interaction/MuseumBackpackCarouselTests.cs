@@ -195,6 +195,7 @@ namespace Game4026.Tests.Interaction
             SetGrip(leftHand, true);
             yield return Until(() => leftHand.IsSelecting(crowbar.Grab),
                 "Gripping the focus must equip the original selected tool into the left hand.");
+            Assert.That(backpack.IsOpen, Is.False, "Equipping the crowbar must dismiss the floating panel.");
             Assert.That(backpack.StoredCount, Is.EqualTo(2));
             Assert.That(crowbar.gameObject.activeSelf, Is.True);
 
@@ -246,9 +247,17 @@ namespace Game4026.Tests.Interaction
             Assert.That(backpack.SelectedItem, Is.SameAs(start));
             InputSystem.QueueStateEvent(mouse, new MouseState { scroll = new Vector2(0f, 120f) });
             yield return Until(() => backpack.SelectedItem != start, "Mouse wheel must cycle the carousel.");
-            yield return Press(Key.B);
+            var equipped = backpack.SelectedItem;
+            var hand = desktop.ActiveHand;
+            hand.transform.position = FocusGrip().transform.position;
+            yield return Press(Key.Q);
+            Assert.That(hand.IsSelecting(equipped.Grab), Is.True);
             Assert.That(backpack.IsOpen, Is.False);
-            Assert.That(backpack.StoredCount, Is.EqualTo(2));
+            Assert.That(backpack.StoredCount, Is.EqualTo(1));
+            yield return Press(Key.Q);
+            yield return Press(Key.B);
+            Assert.That(backpack.IsOpen, Is.True);
+            Assert.That(backpack.SelectedItem, Is.SameAs(start), "Reopening must show the remaining tool.");
         }
 
         private IEnumerator StartTrackedPlay()
