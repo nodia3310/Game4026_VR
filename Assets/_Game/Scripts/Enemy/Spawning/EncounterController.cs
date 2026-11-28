@@ -32,6 +32,8 @@ namespace Game4026.Enemy
 
         public event Action<EncounterController> Started;
         public event Action<EncounterController> Cleared;
+        /// <summary>(encounter, spawned enemy, the prefab it came from)</summary>
+        public event Action<EncounterController, EnemyController, EnemyController> EnemySpawned;
 
         public ArtifactType LinkedArtifact => linkedArtifact;
         public bool IsActive { get; private set; }
@@ -147,6 +149,8 @@ namespace Game4026.Enemy
                         enemy.Alert();
                     Track(enemy);
                     schedule.Consume(now);
+                    if (enemy != null)
+                        EnemySpawned?.Invoke(this, enemy, prefab);
                 }
                 // else: no valid point this frame (player too close); try again next frame
             }

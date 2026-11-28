@@ -72,6 +72,30 @@ A: ArrowProjectile.Impact(Collision) ──┤→ B: Bridges（MeleeDamageBridge
 - DemoFlow 新增 **Wait For Player Ready**（預設開）：第一次開場等玩家拿起武器（B 的 `Bridges/DemoStartOnGrab`）或離起點 5 m 才倒數。Museum_Demo_VR 沒有 DemoStartOnGrab，所以那裡會等到玩家走開 5 m；要舊行為可取消勾選。
 - 兩個 A 的 PlayMode 測試（`MuseumBackpackCarouselTests.ShoulderStow…`、`MuseumFloorPickupTests.PhysicalCrouch…`）在 B 的電腦失敗（模擬 Grip 抓不起手電筒），B 當時連著 Quest Link，可能是真手把干擾，請 A 在自己電腦確認。
 
+## 4e. 文物回合用了 A 的文物 prefab（2026-11-28）
+
+- Museum_Demo 的 `Artifact Rounds/Round 1~3` 用了 A 的 `CanopicJar` / `RosettaStone` / `TutankhamunMask` 和各自的 `…Display` prefab。**A 的 prefab 檔沒改**，下面這些都是場景實例上的覆寫：
+  - 外觀換成展品的縮小版（`Model` 子物件），測試方塊停用；托盤 `Display Tray` 停用；Restoration Trigger 移進展示櫃、放大。
+  - 文物 layer 改成 9（`InteractionTestProp`，跟 A 在 #22 改的面具一樣，VR 才抓得到）；展台的 `Artifact Layers` 加上 layer 9（prefab 預設只看 layer 10）；`Position Tolerance` 0.8。
+- B 依賴的 A 行為：`RestorableArtifact.IsHeld / IsRestored / ResetRestoration / Identity`、`ArtifactDisplayTrigger.OnArtifactRestored / IsRestored / ResetRestoration`。另外 `PhysicalGrabbable.Awake` 會把重力打開，B 是先 `SetActive(true)` 再設成浮空。
+- 桌面測試移速：`InteractionDesktopMode` 寫死 1.5 m/s，B 的 `DemoDebugKeys` 用反射讀它的 private `desktopRig` / `character` 補到 4.5 m/s（只在沒戴頭盔時）。A 如果改了這兩個欄位名稱，B 的補速會失效（不會報錯）。如果 A 願意加一個 Inspector 欄位調速度，B 就可以拿掉這段。
+
+## 4f. 效能優化交接（2026-11-28）
+
+B 在 Museum_Demo 做了不用動到別人素材的部分，剩下的需要 A（或環境組）接手：
+
+**B 已做（Museum_Demo 場景內）**
+- `Decorations` 的 219 個 MeshCollider（全部非凸，合計 820 萬三角形，Console 出現「超過 2M 三角形，碰撞可能偵測不到」的警告）→ 改成 Box Collider。展示櫃只留玻璃的 Box 和底座的 Box（`Case Base Collider`）；櫃裡的展品、框架不再有碰撞。現在整個場景只剩建築本體和異空間建築 2 個 MeshCollider（22.5 萬三角形）。NavMesh 是事先烘焙的，不受影響。
+- 傳送到異空間時（畫面全黑時）關掉展廳的 `Decorations`、`GlassShards`、`SpotLight`；回到展廳時關掉異空間的建築、王座、燈（`DemoFlow` 的 Hall Scenery / Realm Scenery）。建築本體 `Museum Scene` 沒關，因為掉在地上的道具會穿過去。
+- 遮擋剔除：建築、大雕像、船、人面獅身像、牆雕設成 Occluder + Occludee；展示櫃內的東西、玻璃、碎玻璃只設 Occludee；已烘焙。**沒開 Batching Static**（830 萬三角形做靜態合批會讓記憶體暴增，SRP Batcher 已經開著）。
+
+**建議 A 接手（影響最大的在前面）**
+1. **減面**：展廳 830 萬三角形（VR 畫兩次）。最重的是 `Decorations/Anubis`（146 萬）、`Case_wWeapon/Weapons`（102 萬）、`CaseSide/Releif`（58 萬）、`WallCarve`（55 萬）、`CaseSide/Sandstone`（54 萬）、`Case_wMummy/artifact_mummy_wrapped`（52 萬）、`CaseLarge5/Younger_mummy`（42 萬）、`CaseLarge2` 的船（39 萬）、`CaseSmall1/corn_mummy`（37 萬）。A 在 `feature/vr-interaction` 的 `Museum_Demo_Quest3` 已經有一批減面 mesh，可以直接把 Museum_Demo 對應物件的 MeshFilter 換成那些 mesh（碰撞已經是 Box，不用再處理）。
+2. **貼圖**：展廳用到 179 張貼圖，4K 有 30 張、2K 以上 70 張。建議 Max Size 壓到 1024–2048（Android/Quest 平台覆寫 + ASTC）。這是共用素材，可能要先跟環境組講。
+3. **減面後**再考慮開 Batching Static，並重新烘焙遮擋剔除（Window → Rendering → Occlusion Culling → Bake）。
+4. 即時燈：展廳 15 盞 per-pixel 聚光燈（URP 每物件最多 8 盞）。B 的 `DemoLighting` 會在開場和關燈時調它們的亮度，所以要保持 Realtime；如果要改成烘焙，請先跟 B 說。
+5. 如果要直接在 Quest 頭盔上跑（不用 Link）：目前建置目標是 Windows，MSAA 4x、render scale 1，上 Quest 時再看要不要降。
+
 ## 5. 要問 A 的問題
 
 1. 文物歸位事件：B 目前接的是 `ArtifactDisplayTrigger.OnArtifactRestored`。這是正式的來源嗎？還是應該用 `ArtifactRestorationTracker.OnArtifactRestored`？（Tracker 不是場景元件，由誰建立、要怎麼拿到它？）
