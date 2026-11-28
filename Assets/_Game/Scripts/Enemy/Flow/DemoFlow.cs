@@ -36,6 +36,11 @@ namespace Game4026.Enemy
         [SerializeField, Min(0f)] private float fadeSeconds = 0.6f;
         [Tooltip("Seconds after the victory before the player is brought back to the hall.")]
         [SerializeField, Min(0f)] private float returnDelay = 5f;
+        [Tooltip("Rendering optimisation: hall scenery switched off while the player is in the boss realm (while the " +
+                 "screen is black). Only scenery: no gameplay objects, no player, no NavMesh.")]
+        [SerializeField] private GameObject[] hallScenery = new GameObject[0];
+        [Tooltip("Boss realm scenery switched off while the player is in the hall.")]
+        [SerializeField] private GameObject[] realmScenery = new GameObject[0];
         [SerializeField] private bool showHud = true;
         [Tooltip("Testing: skip the hall waves and go straight to the boss (also after a restart).")]
         [SerializeField] private bool startAtBoss;
@@ -100,8 +105,22 @@ namespace Game4026.Enemy
             }
             EnsureModel();
             model.Begin(Time.time, waitForPlayerReady);
+            ShowArea(inRealm: false);
             if (startAtBoss)
                 SkipToBoss();
+        }
+
+        /// <summary>Only the area the player is in is switched on (no-op without a boss realm).</summary>
+        private void ShowArea(bool inRealm)
+        {
+            if (realmArrival == null)
+                return;
+            foreach (GameObject go in hallScenery)
+                if (go != null)
+                    go.SetActive(!inRealm);
+            foreach (GameObject go in realmScenery)
+                if (go != null)
+                    go.SetActive(inRealm);
         }
 
         /// <summary>The player is ready (picked up a weapon): the intro countdown starts. Ignored when not waiting.</summary>
@@ -205,11 +224,11 @@ namespace Game4026.Enemy
                     break;
                 case DemoPhase.BossIntro:
                     if (realmArrival != null)
-                        Run(TeleportRoutine(realmArrival.position, realmArrival.rotation, 1f));
+                        Run(TeleportRoutine(realmArrival.position, realmArrival.rotation, 1f, toRealm: true));
                     break;
                 case DemoPhase.Victory:
                     if (realmArrival != null)
-                        Run(TeleportRoutine(startPosition, startRotation, returnDelay));
+                        Run(TeleportRoutine(startPosition, startRotation, returnDelay, toRealm: false));
                     break;
             }
         }
@@ -229,11 +248,12 @@ namespace Game4026.Enemy
             transition = routine != null ? StartCoroutine(routine) : null;
         }
 
-        private IEnumerator TeleportRoutine(Vector3 position, Quaternion rotation, float wait)
+        private IEnumerator TeleportRoutine(Vector3 position, Quaternion rotation, float wait, bool toRealm)
         {
             if (wait > 0f)
                 yield return new WaitForSecondsRealtime(wait);
             yield return Fade(1f);
+            ShowArea(toRealm);
             if (player != null)
                 MovePlayer(player, position, rotation);
             yield return Fade(0f);
@@ -268,6 +288,7 @@ namespace Game4026.Enemy
                 bossEncounter.ResetEncounter();
             if (vitals != null)
                 vitals.Reset();
+            ShowArea(inRealm: false);
             if (player != null)
                 MovePlayer(player, startPosition, startRotation);
             EnsureModel();

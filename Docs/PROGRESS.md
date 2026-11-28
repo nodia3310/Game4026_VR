@@ -19,10 +19,10 @@
 - **招架輔助**（2026-11-23）：`ParryAssist` 掛在三種敵人的 EnemyWeapon 上，招架窗內玩家握著的武器靠近（比武器大 0.13 m、刀尖外 0.15 m）就算招架，舉刀擋也行。VR 還沒實測，範圍在 prefab 的 ParryAssist 欄位調。法老的手部招式（掌拍、連拍、橫掃、頭部橫斬、合擊）**不能招架**（試過，使用者覺得太簡單，已拿掉）。**飛行武器**（擲武器、萬兵齊發，也包含神諭光彈）擋著也會反彈：`EnemyProjectile` 的 Reflect Assist（預設開、Padding 0.13）。
 - **文物回合**（2026-11-28）：`DemoArtifactRounds`（DemoFlow 物件上，透過 `IDemoHallSteps` 接管展廳階段）。守護者 = 活過來的展品：生成時在自己的玻璃櫃前出現，櫃裡展品消失、玻璃碎在地上 + 音效（玩家看得出哪裡空了）；頭上浮著縮小的展品 + 金光。倒下處浮出縮小展品（35 cm）→ 放回櫃子（手伸進碎掉的櫃子，放開就停住）→ 飛回原位變大、換回真展品，玻璃維持破的 → **驅散該回合剩下的敵人** → 停 3 秒 → 下一回合（放回才開下一波）。① 阿努比斯×2 → 胡狼頭卡諾卜罐 `CaseLong2` ② 阿努比斯×2+神諭 → 神諭雕像 `DisplayCase1`（同一個模型）③ 翼人+阿努比斯 → 有翼雕像 `CaseSide` → 法老。文物沿用 A 的 3 個 prefab（換外觀；ID/Type 還是 Rosetta/Jar/Mask）。Play 實測（桌面、程式殺守護者和放文物）：碎櫃、掉落、放回、驅散、三回合 → Boss、倒下重來時展品回位、玻璃維持破的。VR 實抓沒測；放回變大動畫只看了結果沒看過程。
 - **BGM**（2026-11-23）：`DemoMusic`（DemoFlow 物件上）展廳開打播 Normal battle、進 Boss（傳送開始）切 Boss，交叉淡入；開場等待、勝利、倒下時淡出。Play 實測：Hall → Normal battle、SkipToBoss → Boss。
-- **測試**（2026-11-28 commit 前）：EditMode 全過；PlayMode 67 個 64 過，3 個 A 的互動測試失敗（`InteractionSceneTests.Axe_ReturnDropsWhenTheThrowingHandIsHoldingAnotherItem`、`MuseumBackpackCarouselTests…PreserveToolsThroughGripAndRestart`、`MuseumFloorPickupTests…LiftADroppedMuseumFlashlight`，都是抓取類，不是敵人系統）。
-- **Git**：文物回合 + 桌面移速已 commit 到 feature/enemy-ai（還沒 push / PR）。A 的 feature/vr-interaction 還有 Quest 3 優化場景 `Museum_Demo_Quest3`、錄影場景、背包關閉，未進 main。`ProjectSettings.asset` 有套件自己加的 WebGL define（SENTIS/APP_UI），刻意不 commit。
+- **測試**（2026-11-28 優化 commit 前）：EditMode 320/320；PlayMode 67 個 65 過，2 個 A 的抓取測試失敗（`MuseumBackpackCarouselTests…PreserveToolsThroughGripAndRestart`、`MuseumFloorPickupTests…LiftADroppedMuseumFlashlight`）。
+- **Git**：文物回合（f46c761）、燈光（aa23936）、優化 1–3 已 commit 並 push 到 feature/enemy-ai，等使用者開 PR / merge。A 的 feature/vr-interaction 還有 Quest 3 優化場景 `Museum_Demo_Quest3`、錄影場景、背包關閉，未進 main。`ProjectSettings.asset` 有套件自己加的 WebGL define（SENTIS/APP_UI），刻意不 commit。
 - 下一步：
-  1. 燈光 `DemoLighting` 已 commit（桌面實測：明亮/全暗/微光三張截圖 OK；VR 裡看閃爍會不會不舒服）。接著是優化（見 2026-11-28 紀錄的數據）。實玩看回合節奏、守護者標記、碎櫃音量、三個櫃子的吸附範圍。
+  1. 燈光 `DemoLighting` 已 commit（桌面實測：明亮/全暗/微光三張截圖 OK；VR 裡看閃爍會不會不舒服）。優化 1–3 已做（見下），剩下的交給 A：`NOTES_FOR_A.md` 4f。實玩看回合節奏、守護者標記、碎櫃音量、三個櫃子的吸附範圍。
   2. VR 真機驗收（Quest Link）：招架輔助範圍（小兵 ParryAssist、飛行武器 Reflect Assist、Front Margin）、實際抓三件文物放回櫃子（文物 layer 9、Trigger 範圍、浮空高度沿用 A 調的 0.475）、BGM 音量、頭盔 HUD 高度（使用者自己調 DemoWorldHud 的 Height）、蹲下躲頭部橫斬、傳送。A 在修武器刀刃判定線（目前只有前端 14 cm）。
   3. 法老數值實玩調整（`PharaohStand` / `PharaohArena` Settings）；手部招式維持只能躲（試過招架，太簡單已拿掉）。合擊的「前後一步可躲」只有單元測試。
   4. 文物回合打磨：驅散時的視覺/音效（現在直接進死亡流程）、放回時的音效/特效；小兵也從展品出來（現在只有守護者）；A 的 `Museum_Demo_Quest3` 如果要當正式 demo，要把文物回合搬過去。
@@ -87,6 +87,7 @@
 - 桌面移速：A 的 InteractionDesktopMode 寫死 1.5 m/s，不能改 A 的檔案 → DemoDebugKeys 補速度（只在沒戴頭盔時）。
 - 燈光：展廳 15 盞即時聚光燈 + 平面環境光 + 2 張烘焙貼圖；地板的亮主要是反射 Default-Skybox（沒有反射探針）。只調即時燈關不暗 → 烘焙貼圖跟著閃/全暗時拿掉、反射強度一起降。開場明亮只能加亮即時燈和環境光，地板沒辦法更亮。A 的 West check-in spotlight 不在控制內（關燈時櫃台還亮著）。
 - 優化數據（Museum_Demo 展廳）：8.3M 三角形（Anubis 像 1.46M、武器櫃 1.02M、浮雕 583k、牆雕 553k、砂岩 544k、木乃伊 524k…）；MeshCollider 221 個全非凸、共 8.4M 三角形；材質 121、貼圖 179（4K 30 張、2K+ 70 張）；static 只有 61/545；異空間 112k 三角形在展廳時也開著；URP：MSAA 4x、HDR 關、額外光 per-pixel 最多 8、額外光陰影關；建置目標 Windows（Quest Link）。
+- 優化（使用者：稍微優化、方便交給 A）：Decorations 219 個 MeshCollider（820 萬三角形）→ Box（展示櫃只留玻璃 + 底座）；DemoFlow 傳送時只開玩家所在那邊的佈景（Museum Scene 不關，地上的道具會掉）；遮擋剔除 static 旗標 + 烘焙；不開 Batching Static（830 萬三角形合批記憶體會暴增）。減面、貼圖、合批交給 A（NOTES_FOR_A 4f）。
 - 測試：ArtifactRoundsModelTests 6/6、DemoFlowModelTests 全過（只跑這兩組）。
 
 ### 2026-11-23（招架調整、BGM、文物 demo）
