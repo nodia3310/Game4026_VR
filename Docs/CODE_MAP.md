@@ -49,12 +49,14 @@
 - AttackRunner — Scripts/Enemy/Combat/AttackRunner.cs — 純 C# 出招時間軸（起手 → 預警停格 → 揮下 → 判定 → 收招／連段下一下）；IAttackHost、AttackStepTiming；SkipToHit（翼盾提前結束）
 
 ## Enemy Flow（`Assets/_Game/Scripts/Enemy/Flow/`，`Game4026.Enemy`）
+- ArtifactRoundsModel — Scripts/Enemy/Flow/ArtifactRoundsModel.cs — 純 C# 文物回合：Fighting → 守護者倒下 ArtifactOut → 放回 Restored → 停 pauseAfterRestore 秒 → 下一回合；最後一件 → Done
+- IDemoHallSteps — Scripts/Enemy/Flow/IDemoHallSteps.cs — DemoFlow 展廳階段的替代（BeginHall / StopHall / ResetHall / IsHallDone / HallHud）；DemoFlow.SetHallSteps 設定後取代單一 hallEncounter
 - DemoFlowModel — Scripts/Enemy/Flow/DemoFlowModel.cs — 純 C# demo 流程：Intro（可等 MarkReady 才倒數）→ Hall → BossIntro → Boss → Victory；玩家倒下 → Defeat → Restart；DemoPhase / DemoAction
-- DemoFlow — Scripts/Enemy/Flow/DemoFlow.cs — 場景元件：第一次開場等玩家準備好（MarkPlayerReady 或離起點）；跟著 PlayerTarget.Current 換綁玩家；開展廳遭遇戰、清完開 Boss、倒下時清場並原地重來（重設遭遇戰、補血、移回 PlayerStart）；Boss 前淡出傳送到異空間（realmArrival），勝利後傳回；SkipToBoss / Start At Boss 測試捷徑；傳送保留頭盔偏移；OnGUI 提示文字
+- DemoFlow — Scripts/Enemy/Flow/DemoFlow.cs — 場景元件：第一次開場等玩家準備好（MarkPlayerReady 或離起點）；跟著 PlayerTarget.Current 換綁玩家；開展廳遭遇戰（或 SetHallSteps 的 IDemoHallSteps，例如文物回合）、清完開 Boss、倒下時清場並原地重來（重設遭遇戰、補血、移回 PlayerStart）；Boss 前淡出傳送到異空間（realmArrival），勝利後傳回；SkipToBoss / Start At Boss 測試捷徑；傳送保留頭盔偏移；OnGUI 提示文字
 - PlayerRig — Scripts/Enemy/Flow/PlayerRig.cs — 移動玩家（CharacterController 所在物件，保留頭盔偏移）與淡黑閃現 Blink（不暈的推回/傳送）
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
 - PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`/`MaxHealth`、`ResetHealth()` 或 private setter 補滿；轉接元件（A 的桌面模式）讀它持有的 receiver
-- Demo 文物（Museum_Demo 場景）— `Demo Artifact - Golden Mask`（Meshy 金面具 0.38 m、BoxCollider、Kinematic Rigidbody、XRGrabInteractable、ArtifactIdentity demo_golden_mask / TutankhamunMask、RestorableArtifact，預設隱藏）；`Demo Artifact Display`（人面獅身像展區西側 (4.8, 0, -0.1)：Pedestal 圓柱 + NavMeshObstacle、Glow 光圈、Snap、Volume = ArtifactDisplayTrigger、Artifact Fallback Spawn）；材質 Assets/_Game/Materials/M_DemoPedestal.mat
+- Demo 文物回合（Museum_Demo 場景）— `Artifact Rounds/Round 1~3`：每個有 Display（A 的 `…Display` prefab：托盤停用、Restoration Trigger 移到展示櫃裡手搆得到的高度並放大（1.2–1.4 m 寬）、Snap Point 在中心、Artifact Layers 加 layer 9、Position Tolerance 0.8；Glow = 金色點光）、A 的文物 prefab（layer 9，Model = 展品縮小到 35 cm 的複製，零件照展品本地座標排）、Guardian Spawn（櫃子前 2.2 m）、Fallback Spawn、Glass Shards（借 GlassShards 的碎片模型，預設隱藏）、Encounter（EncounterController + 3 個 SP）。Round 1 胡狼頭卡諾卜罐 `CaseLong2/egyptian_jackal`（A 的 CanopicJar）、Round 2 神諭雕像 `DisplayCase1/aztec_statue_sculpture`（RosettaStone）、Round 3 有翼雕像 `CaseSide/egyptian_winged_statue`（TutankhamunMask）；括號是沿用的 A prefab（ID/Type 沒改）
 - DemoMusic — Scripts/Enemy/Flow/DemoMusic.cs — 掛在 Museum_Demo 的 DemoFlow 物件：展廳戰鬥（Hall）播 `Audio & SFX/Normal battle.mp3`、BossIntro/Boss 播 `Boss.mp3`，其他階段靜音；兩個 2D 循環 AudioSource 交叉淡入（Volume 0.45、Fade Seconds 1.5）；兩首設 Streaming
 - DemoWorldHud — Scripts/Enemy/Flow/DemoWorldHud.cs — 頭盔 HUD：DemoFlow 目標 + HP 的世界空間 TextMesh，浮在頭前、轉頭時慢慢跟上、穿牆可見；只在 XR 裝置啟用時顯示
 - PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body；Museum_Demo 改用 A 的 TrackedPlayerHurtbox 後目前沒用到）
@@ -76,7 +78,7 @@
 - EncounterSchedule — Scripts/Enemy/Spawning/EncounterSchedule.cs — 純 C# 波次排程：上一波全滅後等 startDelay 才開下一波，波內每 spawnInterval 生一隻，遵守 maxAlive
 - SpawnPoint — Scripts/Enemy/Spawning/SpawnPoint.cs — 生成點標記：確認在 NavMesh 上、離玩家 ≥3 公尺，附 Gizmo
 - EnemyPoolManager — Scripts/Enemy/Spawning/EnemyPoolManager.cs — 每種 prefab 一個 ObjectPool，可預熱；敵人 Despawned 時自動回收；CreatedCount 用來確認有沒有重用
-- EncounterController — Scripts/Enemy/Spawning/EncounterController.cs — 一個展廳的遭遇戰：StartEncounter、ForceClear、Started/Cleared、觸發區自動開始；alertOnSpawn（生成的敵人直接追）、TotalEnemies
+- EncounterController — Scripts/Enemy/Spawning/EncounterController.cs — 一個展廳的遭遇戰：StartEncounter、ForceClear、Started/Cleared/EnemySpawned（敵人 + 來源 prefab）、觸發區自動開始；alertOnSpawn（生成的敵人直接追）、TotalEnemies
 - EncounterDirector — Scripts/Enemy/Spawning/EncounterDirector.cs — 場景唯一：NotifyArtifactRestored → 清除對應展廳；三件都歸位 → 開始 Boss 遭遇戰；BossEncounterStarted/BossDefeated
 - ArtifactProgress — Scripts/Enemy/Spawning/ArtifactProgress.cs — 純 C#：以 ArtifactId 去重、判斷三種文物是否都已歸位
 
@@ -91,7 +93,7 @@
 - MockPlayer — Scripts/Enemy/Debug/MockPlayer.cs — 桌面假玩家：WASD、右鍵轉視角，實作 IPlayerDamageReceiver，顯示 HP；Teleport() 給 CLI 測試用
 - MockWeapon — Scripts/Enemy/Debug/MockWeapon.cs — 左鍵從滑鼠位置 Raycast，對 IDamageable 呼叫 TakeDamage（同 A 的呼叫方式）
 - EnemyDebugLabel — Scripts/Enemy/Debug/EnemyDebugLabel.cs — 只在 Editor 顯示：敵人頭上的狀態、正在出的招式（連段第幾下）與血量
-- DemoDebugKeys — Scripts/Enemy/Debug/DemoDebugKeys.cs — Demo 測試捷徑：B 跳到法老（DemoFlow.SkipToBoss）、U 法老立刻放大招（PharaohStand.QueueUltimate）
+- DemoDebugKeys — Scripts/Enemy/Debug/DemoDebugKeys.cs — Demo 測試捷徑：B 跳到法老（DemoFlow.SkipToBoss）、U 法老立刻放大招（PharaohStand.QueueUltimate）；沒戴頭盔時把 A 桌面模式的走路速度補到 Desktop Move Speed（預設 4.5 m/s；A 寫死 1.5，用反射拿 A 的 desktopRig/character）
 - DebugArtifactButton — Scripts/Enemy/Debug/DebugArtifactButton.cs — 按 1/2/3 模擬 Rosetta/Canopic/Mask 歸位，左上角顯示進度
 
 ## 資產與場景
@@ -119,7 +121,7 @@
 - M_AttackGlint — Assets/_Game/Prefabs/Enemies/Materials/M_AttackGlint.mat — 提示光點材質（URP Particles/Unlit 加算、Default-Particle 貼圖）
 - AC_Anubis — Assets/_Game/Animations/Enemy/Anubis/AC_Anubis.controller — Locomotion、Attack（QuickerAttack）、Attack_Mirror（鏡像）、JumpAttack（突進斬）、Hit、Death；攻擊狀態速度綁 AttackSpeed
 - Wave_Hall_1 / Wave_Hall_2 / Wave_Boss_Pharaoh / Wave_Boss_Minions — Assets/_Game/Data/Enemies/*.asset — 木乃伊×3 / 衛兵+女神像（延遲 2 秒）/ 法老×1 / 木乃伊×2（Boss 召喚）
-- Museum_Demo — Assets/_Game/Scenes/Demo/Museum_Demo.unity — playable demo 場景（複製自 Museum_New）：建築與展示櫃加了 MeshCollider、NavMesh（Museum_Demo/NavMesh-Navigation.asset）、A 的 VR 玩家（Museum VR Setup：VR Player + TrackedPlayerHurtbox、背包、桌面模式、受傷紅框）、MuseumGuardDesk、Museum Floor Confirmation、Guard Desk Weapon Stand（斧、弓）、DemoFlow 上的 MuseumDemoRun、VR Services（DamageBridgeInstaller + DemoStartOnGrab）、MockPlayer（停用）、EnemyPool、SpawnPoints_Hall、SP_Throne、Encounter_Hall / Encounter_Boss、DemoFlow、AttackCoordinator；`BossRealm`（y=-200 的建築複製品、王座、即時光、RealmVolume、RealmArrival、SP_Throne）
+- Museum_Demo — Assets/_Game/Scenes/Demo/Museum_Demo.unity — playable demo 場景（複製自 Museum_New）：建築與展示櫃加了 MeshCollider、NavMesh（Museum_Demo/NavMesh-Navigation.asset）、A 的 VR 玩家（Museum VR Setup：VR Player + TrackedPlayerHurtbox、背包、桌面模式、受傷紅框）、MuseumGuardDesk、Museum Floor Confirmation、Guard Desk Weapon Stand（斧、弓）、DemoFlow 上的 MuseumDemoRun、VR Services（DamageBridgeInstaller + DemoStartOnGrab）、MockPlayer（停用）、EnemyPool、Artifact Rounds（3 回合的遭遇戰、文物、展台）、SP_Throne、Encounter_Boss、DemoFlow（+ DemoArtifactRounds）、AttackCoordinator；`BossRealm`（y=-200 的建築複製品、王座、即時光、RealmVolume、RealmArrival、SP_Throne）
 - M_ScreenFade / M_Throne / RealmVolume — Assets/_Game/Scenes/Demo/Museum_Demo/ — 淡出材質、王座材質、異空間的局部後處理（紫色、暗角）
 - M_SpectralGold / M_StandTelegraph — Assets/_Game/Prefabs/Enemies/Materials/ — 替身的神聖半透明金色（SpectralGlow shader）/ 預警紅光
 - SpectralGlow — Assets/_Game/Prefabs/Enemies/Materials/Shaders/SpectralGlow.shader — URP 無光照 shader：深度預寫 + 半透明身體 + 菲涅耳邊光 + 光紋（不需要 HDR/Bloom，支援 VR single-pass instanced）
@@ -134,7 +136,7 @@
 - ParryZone — Scripts/Bridges/ParryZone.cs — 把 Collider 形狀（Capsule/Box/Sphere，停用的也行）放大一圈做 Overlap 查詢、找符合條件的 Collider、畫 Gizmo
 - HeldWeaponParryProbe — Scripts/Bridges/HeldWeaponParryProbe.cs — 實作 IParryProbe、裝成 ParryProbe.Current（DamageBridgeInstaller 開場自動加）：放大範圍內有玩家握著的近戰武器，且武器比玩家身體（Body–Head 線）更靠近飛來的武器（Front Margin 0.1）才算；成功後讓握武器的手把照反應震動
 - ArrowDamageBridge — Scripts/Bridges/ArrowDamageBridge.cs — 掛在 A 的箭上（由安裝器自動加），聽 Impact 事件扣血
-- DemoArtifactStep — Scripts/Bridges/DemoArtifactStep.cs — 掛在 Museum_Demo 的 DemoFlow 物件：展廳最後一隻敵人倒下處（HitImpacts 的 Kill 位置；沒有就用 Fallback Spawn）浮出黃金面具（A 的 RestorableArtifact，浮著旋轉到被抓）；放上 ArtifactDisplayTrigger → DemoFlow.MarkArtifactRestored → 傳送打 Boss；重來時收回面具、重置展台。設 DemoFlow.RequireArtifact / ArtifactHint
+- DemoArtifactRounds — Scripts/Bridges/DemoArtifactRounds.cs — 掛在 Museum_Demo 的 DemoFlow 物件（IDemoHallSteps）：3 回合，每回合跑自己的 EncounterController；第一隻 guardianPrefab 是守護者 = 活過來的展品：生成時 Warp 到櫃子前、展品隱藏、玻璃關掉、地上碎片出現、播 glass-breaking.mp3；頭上浮著縮小展品 + 金色點光；倒下處浮出縮小展品（A 的 RestorableArtifact，浮著旋轉到被抓；掉出地圖回原處；放開時在櫃子 Trigger 範圍內就停住）；吸附後 Model 飛到展品原位放大（Grow Seconds 0.8）再換回真展品、玻璃維持破的；驅散該回合剩下的敵人 → 停 3 秒下一回合；三件都回去 → Boss。重來時展品回位、文物收回；玻璃不復原（重來後櫃子已開，展品照樣消失但沒有碎玻璃音效）
 - ArtifactEventBridge — Scripts/Bridges/ArtifactEventBridge.cs — 訂閱場景裡所有 A 的 ArtifactDisplayTrigger.OnArtifactRestored，轉給 EncounterDirector
 - DamageBridgeInstaller — Scripts/Bridges/DamageBridgeInstaller.cs — 場景元件：開場時幫所有 MeleeWeapon 加橋接，每次射擊後幫新的箭加橋接
 
@@ -146,6 +148,7 @@
 - BossMechanicsTests — Tests/EditMode/Enemy/BossMechanicsTests.cs — 擺錘角度/刀刃位置、萬兵齊發每把只用一次且每波分散、扇形對稱
 - PharaohStandTests — Tests/EditMode/Enemy/PharaohStandTests.cs — 替身選招（階段、不連續橫掃）、掌拍/橫掃命中（蹲下、跨步躲開）、橫掃路線
 - DemoFlowModelTests — Tests/EditMode/Enemy/DemoFlowModelTests.cs — demo 流程：開場延遲、清場進 Boss、勝利、倒下重來
+- ArtifactRoundsModelTests — Tests/EditMode/Enemy/ArtifactRoundsModelTests.cs — 文物回合：守護者倒下才能放回、放回後停頓再下一回合、第三件完成、Stop 重來
 - FakeEnemyContext — Tests/EditMode/Enemy/FakeEnemyContext.cs — 測試用 IEnemyContext（不需要 NavMesh / Play Mode）
 - EnemyAttackTests — Tests/EditMode/Enemy/EnemyAttackTests.cs — 出招時間、命中範圍與角度、AreaSlam、連段、突進距離、打斷、攻速倍率、預設招式
 - EnemyProjectileTests — Tests/EditMode/Enemy/EnemyProjectileTests.cs — 飛行、打中玩家、壽命、反彈（一次、方向、速度）、箭不能反彈、線段距離

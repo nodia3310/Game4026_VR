@@ -3,11 +3,11 @@
 > 每次任務結束時由 agent 更新。新的紀錄寫在最上面。
 
 ## 目前狀態
-> 2026-11-22 整理。舊的詳細條目在 `PROGRESS_ARCHIVE.md`（「2026-11-22 目前狀態快照」）。
+> 2026-11-28 更新。舊的詳細條目在 `PROGRESS_ARCHIVE.md`（「2026-11-22 目前狀態快照」）。
 
-- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場（地板確認後）等玩家拿起武器（`DemoStartOnGrab`；或離起點 5 m）→ 倒數 3 秒 → 展廳 3 波（阿努比斯×2 → 阿努比斯×2+神諭 → 翼人+阿努比斯）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（桌面 OnGUI；頭盔裡是 `DemoWorldHud` 世界空間文字，含 HP）。
+- **Playable demo**：`Assets/_Game/Scenes/Demo/Museum_Demo.unity`（複製自環境組的 `Museum_New`，原檔不動）。`DemoFlow`：開場（地板確認後）等玩家拿起武器（`DemoStartOnGrab`；或離起點 5 m）→ 倒數（A 在 #18 改成拿武器後 30 秒）→ 展廳 3 個**文物回合**（見下）→ 淡黑傳送到異空間 `BossRealm`（同場景 y=-200 的建築複製品）→ 法老 → 勝利後傳回；倒下 → 原地重來。玩家目前是 MockPlayer（桌面）。HUD 英文（桌面 OnGUI；頭盔裡是 `DemoWorldHud` 世界空間文字，含 HP）。
 - **玩家是 A 的 VR 玩家**（2026-11-22 第二版，使用者決定以我們的 Museum_Demo 為正式 demo；A 的 `Museum_Demo_VR` 只當 A 的測試場景）：從 Museum_Demo_VR 整組搬來 `Museum VR Setup`（VR Player = PlayerTarget + A 的 `TrackedPlayerHurtbox` 追蹤閃避、XR Origin、Player Health、背包、`InteractionDesktopMode` + `PlayerDamageVignette` 受傷紅框）、`MuseumGuardDesk`、`Museum Floor Confirmation`（黃圈 + 右手 A 確認地板）、`Guard Desk Weapon Stand`（斧、弓）、`BossRealm/Boss Realm Weapon Stand`；DemoFlow 物件加 A 的 `MuseumDemoRun`（地板確認後才啟用 DemoFlow/DemoDebugKeys、傳送時手上裝備跟著走、重來時裝備歸位）。DemoFlow、DemoDebugKeys 在場景裡預設關閉（由 MuseumDemoRun 打開）。我第一版的 West gallery play setup、Weapon bench、刀鏟已移除。`VR Services`（DamageBridgeInstaller + DemoStartOnGrab）保留。桌面測試：A 的桌面模式會自動通過地板確認。
-- **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。（舊的 MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。）
+- **桌面測試捷徑**：Play 時 **B** 跳到法老、**U** 法老立刻放大招；桌面模式走路 4.5 m/s（`DemoDebugKeys.Desktop Move Speed`，A 原本 1.5）；DemoFlow 勾 `Start At Boss` 每次直接進 Boss。（舊的 MockPlayer：WASD、右鍵轉視角、左鍵攻擊、F 招架、C 蹲下。）
 - **法老 Boss**（`Enemy_Pharaoh`，450 HP，不動）：本體是大廳中間的人面獅身像（`Model/Sphinx`，sphinx_of_hatshepsut_new.glb，王座前，Body 改 BoxCollider 貼合雕像，已移除阿努比斯模型與 EnemyAnimator）；背後替身的身體是圖坦卡門金面具（`Stand/Body/Mask`，Meshy 模型 + `M_TutankhamunMask`；舊佔位形狀停用留著）用**左右兩隻大手**出招，閒置的手回休息位：
   - 掌拍（拍完卡地，打手 ×1.5 傳給法老）、連拍（第 2 階段起，左右輪流）、橫掃（往前後一步或蹲下）、頭部橫斬（只能蹲下）、擲武器（掌中召喚匕首，可打回去 35）、**雙手合擊**（前後一步可躲，合掌後兩手都能打）
   - 換階段（60%、25%）大招**萬兵齊發**：12 隻手各握一把武器（`egyptian_weapons.glb`）每 0.75 秒丟 3 把，每把都能打回去（12），打回 60% 法老硬直 → **結界**（半徑 5 m，平常進不去）打開 12 秒：天花板吊下的**實體擺錘大鐮刀**（3 把）、本體受傷 ×2 → 結束時衝擊波把附近玩家淡黑閃現推回 12 m。小兵召喚關閉中。
@@ -17,17 +17,17 @@
 - **暫時做法**：玩家血量用 `PlayerVitals` 反射讀 `CurrentHealth`；A 的 `PlayerHealth` 沒有 `ResetHealth()` → 用反射呼叫 private setter 補滿（已在 NOTES_FOR_A 請 A 加）；桌面模式的 `DesktopPlayerDamageReceiver` 從它的 `Health` 屬性讀；專案 URP（Performance URP Config）HDR 關、相機沒開後處理 → 沒有 Bloom，RealmVolume 實際沒生效（共用設定，沒改）。
 - **音效**（2026-11-22）：`EnemySfx` 敵人生成播召喚聲（阿努比斯、神諭、翼人；法老沒掛）、神諭的石頭聲（升起、滾動起步、跳砸落地、頭槌、倒地；走路跳步沒有）；結界擺錘鐮刀每次擺過最低點前 0.3 秒播揮砍聲（`PharaohArena` 的 Sound 欄位）。三個音檔已設 Force To Mono。
 - **招架輔助**（2026-11-23）：`ParryAssist` 掛在三種敵人的 EnemyWeapon 上，招架窗內玩家握著的武器靠近（比武器大 0.13 m、刀尖外 0.15 m）就算招架，舉刀擋也行。VR 還沒實測，範圍在 prefab 的 ParryAssist 欄位調。法老的手部招式（掌拍、連拍、橫掃、頭部橫斬、合擊）**不能招架**（試過，使用者覺得太簡單，已拿掉）。**飛行武器**（擲武器、萬兵齊發，也包含神諭光彈）擋著也會反彈：`EnemyProjectile` 的 Reflect Assist（預設開、Padding 0.13）。
-- **Demo 文物歸位**（2026-11-23，簡化版、一件）：展廳 3 波清完 → 最後一隻倒下處浮出黃金面具 → HUD「Return the golden mask to the Sphinx」→ 放到人面獅身像前的展台（A 的 ArtifactDisplayTrigger 吸附）→ 傳送打法老。`DemoFlow` 新增 RequireArtifact 閘門（沒掛 `DemoArtifactStep` 就跟以前一樣）。Play 實測：等待、浮出、放上吸附 → Boss、重來收回都正常（放上是用程式模擬，VR 實抓沒測）。完整版（每波一件、三件）之後再做。
+- **文物回合**（2026-11-28）：`DemoArtifactRounds`（DemoFlow 物件上，透過 `IDemoHallSteps` 接管展廳階段）。守護者 = 活過來的展品：生成時在自己的玻璃櫃前出現，櫃裡展品消失、玻璃碎在地上 + 音效（玩家看得出哪裡空了）；頭上浮著縮小的展品 + 金光。倒下處浮出縮小展品（35 cm）→ 放回櫃子（手伸進碎掉的櫃子，放開就停住）→ 飛回原位變大、換回真展品，玻璃維持破的 → **驅散該回合剩下的敵人** → 停 3 秒 → 下一回合（放回才開下一波）。① 阿努比斯×2 → 胡狼頭卡諾卜罐 `CaseLong2` ② 阿努比斯×2+神諭 → 神諭雕像 `DisplayCase1`（同一個模型）③ 翼人+阿努比斯 → 有翼雕像 `CaseSide` → 法老。文物沿用 A 的 3 個 prefab（換外觀；ID/Type 還是 Rosetta/Jar/Mask）。Play 實測（桌面、程式殺守護者和放文物）：碎櫃、掉落、放回、驅散、三回合 → Boss、倒下重來時展品回位、玻璃維持破的。VR 實抓沒測；放回變大動畫只看了結果沒看過程。
 - **BGM**（2026-11-23）：`DemoMusic`（DemoFlow 物件上）展廳開打播 Normal battle、進 Boss（傳送開始）切 Boss，交叉淡入；開場等待、勝利、倒下時淡出。Play 實測：Hall → Normal battle、SkipToBoss → Boss。
-- **測試**：EditMode 305/305（含 A 的）、PlayMode 61/64（3 個 A 的失敗，見紀錄）、PlayMode 62/64（A 的 2 個抓取測試失敗，見紀錄）。
-- **Git**：feature/enemy-ai 8aaa7ce 已 push（音效、VR 玩家、法老換模型、拿武器開始）；使用者要開 PR 到 main。A 的 feature/vr-interaction 比 main 多 4 個 commit（只動 A_VRInteraction，和我們不重疊；含 `PlayerHealth.ResetHealth`、`TrackedPlayerHurtbox` 追蹤閃避、`MuseumDemoRun`），由 A 開 PR、使用者 merge。兩邊都進 main 後：把 main 合進 feature/enemy-ai，Museum_Demo 的 XR Origin 接 TrackedPlayerHurtbox（我們的是舊版 Museum_test 複製來的，不會自動更新），確認 MuseumDemoRun 和 DemoFlow 不重複。
+- **測試**（2026-11-28 commit 前）：EditMode 全過；PlayMode 67 個 64 過，3 個 A 的互動測試失敗（`InteractionSceneTests.Axe_ReturnDropsWhenTheThrowingHandIsHoldingAnotherItem`、`MuseumBackpackCarouselTests…PreserveToolsThroughGripAndRestart`、`MuseumFloorPickupTests…LiftADroppedMuseumFlashlight`，都是抓取類，不是敵人系統）。
+- **Git**：文物回合 + 桌面移速已 commit 到 feature/enemy-ai（還沒 push / PR）。A 的 feature/vr-interaction 還有 Quest 3 優化場景 `Museum_Demo_Quest3`、錄影場景、背包關閉，未進 main。`ProjectSettings.asset` 有套件自己加的 WebGL define（SENTIS/APP_UI），刻意不 commit。
 - 下一步：
-  1. 使用者在 Museum_Demo 實玩法老戰並調數值（`Enemy_Pharaoh` → `PharaohStand` / `PharaohArena` 的 Settings、`PharaohHand` 的 Damage Multiplier）。合擊的「前後一步可躲」只有單元測試，Play Mode 沒驗到。
-  2. 使用者放法老替身模型：換 `Enemy_Pharaoh/Stand/Body`（佔位形狀）；手是 `Hand/Model`、`HandL/Model`（XR Hands 範例的手）。
-  3. VR 真機驗收（Quest Link）：拿武器打敵人、弓箭、淡黑傳送到異空間/閃現推回、世界空間 HUD 位置、蹲下躲頭部橫斬（A 的 Quest 左手 X 切蹲下）、背包。桌面模式已驗：被打扣血、倒下重來補血回起點、武器 4/4 接上傷害橋接。和 A 定玩家血量合約（ResetHealth）。
-  4. 文物流程（使用者定的，等 A 合併後做）：每波一隻精英，死掉時原地留下它的文物（A 的 RestorableArtifact），放回展台（ArtifactDisplayTrigger → ArtifactEventBridge）後才開下一波；三件都歸位 → 法老。生成點改成從對應展品出現（阿努比斯像 x=-24、Case_wMummy x=23、SphinxPharaoh x=11.5）。A 的 `MuseumEncounterPlan.zh-TW.md` 也是這個方向。
-  5. 打磨：替身招式/合擊/結界音效（擺錘已有）、異空間燈光（現在紫燈讓地板看起來紫黑）、Bloom 要跟組員討論 Quest 效能。
-  6. 舊項目：一打多錯開出場與蓄力音效、阿努比斯 5 招手感調整、規格 M4（StatuePart、WingShield、卡雕像）、其他敵人換模型、身體 Collider 掛骨頭。
+  1. 燈光：開場亮 → 怪物要出現時閃爍關燈 → 亮回微光（`DemoLighting` 進行中，還沒掛進場景）。之後看優化。實玩看回合節奏、守護者標記、碎櫃音量、三個櫃子的吸附範圍。
+  2. VR 真機驗收（Quest Link）：招架輔助範圍（小兵 ParryAssist、飛行武器 Reflect Assist、Front Margin）、實際抓三件文物放回櫃子（文物 layer 9、Trigger 範圍、浮空高度沿用 A 調的 0.475）、BGM 音量、頭盔 HUD 高度（使用者自己調 DemoWorldHud 的 Height）、蹲下躲頭部橫斬、傳送。A 在修武器刀刃判定線（目前只有前端 14 cm）。
+  3. 法老數值實玩調整（`PharaohStand` / `PharaohArena` Settings）；手部招式維持只能躲（試過招架，太簡單已拿掉）。合擊的「前後一步可躲」只有單元測試。
+  4. 文物回合打磨：驅散時的視覺/音效（現在直接進死亡流程）、放回時的音效/特效；小兵也從展品出來（現在只有守護者）；A 的 `Museum_Demo_Quest3` 如果要當正式 demo，要把文物回合搬過去。
+  5. 打磨：替身結界音效、異空間燈光、Bloom/Quest 效能、法老替身手換正式模型。
+  6. 舊項目：一打多錯開出場與蓄力音效、阿努比斯手感、規格 M4（StatuePart、WingShield、卡雕像）、其他敵人換模型。
 - 給 A 的對接說明：`Notes For Groupmates/NOTES_FOR_A.md`
 
 ## 已做的決定
@@ -77,6 +77,22 @@
 
 ## 紀錄
 > 較早的紀錄在 `PROGRESS_ARCHIVE.md`（平常不用讀）。
+
+### 2026-11-28（文物回合）
+- 使用者決定：放回文物才開下一波；放回時驅散剩下的敵人（守護者倒下就掉文物，所以先拿文物的玩家可以跳過小兵）；對應表照提案；用 A 的 prefab 但換真模型。
+- A 的 prefab 外觀是測試方塊；展台只偵測 layer 10，但 Museum_Demo 的可抓物件在 #22 改成 layer 9 → 場景實例改 layer 9、展台 Artifact Layers 加 9。A 的 `PhysicalGrabbable.Awake` 會開重力，所以文物要先 SetActive 再設成浮空。
+- `DemoFlow` 拿掉 RequireArtifact/ArtifactHint/MarkArtifactRestored，改成 `SetHallSteps(IDemoHallSteps)`；`DemoFlowModel.Tick` 拿掉 artifactReady；`EncounterController` 加 `EnemySpawned`。刪 `DemoArtifactStep`、場景的 Encounter_Hall / SpawnPoints_Hall / 舊面具與展台。
+- 使用者提議改成「怪物是展品變的」：守護者生成時展品消失、玻璃碎、播音效；文物是展品縮小版，放回去變回原尺寸。選胡狼像（第 1 回合）、玻璃放回後、重來後都維持碎的。拿掉底座和金面具 / 人面獅身像那條線。
+- 有翼雕像在櫃子上層（底部約 2.4 m）手搆不到 → 吸附區放在手的高度，吸附後再飛上去變大。A 的文物放開會掉（forceGravityOnDetach），櫃子裡沒有架子接 → 放開時在 Trigger 裡就改成 kinematic 停住，讓 A 的 dwell 判定接到。
+- 桌面移速：A 的 InteractionDesktopMode 寫死 1.5 m/s，不能改 A 的檔案 → DemoDebugKeys 補速度（只在沒戴頭盔時）。
+- 測試：ArtifactRoundsModelTests 6/6、DemoFlowModelTests 全過（只跑這兩組）。
+
+### 2026-11-23（招架調整、BGM、文物 demo）
+- 法老投射物反彈沒火花/音效：7 個投射物 prefab 的 Hit Feedback 是空的（內建預設沒有火花和音檔）→ 接 HitFeedback_Default。
+- 法老手部攻擊音效：PharaohStand Sound 欄位（掌拍 powerful-impact-hit、橫掃/橫斬/擲武器 greatsword slash、合擊 combat-impact），手上的 3D AudioSource。
+- BGM：DemoMusic（Hall → Normal battle、BossIntro/Boss → Boss，交叉淡入），兩首設 Streaming。
+- 使用者做簡報：整理了「我做了什麼 / 接下來」的講稿（只在對話裡）。
+- Demo 文物歸位（一件）：見目前狀態。展台位置選人面獅身像展區西側欄杆外，面具 Snap 朝 -X（截圖確認正面朝展廳）。
 
 ### 2026-11-23（VR 招架輔助）
 - 量到 A 的斧頭、鐵撬刀刃判定線（Blade Base → Tip）只有前端 14 cm、半徑 3.5 cm，斧刃還偏離判定線；而且 A 的武器只在揮 ≥ 1.2 m/s 時偵測 → VR 招架難、要靠很近才打到。使用者已轉告 A 調武器。

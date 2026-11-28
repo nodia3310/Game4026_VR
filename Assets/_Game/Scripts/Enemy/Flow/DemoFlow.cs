@@ -49,21 +49,18 @@ namespace Game4026.Enemy
         private ScreenFader fader;
         private Coroutine transition;
         private bool restartPending;
-        private bool artifactRestored;
+        private IDemoHallSteps hallSteps;
 
         public DemoPhase Phase => model != null ? model.Phase : DemoPhase.Intro;
         public EncounterController HallEncounter => hallEncounter;
         public EncounterController BossEncounter => bossEncounter;
         public bool ShowHud => showHud;
-        /// <summary>Set by the artifact step: after the hall is cleared, wait for the artifact to be put back.</summary>
-        public bool RequireArtifact { get; set; }
-        /// <summary>Text shown while the cleared hall waits for the artifact.</summary>
-        public string ArtifactHint { get; set; } = "Return the artifact to its display";
-        public bool ArtifactRestored => artifactRestored;
-        /// <summary>The hall is cleared and the flow waits for the artifact.</summary>
-        public bool AwaitingArtifact => model != null && model.Phase == DemoPhase.Hall && RequireArtifact && !artifactRestored &&
-                                        (hallEncounter == null || hallEncounter.IsCleared);
-        public void MarkArtifactRestored() => artifactRestored = true;
+        /// <summary>
+        /// Replaces the single hall encounter (e.g. artifact rounds): the flow begins / stops / resets these steps and
+        /// goes to the boss when they are done. Null = back to the hall encounter.
+        /// </summary>
+        public void SetHallSteps(IDemoHallSteps steps) => hallSteps = steps;
+        public IDemoHallSteps HallSteps => hallSteps;
         /// <summary>True while the first intro waits for the player to pick up a weapon.</summary>
         public bool IsWaitingForPlayer => model != null && model.Phase == DemoPhase.Intro && !model.IsReady;
         /// <summary>Current HUD line (objective / phase), empty when nothing to show.</summary>
@@ -119,8 +116,7 @@ namespace Game4026.Enemy
             EnsureModel();
             if (model.Phase != DemoPhase.Intro && model.Phase != DemoPhase.Hall)
                 return;
-            if (hallEncounter != null)
-                hallEncounter.ForceClear();
+            StopHall();
             model.SkipToBoss(Time.time);
         }
 
@@ -157,7 +153,7 @@ namespace Game4026.Enemy
         {
             ResolvePlayer();
             EnsureModel();
-            bool hallCleared = hallEncounter == null || hallEncounter.IsCleared;
+            bool hallCleared = hallSteps != null ? hallSteps.IsHallDone : hallEncounter == null || hallEncounter.IsCleared;
             bool bossCleared = bossEncounter == null || (bossEncounter.IsCleared && !bossEncounter.WasForceCleared);
             bool dead = vitals != null && vitals.IsDead;
             if (IsWaitingForPlayer && player != null)
@@ -168,10 +164,12 @@ namespace Game4026.Enemy
                     MarkPlayerReady();
             }
 
-            switch (model.Tick(Time.time, hallCleared, bossCleared, dead, !RequireArtifact || artifactRestored))
+            switch (model.Tick(Time.time, hallCleared, bossCleared, dead))
             {
                 case DemoAction.StartHall:
-                    if (hallEncounter != null)
+                    if (hallSteps != null)
+                        hallSteps.BeginHall();
+                    else if (hallEncounter != null)
                         hallEncounter.StartEncounter();
                     break;
                 case DemoAction.StartBoss:
@@ -196,8 +194,7 @@ namespace Game4026.Enemy
             {
                 case DemoPhase.Defeat:
                     // Stop every fight so nothing keeps hitting the fallen player.
-                    if (hallEncounter != null)
-                        hallEncounter.ForceClear();
+                    StopHall();
                     if (bossEncounter != null)
                         bossEncounter.ForceClear();
                     Run(null);
@@ -213,6 +210,14 @@ namespace Game4026.Enemy
                         Run(TeleportRoutine(startPosition, startRotation, returnDelay));
                     break;
             }
+        }
+
+        private void StopHall()
+        {
+            if (hallSteps != null)
+                hallSteps.StopHall();
+            if (hallEncounter != null)
+                hallEncounter.ForceClear();
         }
 
         private void Run(IEnumerator routine)
@@ -253,7 +258,8 @@ namespace Game4026.Enemy
         public void Restart()
         {
             restartPending = false;
-            artifactRestored = false;
+            if (hallSteps != null)
+                hallSteps.ResetHall();
             if (hallEncounter != null)
                 hallEncounter.ResetEncounter();
             if (bossEncounter != null)
@@ -307,8 +313,8 @@ namespace Game4026.Enemy
                     int left = Mathf.CeilToInt(model.IntroRemaining(Time.time));
                     return left > 0 ? CountdownText(left) : "The exhibits are waking up...";
                 case DemoPhase.Hall:
-                    if (AwaitingArtifact)
-                        return ArtifactHint;
+                    if (hallSteps != null)
+                        return hallSteps.HallHud;
                     return hallEncounter != null
                         ? $"Defeat the guardians  {hallEncounter.KillCount} / {hallEncounter.TotalEnemies}"
                         : string.Empty;
