@@ -45872,6 +45872,7 @@ GameObject:
   - component: {fileID: 1621965823}
   - component: {fileID: 1621965824}
   - component: {fileID: 1621965825}
+  - component: {fileID: 1621965826}
   m_Layer: 0
   m_Name: DemoFlow
   m_TagString: Untagged
@@ -46074,6 +46075,45 @@ MonoBehaviour:
   markScale: 1
   markLight: 1
   markLightColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+--- !u!114 &1621965826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621965818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f647e8f3b2ed5fb4cbd0118f8e0f65a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game4026.Enemy::Game4026.Enemy.DemoLighting
+  flow: {fileID: 1621965819}
+  lights:
+  - {fileID: 1376693619}
+  - {fileID: 1106094193}
+  - {fileID: 1051102344}
+  - {fileID: 2055575060}
+  - {fileID: 1128535874}
+  - {fileID: 1431861173}
+  - {fileID: 1758540810}
+  - {fileID: 1350472743}
+  - {fileID: 1271851849}
+  - {fileID: 780987845}
+  - {fileID: 928007556}
+  - {fileID: 1544603492}
+  - {fileID: 931380058}
+  - {fileID: 1282577610}
+  - {fileID: 8992331}
+  brightMultiplier: 3
+  brightAmbient: {r: 0.3, g: 0.29, b: 0.27, a: 1}
+  brightFadeSeconds: 1.5
+  blackoutLead: 3
+  flickerSeconds: 1.2
+  darkSeconds: 2.5
+  fadeUpSeconds: 3
+  darkenLightmaps: 1
+  powerDownSound: {fileID: 0}
+  powerDownVolume: 0.8
 --- !u!1 &1622812119
 GameObject:
   m_ObjectHideFlags: 0

@@ -57,6 +57,7 @@
 - ScreenFader — Scripts/Enemy/Flow/ScreenFader.cs — 玩家頭前 0.2 m 的黑色面片淡出淡入（桌面與頭盔都能用）
 - PlayerVitals — Scripts/Enemy/Flow/PlayerVitals.cs — 暫時的玩家血量轉接：反射讀 `CurrentHealth`/`MaxHealth`、`ResetHealth()` 或 private setter 補滿；轉接元件（A 的桌面模式）讀它持有的 receiver
 - Demo 文物回合（Museum_Demo 場景）— `Artifact Rounds/Round 1~3`：每個有 Display（A 的 `…Display` prefab：托盤停用、Restoration Trigger 移到展示櫃裡手搆得到的高度並放大（1.2–1.4 m 寬）、Snap Point 在中心、Artifact Layers 加 layer 9、Position Tolerance 0.8；Glow = 金色點光）、A 的文物 prefab（layer 9，Model = 展品縮小到 35 cm 的複製，零件照展品本地座標排）、Guardian Spawn（櫃子前 2.2 m）、Fallback Spawn、Glass Shards（借 GlassShards 的碎片模型，預設隱藏）、Encounter（EncounterController + 3 個 SP）。Round 1 胡狼頭卡諾卜罐 `CaseLong2/egyptian_jackal`（A 的 CanopicJar）、Round 2 神諭雕像 `DisplayCase1/aztec_statue_sculpture`（RosettaStone）、Round 3 有翼雕像 `CaseSide/egyptian_winged_statue`（TutankhamunMask）；括號是沿用的 A prefab（ID/Type 沒改）
+- DemoLighting — Scripts/Enemy/Flow/DemoLighting.cs — 掛在 Museum_Demo 的 DemoFlow 物件：開場/勝利時明亮（SpotLight 底下 15 盞 ×Bright Multiplier 3、環境光 Bright Ambient）；倒數剩 Blackout Lead 3 秒 → 閃爍（Flicker 1.2 秒）→ 全暗（Dark 2.5 秒，怪物在這時出現）→ 亮回場景原本的微光（Fade Up 3 秒）。烘焙光照貼圖跟著閃、全暗時拿掉、恢復時閃兩下；天空盒反射強度一起調（地板反射天空盒）。停止時還原。DemoFlow.IntroRemaining 給它倒數
 - DemoMusic — Scripts/Enemy/Flow/DemoMusic.cs — 掛在 Museum_Demo 的 DemoFlow 物件：展廳戰鬥（Hall）播 `Audio & SFX/Normal battle.mp3`、BossIntro/Boss 播 `Boss.mp3`，其他階段靜音；兩個 2D 循環 AudioSource 交叉淡入（Volume 0.45、Fade Seconds 1.5）；兩首設 Streaming
 - DemoWorldHud — Scripts/Enemy/Flow/DemoWorldHud.cs — 頭盔 HUD：DemoFlow 目標 + HP 的世界空間 TextMesh，浮在頭前、轉頭時慢慢跟上、穿牆可見；只在 XR 裝置啟用時顯示
 - PlayerBodyAnchor — Scripts/Enemy/Flow/PlayerBodyAnchor.cs — XR 玩家的身體中心：跟著頭的水平位置、在眼睛下 0.45 m（給 PlayerTarget.Body；Museum_Demo 改用 A 的 TrackedPlayerHurtbox 後目前沒用到）
@@ -148,6 +149,7 @@
 - BossMechanicsTests — Tests/EditMode/Enemy/BossMechanicsTests.cs — 擺錘角度/刀刃位置、萬兵齊發每把只用一次且每波分散、扇形對稱
 - PharaohStandTests — Tests/EditMode/Enemy/PharaohStandTests.cs — 替身選招（階段、不連續橫掃）、掌拍/橫掃命中（蹲下、跨步躲開）、橫掃路線
 - DemoFlowModelTests — Tests/EditMode/Enemy/DemoFlowModelTests.cs — demo 流程：開場延遲、清場進 Boss、勝利、倒下重來
+- DemoLightingTests — Tests/EditMode/Enemy/DemoLightingTests.cs — 關燈序列：閃爍、全暗、亮回戰鬥亮度；烘焙貼圖跟著閃、全暗時關、恢復時閃兩下
 - ArtifactRoundsModelTests — Tests/EditMode/Enemy/ArtifactRoundsModelTests.cs — 文物回合：守護者倒下才能放回、放回後停頓再下一回合、第三件完成、Stop 重來
 - FakeEnemyContext — Tests/EditMode/Enemy/FakeEnemyContext.cs — 測試用 IEnemyContext（不需要 NavMesh / Play Mode）
 - EnemyAttackTests — Tests/EditMode/Enemy/EnemyAttackTests.cs — 出招時間、命中範圍與角度、AreaSlam、連段、突進距離、打斷、攻速倍率、預設招式

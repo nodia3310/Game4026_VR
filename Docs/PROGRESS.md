@@ -22,7 +22,7 @@
 - **測試**（2026-11-28 commit 前）：EditMode 全過；PlayMode 67 個 64 過，3 個 A 的互動測試失敗（`InteractionSceneTests.Axe_ReturnDropsWhenTheThrowingHandIsHoldingAnotherItem`、`MuseumBackpackCarouselTests…PreserveToolsThroughGripAndRestart`、`MuseumFloorPickupTests…LiftADroppedMuseumFlashlight`，都是抓取類，不是敵人系統）。
 - **Git**：文物回合 + 桌面移速已 commit 到 feature/enemy-ai（還沒 push / PR）。A 的 feature/vr-interaction 還有 Quest 3 優化場景 `Museum_Demo_Quest3`、錄影場景、背包關閉，未進 main。`ProjectSettings.asset` 有套件自己加的 WebGL define（SENTIS/APP_UI），刻意不 commit。
 - 下一步：
-  1. 燈光：開場亮 → 怪物要出現時閃爍關燈 → 亮回微光（`DemoLighting` 進行中，還沒掛進場景）。之後看優化。實玩看回合節奏、守護者標記、碎櫃音量、三個櫃子的吸附範圍。
+  1. 燈光 `DemoLighting` 已 commit（桌面實測：明亮/全暗/微光三張截圖 OK；VR 裡看閃爍會不會不舒服）。接著是優化（見 2026-11-28 紀錄的數據）。實玩看回合節奏、守護者標記、碎櫃音量、三個櫃子的吸附範圍。
   2. VR 真機驗收（Quest Link）：招架輔助範圍（小兵 ParryAssist、飛行武器 Reflect Assist、Front Margin）、實際抓三件文物放回櫃子（文物 layer 9、Trigger 範圍、浮空高度沿用 A 調的 0.475）、BGM 音量、頭盔 HUD 高度（使用者自己調 DemoWorldHud 的 Height）、蹲下躲頭部橫斬、傳送。A 在修武器刀刃判定線（目前只有前端 14 cm）。
   3. 法老數值實玩調整（`PharaohStand` / `PharaohArena` Settings）；手部招式維持只能躲（試過招架，太簡單已拿掉）。合擊的「前後一步可躲」只有單元測試。
   4. 文物回合打磨：驅散時的視覺/音效（現在直接進死亡流程）、放回時的音效/特效；小兵也從展品出來（現在只有守護者）；A 的 `Museum_Demo_Quest3` 如果要當正式 demo，要把文物回合搬過去。
@@ -85,6 +85,8 @@
 - 使用者提議改成「怪物是展品變的」：守護者生成時展品消失、玻璃碎、播音效；文物是展品縮小版，放回去變回原尺寸。選胡狼像（第 1 回合）、玻璃放回後、重來後都維持碎的。拿掉底座和金面具 / 人面獅身像那條線。
 - 有翼雕像在櫃子上層（底部約 2.4 m）手搆不到 → 吸附區放在手的高度，吸附後再飛上去變大。A 的文物放開會掉（forceGravityOnDetach），櫃子裡沒有架子接 → 放開時在 Trigger 裡就改成 kinematic 停住，讓 A 的 dwell 判定接到。
 - 桌面移速：A 的 InteractionDesktopMode 寫死 1.5 m/s，不能改 A 的檔案 → DemoDebugKeys 補速度（只在沒戴頭盔時）。
+- 燈光：展廳 15 盞即時聚光燈 + 平面環境光 + 2 張烘焙貼圖；地板的亮主要是反射 Default-Skybox（沒有反射探針）。只調即時燈關不暗 → 烘焙貼圖跟著閃/全暗時拿掉、反射強度一起降。開場明亮只能加亮即時燈和環境光，地板沒辦法更亮。A 的 West check-in spotlight 不在控制內（關燈時櫃台還亮著）。
+- 優化數據（Museum_Demo 展廳）：8.3M 三角形（Anubis 像 1.46M、武器櫃 1.02M、浮雕 583k、牆雕 553k、砂岩 544k、木乃伊 524k…）；MeshCollider 221 個全非凸、共 8.4M 三角形；材質 121、貼圖 179（4K 30 張、2K+ 70 張）；static 只有 61/545；異空間 112k 三角形在展廳時也開著；URP：MSAA 4x、HDR 關、額外光 per-pixel 最多 8、額外光陰影關；建置目標 Windows（Quest Link）。
 - 測試：ArtifactRoundsModelTests 6/6、DemoFlowModelTests 全過（只跑這兩組）。
 
 ### 2026-11-23（招架調整、BGM、文物 demo）

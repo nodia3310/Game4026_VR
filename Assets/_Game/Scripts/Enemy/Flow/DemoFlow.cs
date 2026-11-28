@@ -61,6 +61,8 @@ namespace Game4026.Enemy
         /// </summary>
         public void SetHallSteps(IDemoHallSteps steps) => hallSteps = steps;
         public IDemoHallSteps HallSteps => hallSteps;
+        /// <summary>Seconds left before the hall fight starts; -1 while not counting down (waiting for the player, or not in the intro).</summary>
+        public float IntroRemaining => model != null && model.Phase == DemoPhase.Intro && model.IsReady ? model.IntroRemaining(Time.time) : -1f;
         /// <summary>True while the first intro waits for the player to pick up a weapon.</summary>
         public bool IsWaitingForPlayer => model != null && model.Phase == DemoPhase.Intro && !model.IsReady;
         /// <summary>Current HUD line (objective / phase), empty when nothing to show.</summary>
